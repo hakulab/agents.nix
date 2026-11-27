@@ -63,24 +63,35 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         dk = devkit.lib.mkLib pkgs;
-        nuLibDirs = [ ./tests/lib ];
+        nuLibDirs = [
+          ./scripts/lib
+          ./tests/lib
+        ];
 
         preCommit = dk.preCommit {
           src = ./.;
           hooks = {
+            cspell.excludes = [ "/fixtures/" ];
             doctoc.enable = true;
+            end-of-file-fixer.excludes = [ "/fixtures/" ];
             lychee = {
               enable = true;
-              settings.flags = "--offline";
+              excludes = [ "/fixtures/" ];
+              settings.flags = "--offline --exclude '@(docsDir|devkitSource)@'";
             };
+            markdownlint-cli2.excludes = [ "/fixtures/" ];
             nu-check = {
               enable = true;
               settings.libDirs = nuLibDirs;
             };
-            prettier.enable = true;
+            prettier = {
+              enable = true;
+              excludes = [ "/fixtures/" ];
+            };
             shellcheck.enable = true;
             shfmt.enable = true;
             taplo.enable = true;
+            trim-trailing-whitespace.excludes = [ "/fixtures/" ];
           };
         };
 
@@ -105,6 +116,16 @@
           ];
           libDirs = nuLibDirs;
         };
+
+        tsTests =
+          pkgs.runCommand "ts-tests"
+            {
+              nativeBuildInputs = [ pkgs.bun ];
+            }
+            ''
+              bun test ${./scripts/omp}/file-formatter.test.ts
+              touch "$out"
+            '';
       in
       {
         # ------------------------------------------------------------------------------------------
@@ -115,12 +136,14 @@
           packages = [
             dk.nushell
             dk.nu-test
+            pkgs.bun
           ];
           inputsFrom = [
             preCommit
           ];
           shellHook = ''
-            export NU_LIB_DIRS="$(git rev-parse --show-toplevel)/tests/lib"
+            repo_root="$(git rev-parse --show-toplevel)"
+            export NU_LIB_DIRS="$repo_root/scripts/lib:$repo_root/tests/lib"
           '';
         };
 
@@ -132,7 +155,13 @@
         # ------------------------------------------------------------------------------------------
         # Checks
         # ------------------------------------------------------------------------------------------
-        checks = self.packages.${system} // libChecks // { nu-tests = nuTests; };
+        checks =
+          self.packages.${system}
+          // libChecks
+          // {
+            nu-tests = nuTests;
+            ts-tests = tsTests;
+          };
 
         # ------------------------------------------------------------------------------------------
         # Formatter
