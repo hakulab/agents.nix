@@ -19,19 +19,24 @@ const CURL_ARGS = [
 
 # `run` is the completed model call, `calls` holds what each curl call received, and `token_file`
 # is the token's path.
-def call [request: record, reply: record]: nothing -> record {
+def call [
+  request: record
+  reply: record
+  --gateway: record = {}
+]: nothing -> record {
   let dir = (mktemp --directory)
   let config_file = ($dir | path join "config.json")
   let token_file = ($dir | path join "token")
   let log = ($dir | path join "calls.jsonl")
 
   $"($TOKEN)\n" | save $token_file
+  let default_gateway = {
+    baseUrl: "https://gateway.test"
+    tokenFile: $token_file
+    caFile: "/ca.pem"
+  }
   {
-    gateway: {
-      baseUrl: "https://gateway.test"
-      tokenFile: $token_file
-      caFile: "/ca.pem"
-    }
+    gateway: ($default_gateway | merge $gateway)
     curl: ($env.NU_TEST_STUBS | path join "curl")
     curlArgs: $CURL_ARGS
   }
@@ -123,28 +128,7 @@ def "test a reply cut short fails with its finish reason" [] {
   assert equal $result.run.stderr "model-call: the gateway reply ended with finish_reason length\n"
 }
 
-def "test optional caFile can be omitted and extraHeaders are forwarded" [] {
-  let dir = (mktemp --directory)
-  let config_file = ($dir | path join "config.json")
-  let token_file = ($dir | path join "token")
-  let log = ($dir | path join "calls.jsonl")
-
-  $"($TOKEN)\n" | save $token_file
-  {
-    gateway: {
-      baseUrl: "https://gateway.test"
-      tokenFile: $token_file
-      caFile: null
-      extraHeaders: {
-        "x-custom": "value"
-      }
-    }
-    curl: ($env.NU_TEST_STUBS | path join "curl")
-    curlArgs: $CURL_ARGS
-  }
-  | to json
-  | save $config_file
-
+def "test optional caFile and tokenFile can be omitted and extraHeaders are sorted" [] {
   let request = {
     model: "stub"
     maxTokens: 64
@@ -152,24 +136,24 @@ def "test optional caFile can be omitted and extraHeaders are forwarded" [] {
     user: "Text."
   }
 
-  let run = with-env {
-    STUB_LOG: $log
-    STUB_REPLY: (reply "ok" "stop" | to json)
-  } {
-    $request
-    | to json
-    | run-script $SCRIPT --config $config_file
-  }
+  let result = (
+    call $request (reply "ok" "stop") --gateway {
+      caFile: null
+      tokenFile: null
+      extraHeaders: {
+        "x-zeta": "2"
+        "x-alpha": "1"
+      }
+    }
+  )
 
-  assert equal $run.exit_code 0 $run.stderr
-  assert equal $run.stdout "ok"
-  let calls = (open $log | from json --objects)
-  assert equal $calls.0.args [
+  assert equal $result.run.exit_code 0 $result.run.stderr
+  assert equal $result.run.stdout "ok"
+  assert equal $result.calls.0.args [
     "https://gateway.test/v1/chat/completions"
     ...$CURL_ARGS
-    --variable $"token@($token_file)"
-    --expand-header "Authorization: Bearer {{token:trim}}"
-    --header "x-custom: value"
+    --header "x-alpha: 1"
+    --header "x-zeta: 2"
     --header "content-type: application/json"
     --data @-
   ]

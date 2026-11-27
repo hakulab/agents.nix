@@ -1,9 +1,8 @@
 # ==================================================================================================
-# Shared Agent Roles
+# Built-In Agent Role Definitions
 # ==================================================================================================
 
 {
-  lib,
   assetsDir,
   promptFragments,
 }:
@@ -284,42 +283,5 @@ let
       };
     };
   };
-
-  toLine = text: lib.replaceStrings [ "\n" ] [ " " ] (lib.trim text);
-
-  normalizeRoles = lib.mapAttrs (
-    _: role:
-    role
-    // {
-      description = toLine role.description;
-      prompt = lib.trim role.prompt;
-    }
-  );
-
-  mkRoleOptions =
-    {
-      agentRoles,
-      defaultEnabled ? builtins.attrNames agentRoles,
-    }:
-    let
-      sharedAgentNames = builtins.attrNames agentRoles;
-    in
-    {
-      inherit sharedAgentNames;
-
-      mkEnabledAgentsOption =
-        {
-          description,
-          names ? sharedAgentNames,
-          default ? lib.filter (name: lib.elem name names) defaultEnabled,
-        }:
-        lib.mkOption {
-          type = lib.types.listOf (lib.types.enum names);
-          inherit default description;
-        };
-    };
 in
-{
-  inherit mkRoleOptions normalizeRoles;
-  definitions = builtins.mapAttrs (name: role: role // { prompt = composePrompt name; }) defaultRoles;
-}
+builtins.mapAttrs (name: role: role // { prompt = composePrompt name; }) defaultRoles

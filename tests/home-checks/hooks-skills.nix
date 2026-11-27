@@ -40,13 +40,23 @@ let
 
   enabledCfg = evalHome {
     agents = {
+      models.catalog."gemini-4-flash".channelId = {
+        alpha = "alpha/gemini-4-flash";
+        beta = "beta/gemini-4-flash";
+      };
+
       modelCall = {
         enable = true;
         baseUrl = "https://gateway.example.test";
         apiKeyFile = "/run/secrets/model-call-key";
+        channels = [ "beta" ];
         extraHeaders."x-env" = "test";
       };
-      skills.targets.claude = true;
+
+      skills = {
+        prosePolish.model = "custom/prose-model";
+        targets.claude = true;
+      };
     };
   };
 
@@ -124,6 +134,8 @@ check "home-shared-hooks-skills" [
     name = "enabled modelCall auto-registers prose-polish skill and its trusted script";
     ok =
       enabledCfg.agents.skills.sources ? prose-polish
+      && enabledCfg.agents.skills.prosePolish.model == "custom/prose-model"
+      && enabledCfg.agents.modelCall.channels == [ "beta" ]
       && lib.elem "${homeDirectory}/.claude/skills/prose-polish/scripts/prose-polish" enabledSkillScripts
       && lib.all (a: a.assertion) enabledCfg.assertions;
   }

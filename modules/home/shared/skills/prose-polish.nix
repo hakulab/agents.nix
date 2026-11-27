@@ -12,8 +12,10 @@
   dk,
   assetsDir,
   modelCatalog,
+  modelIdFor,
   promptFragments,
   modelCall,
+  modelOverride,
 }:
 
 let
@@ -22,14 +24,7 @@ let
   skillDir = assetsDir + "/skills/prose-polish";
   skillScript = "scripts/prose-polish";
 
-  modelIdFor =
-    key: model:
-    let
-      channels = builtins.attrValues (model.channelId or { });
-    in
-    if channels != [ ] then lib.head channels else key;
-
-  models = lib.mapAttrs modelIdFor modelCatalog.models;
+  models = lib.mapAttrs (key: _: modelIdFor modelCatalog key) modelCatalog.models;
 
   proseModelKey = modelCatalog.defaults.prose;
 
@@ -40,7 +35,7 @@ let
       ;
     inherit (promptFragments) phrasing;
     maxRepairs = 3;
-    model = models.${proseModelKey} or proseModelKey;
+    model = if modelOverride != null then modelOverride else models.${proseModelKey} or proseModelKey;
     prompt = builtins.readFile (skillDir + "/scripts/prompt.md");
     repairPrompt = builtins.readFile (skillDir + "/scripts/repair-prompt.md");
   };

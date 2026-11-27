@@ -117,8 +117,9 @@
         };
 
         homeChecks = import ./tests/home-checks {
-          inherit pkgs home-manager;
+          inherit pkgs;
           inherit (nixpkgs) lib;
+          inherit home-manager;
           sharedModule = sharedHomeModule;
         };
 

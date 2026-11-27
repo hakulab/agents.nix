@@ -52,10 +52,8 @@ def main [
     $curl_args = (
       $curl_args
       | append [
-        --variable
-        $"token@($token_file)"
-        --expand-header
-        "Authorization: Bearer {{token:trim}}"
+        --variable $"token@($token_file)"
+        --expand-header "Authorization: Bearer {{token:trim}}"
       ]
     )
   }
@@ -65,10 +63,8 @@ def main [
   $curl_args = (
     $curl_args
     | append [
-      --header
-      "content-type: application/json"
-      --data
-      @-
+      --header "content-type: application/json"
+      --data @-
     ]
   )
 

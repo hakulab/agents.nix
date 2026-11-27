@@ -10,20 +10,7 @@
 }:
 
 let
-  check =
-    name: assertions:
-    let
-      failed = lib.filter (item: !item.ok) assertions;
-      message = lib.concatMapStringsSep "\n" (item: "  - ${item.name}") failed;
-    in
-    if failed != [ ] then
-      throw "check `${name}` failed:\n${message}"
-    else
-      pkgs.runCommand "check-${name}" { } ''
-        touch "$out"
-      '';
-
-  throws = expr: !(builtins.tryEval (builtins.deepSeq expr true)).success;
+  inherit (import ../lib.nix { inherit pkgs lib; }) check throws;
 
   homeDirectory = if pkgs.stdenv.isDarwin then "/Users/tester" else "/home/tester";
 
@@ -60,6 +47,7 @@ in
     inherit
       lib
       check
+      throws
       evalHome
       ;
   };

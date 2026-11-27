@@ -21,13 +21,17 @@ let
       dataDir = "${homeDirectory}/.local/share/custom-agents";
       instructions.extraSections = "## Custom\n\nExtra guidance.";
       instructions.docs."team.md" = "# Team guide\n";
-      roles.definitions.custom-role = {
-        description = ''
-          Custom
-          role.
-        '';
-        prompt = "  Be concise.  ";
-        workload = "mini";
+      roles.definitions = {
+        reviewer.claude.color = "blue";
+
+        custom-role = {
+          description = ''
+            Custom
+            role.
+          '';
+          prompt = "  Be concise.  ";
+          workload = "mini";
+        };
       };
     };
   };
@@ -94,6 +98,14 @@ check "home-shared-defaults" [
       && resolved.agentRoles ? implementer
       && resolved.agentRoles ? reviewer
       && !(lib.hasInfix "\n" resolved.agentRoles.architect.description);
+  }
+  {
+    name = "overriding one nested role field preserves sibling defaults";
+    ok =
+      xdgCfg.agents.resolved.agentRoles.reviewer.claude.color == "blue"
+      && xdgCfg.agents.resolved.agentRoles.reviewer.claude.permissionMode == "plan"
+      && xdgCfg.agents.resolved.agentRoles.reviewer.claude.memory == "local"
+      && xdgCfg.agents.resolved.agentRoles.reviewer.claude.skills == [ "review" ];
   }
   {
     name = "custom roles extend built-in definitions and collapse multiline descriptions";

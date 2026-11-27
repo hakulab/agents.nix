@@ -19,31 +19,37 @@ let
         disabledServers = [ "exa" ];
 
         presets = {
-          github = {
-            enable = true;
-            fallbackTokenFile = "/run/secrets/github-pat";
-          };
-          gitlab = {
-            enable = true;
-            fallbackTokenFile = "/run/secrets/gitlab-pat";
-            fallbackApiUrl = "https://gitlab.example.test/api/v4";
-          };
-          exa = {
-            enable = true;
-            apiKeyFile = "/run/secrets/exa-key";
-          };
-          chromeDevtools = {
-            enable = true;
-            headless = true;
-          };
-          deepwiki.enable = true;
-          scrapling.enable = true;
           atlassian = {
             enable = true;
             url = "https://wiki.example.test";
             tokenFile = "/run/secrets/wiki-pat";
             clearProxy = true;
           };
+
+          chromeDevtools = {
+            enable = true;
+            headless = true;
+          };
+
+          deepwiki.enable = true;
+
+          exa = {
+            enable = true;
+            apiKeyFile = "/run/secrets/exa-key";
+          };
+
+          github = {
+            enable = true;
+            fallbackTokenFile = "/run/secrets/github-pat";
+          };
+
+          gitlab = {
+            enable = true;
+            fallbackTokenFile = "/run/secrets/gitlab-pat";
+            fallbackApiUrl = "https://gitlab.example.test/api/v4";
+          };
+
+          scrapling.enable = true;
         };
 
         servers = {
@@ -57,10 +63,20 @@ let
           disabledServer = {
             enable = false;
             type = "http";
+            displayName = "DisabledServer";
             url = "https://disabled.example.test/mcp";
           };
         };
       };
+
+      permissions.mcpAllows.disabledServer = [ "ping" ];
+    };
+  };
+
+  isolatedUvCfg = evalHome {
+    agents.mcp = {
+      uv.isolatedConfig = true;
+      presets.atlassian.enable = true;
     };
   };
 
@@ -116,9 +132,11 @@ check "home-shared-mcp" [
   {
     name = "uv.isolatedConfig controls --no-config in uvx wrappers";
     ok =
-      cfg.agents.mcp.uv.isolatedConfig
+      isolatedUvCfg.agents.mcp.uv.isolatedConfig
       && !noIsolatedUvCfg.agents.mcp.uv.isolatedConfig
-      && mcp.servers.atlassian.command != noIsolatedUvCfg.agents.mcp.servers.atlassian.command;
+      &&
+        isolatedUvCfg.agents.resolved.mcp.servers.atlassian.command
+        != noIsolatedUvCfg.agents.resolved.mcp.servers.atlassian.command;
   }
 
   # ------------------------------------------------------------------------------------------------
@@ -140,11 +158,16 @@ check "home-shared-mcp" [
   # Server-declared permissions and validation
   # ------------------------------------------------------------------------------------------------
   {
-    name = "custom server allowTools fold into resolved.permissions.mcpAllows";
-    ok = lib.any (
-      entry:
-      entry.server == "customHttp" && entry.displayName == "CustomHttp" && entry.tool == "list_items"
-    ) permissions.mcpAllows;
+    name = "custom server allowTools fold into resolved.permissions.mcpAllows and disabled servers remain valid";
+    ok =
+      lib.any (
+        entry:
+        entry.server == "customHttp" && entry.displayName == "CustomHttp" && entry.tool == "list_items"
+      ) permissions.mcpAllows
+      && lib.any (
+        entry:
+        entry.server == "disabledServer" && entry.displayName == "DisabledServer" && entry.tool == "ping"
+      ) permissions.mcpAllows;
   }
   {
     name = "valid MCP configuration passes all module assertions";

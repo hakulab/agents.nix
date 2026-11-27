@@ -5,6 +5,7 @@
 {
   lib,
   check,
+  throws,
   evalHome,
 }:
 
@@ -92,6 +93,21 @@ let
     oauth = oauthAuth;
   };
 
+  envFileOnlyLines =
+    resolved.anthropicProfiles.mkEnvLines
+      {
+        label = "claude";
+      }
+      {
+        type = "api-key";
+        tokenFile = null;
+        extraEnvFiles.CUSTOM_SECRET = "/run/secrets/custom-secret";
+      };
+
+  pathSecretCfg = evalHome {
+    agents.providers.bad-provider.apiKeyFile = /tmp/not-a-string;
+  };
+
   switcher = resolved.mkProfileSwitch {
     name = "test-profile-switch";
     assistant = "test";
@@ -175,6 +191,17 @@ check "home-shared-providers-profiles" [
     ok = lib.any (
       line: lib.hasInfix "NODE_EXTRA_CA_CERTS=${lib.escapeShellArg "/run/secrets/gw-ca.pem"}" line
     ) gwEnvLines;
+  }
+  {
+    name = "mkEnvLines supports extraEnvFiles when tokenFile is null";
+    ok =
+      lib.any (line: lib.hasInfix "__read_secret()" line) envFileOnlyLines
+      && lib.any (line: lib.hasInfix "CUSTOM_SECRET=" line) envFileOnlyLines
+      && !(lib.any (line: lib.hasInfix "ANTHROPIC_AUTH_TOKEN" line) envFileOnlyLines);
+  }
+  {
+    name = "secret *File options reject Nix path literals to prevent store copying";
+    ok = throws pathSecretCfg.agents.providers.bad-provider.apiKeyFile;
   }
   {
     name = "mkProfileEnvVars tracks static and extra profile env vars for cleanup";
