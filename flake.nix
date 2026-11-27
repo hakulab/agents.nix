@@ -17,10 +17,14 @@
   # ------------------------------------------------------------------------------------------------
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
+    nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
 
     devkit = {
       url = "github:hakulab/devkit/v3";
-      inputs.nixpkgs.follows = "nixpkgs";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        nixpkgs-unstable.follows = "nixpkgs-unstable";
+      };
     };
   };
 
@@ -29,11 +33,29 @@
   # ------------------------------------------------------------------------------------------------
   outputs =
     {
+      self,
       nixpkgs,
+      nixpkgs-unstable,
       devkit,
-      ...
     }:
-    devkit.lib.eachSystem devkit.lib.systems (
+    let
+      agentsLib = import ./lib {
+        inherit (nixpkgs) lib;
+      };
+    in
+    {
+      lib = agentsLib;
+
+      overlays.default =
+        final: _:
+        import ./packages {
+          pkgs = final;
+          dk = devkit.lib.mkLib final;
+          playwrightDriver =
+            nixpkgs-unstable.legacyPackages.${final.stdenv.hostPlatform.system}.playwright-driver;
+        };
+    }
+    // devkit.lib.eachSystem devkit.lib.systems (
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
@@ -47,12 +69,36 @@
               enable = true;
               settings.flags = "--offline";
             };
-            nu-check.enable = true;
+            nu-check = {
+              enable = true;
+              settings.libDirs = [ ./tests/lib ];
+            };
             prettier.enable = true;
             shellcheck.enable = true;
             shfmt.enable = true;
             taplo.enable = true;
           };
+        };
+
+        packages = import ./packages {
+          inherit pkgs dk;
+          playwrightDriver = nixpkgs-unstable.legacyPackages.${system}.playwright-driver;
+        };
+
+        libChecks = import ./tests/lib-checks.nix {
+          inherit pkgs agentsLib;
+          inherit (nixpkgs) lib;
+        };
+
+        nuTests = dk.nuTests {
+          src = ./.;
+          libDirs = [ ./tests/lib ];
+          runtimeInputs = [
+            pkgs.direnv
+            pkgs.git
+            pkgs.nixfmt
+            pkgs.prek
+          ];
         };
       in
       {
@@ -69,6 +115,16 @@
             preCommit
           ];
         };
+
+        # ------------------------------------------------------------------------------------------
+        # Packages
+        # ------------------------------------------------------------------------------------------
+        inherit packages;
+
+        # ------------------------------------------------------------------------------------------
+        # Checks
+        # ------------------------------------------------------------------------------------------
+        checks = self.packages.${system} // libChecks // { nu-tests = nuTests; };
 
         # ------------------------------------------------------------------------------------------
         # Formatter
