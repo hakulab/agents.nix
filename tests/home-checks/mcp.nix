@@ -4,12 +4,12 @@
 
 {
   lib,
-  check,
-  throws,
-  evalHome,
+  harness,
 }:
 
 let
+  inherit (harness) check throws evalHome;
+
   cfg = evalHome {
     agents = {
       browser.chromiumPackage = null;

@@ -3,16 +3,13 @@
 # ==================================================================================================
 
 {
+  nixpkgs-unstable,
+  devkit,
   agentsLib,
-  devkitLib,
   repoRoot,
   sharedModule,
-  unstablePackagesFor,
 }:
 
-let
-  scriptsDir = repoRoot + "/scripts";
-in
 {
   config,
   pkgs,
@@ -23,8 +20,8 @@ in
 let
   cfg = config.agents.t3code;
   proxyCfg = config.agents.proxy;
-  unstablePackages = unstablePackagesFor pkgs.stdenv.hostPlatform.system;
-  dk = devkitLib.mkLib pkgs;
+  unstablePackages = nixpkgs-unstable.legacyPackages.${pkgs.stdenv.hostPlatform.system};
+  dk = devkit.lib.mkLib pkgs;
   json = pkgs.formats.json { };
 
   homeDir = config.home.homeDirectory;
@@ -143,7 +140,7 @@ let
 
   activateConfig = dk.writeNuApplication {
     name = "activate-t3code-config";
-    text = builtins.readFile (scriptsDir + "/t3code/activate-config.nu");
+    text = builtins.readFile (repoRoot + "/scripts/t3code/activate-config.nu");
     runtimeInputs = [ pkgs.coreutils ];
     libDirs = [ config.agents._internal.nuModules ];
     flags.config = json.generate "activate-t3code-config.json" {
@@ -153,6 +150,9 @@ let
     };
   };
 
+  # ------------------------------------------------------------------------------------------------
+  # Background service
+  # ------------------------------------------------------------------------------------------------
   serviceConfig = import ./service.nix {
     inherit
       pkgs

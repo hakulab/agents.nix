@@ -7,14 +7,14 @@
   mkNuHook,
   modelCall,
   patchInput,
-  modelCatalog,
-  modelIdFor,
-  promptFragments,
+  internal,
   modelCallCfg,
   timeouts,
 }:
 
 let
+  inherit (internal) modelCatalog modelIdFor promptFragments;
+
   commentGateModel =
     if modelCallCfg.commentGateModel != null then
       modelCallCfg.commentGateModel

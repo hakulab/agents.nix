@@ -4,11 +4,11 @@
 
 {
   lib,
-  shared,
+  resolved,
 }:
 
 let
-  policy = shared.permissions;
+  policy = resolved.permissions;
 
   sanitize =
     value:

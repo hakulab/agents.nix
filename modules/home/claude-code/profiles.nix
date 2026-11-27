@@ -7,16 +7,16 @@
   pkgs,
   lib,
   agentsLib,
-  resolved,
   scriptsDir,
   mcpFlag,
-  enabledAgents,
 }:
 
 let
   inherit (agentsLib.models) modelAliases roleTiers;
 
   cfg = config.agents.claude-code;
+  resolved = config.agents.resolved;
+  inherit (cfg.agents) enabledAgents;
   json = pkgs.formats.json { };
   stateDir = "${config.xdg.stateHome}/claude-code";
   claudeScriptsDir = scriptsDir + "/claude-code";
@@ -225,17 +225,13 @@ let
   # Custom agents
   # ------------------------------------------------------------------------------------------------
   mkAgentsDir =
-    {
-      agentModels,
-      efforts,
-    }:
+    profile:
     let
       agents = import ./agents.nix {
         inherit
           lib
           resolved
-          agentModels
-          efforts
+          profile
           enabledAgents
           ;
       };
@@ -285,12 +281,19 @@ let
     in
     pkgs.linkFarm "claude-profile-${name}" {
       "env.sh" = envScript;
-      agents = mkAgentsDir {
-        inherit (profile) agentModels efforts;
-      };
+      agents = mkAgentsDir profile;
     };
 
   profileBundles = lib.mapAttrs mkProfileBundle cfg.auth.profiles;
+
+  switch = resolved.mkProfileSwitch {
+    name = "claude-switch";
+    assistant = "Claude Code";
+    inherit stateDir;
+    extension = "d";
+    profiles = profileBundles;
+    inherit (cfg.auth) defaultProfile;
+  };
 
   # ------------------------------------------------------------------------------------------------
   # Profile loader and session helpers
@@ -304,15 +307,6 @@ let
 
   sessionArgs = pkgs.replaceVars (claudeScriptsDir + "/session-args.sh") {
     inherit mcpFlag;
-  };
-
-  switch = resolved.mkProfileSwitch {
-    name = "claude-switch";
-    assistant = "Claude Code";
-    inherit stateDir;
-    extension = "d";
-    profiles = profileBundles;
-    inherit (cfg.auth) defaultProfile;
   };
 
   processWrapper = pkgs.writeShellScript "claude-process-wrapper" (
@@ -337,11 +331,17 @@ in
   # Module config
   # ------------------------------------------------------------------------------------------------
   config = {
+    # ----------------------------------------------------------------------------------------------
+    # Assertions
+    # ----------------------------------------------------------------------------------------------
     assertions = [
       switch.assertion
     ]
     ++ lib.concatLists (lib.mapAttrsToList mkProfileAssertions cfg.auth.profiles);
 
+    # ----------------------------------------------------------------------------------------------
+    # Default profiles
+    # ----------------------------------------------------------------------------------------------
     agents.claude-code.auth.profiles = lib.mapAttrs (
       _: profile:
       lib.mapAttrs (
@@ -350,6 +350,9 @@ in
       ) profile
     ) profiles;
 
+    # ----------------------------------------------------------------------------------------------
+    # Packages, files, and activation
+    # ----------------------------------------------------------------------------------------------
     home = {
       packages = [ switch.package ];
 

@@ -5,12 +5,13 @@
 {
   lib,
   resolved,
-  agentModels,
-  efforts,
+  profile,
   enabledAgents,
 }:
 
 let
+  inherit (profile) agentModels efforts;
+
   renderField =
     settings: field: lib.optional (settings ? ${field}) "${field}: ${toString settings.${field}}";
 

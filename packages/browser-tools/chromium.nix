@@ -19,6 +19,7 @@ pkgs.runCommand "playwright-chromium"
     ];
 
     PLAYWRIGHT_BROWSERS_PATH = browsers;
+
     meta = {
       description = "Chromium matching the pinned Playwright driver";
       license = lib.licenses.bsd3;

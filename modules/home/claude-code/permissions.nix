@@ -23,11 +23,8 @@ let
   toAllowRule = command: "Bash(${command} *)";
 
   commandRules = map toAllowRule policy.allowCommands;
-
   skillRules = map toAllowRule (resolved.mkSkillScriptPaths "${resolved.configDirs.claude}/skills");
-
   mcpRules = map (entry: "mcp__${entry.displayName}__${entry.tool}") policy.mcpAllows;
-
   toolRules = map (tool: toolNames.${tool}) allows.tools;
 
   # A leading `//` makes a Claude Code path rule absolute.

@@ -7,13 +7,13 @@
   pkgs,
   lib,
   agentsLib,
-  shared,
 }:
 
 let
   cfg = config.agents.omp.auth;
+  resolved = config.agents.resolved;
   yaml = pkgs.formats.yaml { };
-  configDir = shared.configDirs.omp;
+  configDir = resolved.configDirs.omp;
   stateDir = "${config.xdg.stateHome}/omp";
 
   # ------------------------------------------------------------------------------------------------
@@ -61,7 +61,7 @@ let
   # ------------------------------------------------------------------------------------------------
   # Profile definitions
   # ------------------------------------------------------------------------------------------------
-  resolvedProfiles = shared.resolveProfiles {
+  resolvedProfiles = resolved.resolveProfiles {
     nativeFamily = "gpt";
     client = "omp";
   };
@@ -97,7 +97,7 @@ let
   # ------------------------------------------------------------------------------------------------
   # Profile switcher
   # ------------------------------------------------------------------------------------------------
-  switch = shared.mkProfileSwitch {
+  switch = resolved.mkProfileSwitch {
     name = "omp-switch";
     assistant = "OMP";
     inherit stateDir;
@@ -138,6 +138,9 @@ in
       }
     ];
 
+    # ----------------------------------------------------------------------------------------------
+    # Packages, files, and activation
+    # ----------------------------------------------------------------------------------------------
     home = {
       packages = [ switch.package ];
       file = switch.files;

@@ -3,11 +3,11 @@
 # ==================================================================================================
 
 {
+  devkit,
+  llm-agents,
   agentsLib,
-  devkitLib,
-  llmAgents,
   repoRoot,
-  sharedHomeModule,
+  sharedModule,
 }:
 
 let
@@ -24,7 +24,7 @@ let
   cfg = config.agents.codex;
   resolved = config.agents.resolved;
   configDir = resolved.configDirs.codex;
-  dk = devkitLib.mkLib pkgs;
+  dk = devkit.lib.mkLib pkgs;
   inherit (config.agents._internal) nuModules;
   json = pkgs.formats.json { };
 
@@ -35,7 +35,7 @@ in
 {
   key = "agents-nix/home/codex";
 
-  imports = [ sharedHomeModule ];
+  imports = [ sharedModule ];
 
   # ------------------------------------------------------------------------------------------------
   # Options
@@ -45,7 +45,7 @@ in
 
     package = lib.mkOption {
       type = lib.types.package;
-      default = llmAgents.packages.${pkgs.stdenv.hostPlatform.system}.codex;
+      default = llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.codex;
       defaultText = lib.literalExpression "llm-agents.packages.\${system}.codex";
       description = "Codex CLI package to wrap and install";
     };
@@ -234,9 +234,12 @@ in
       # --------------------------------------------------------------------------------------------
       baseSettings =
         (import ./settings.nix {
-          inherit hooks mcp;
-          inherit (resolved) notify;
-          inherit permissions;
+          inherit
+            resolved
+            hooks
+            mcp
+            permissions
+            ;
         })
         // profiles.settings
         // lib.optionalAttrs (cfg.plugins != { }) {
@@ -286,6 +289,7 @@ in
           codex = {
             mcp.disabledServers = lib.mkDefault config.agents.mcp.disabledServers;
             plugins = lib.mapAttrs (_: plugin: { enabled = lib.mkDefault plugin.enabled; }) defaultPlugins;
+
             _internal = {
               settings = codexSettings;
               inherit (profiles)
@@ -296,6 +300,7 @@ in
                 ;
             };
           };
+
           skills.targets.codex = lib.mkDefault true;
         };
 

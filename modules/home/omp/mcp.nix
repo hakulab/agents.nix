@@ -4,17 +4,17 @@
 
 {
   lib,
-  shared,
+  resolved,
   enabledServers,
 }:
 
 let
-  activeServers = lib.filter (name: shared.mcp.servers ? ${name}) enabledServers;
+  activeServers = lib.filter (name: resolved.mcp.servers ? ${name}) enabledServers;
 
   mkEntry =
     name:
-    lib.nameValuePair (shared.mcp.displayNames.${name} or name) (
-      shared.mcp.servers.${name} // { timeout = shared.mcp.timeouts.startup * 1000; }
+    lib.nameValuePair (resolved.mcp.displayNames.${name} or name) (
+      resolved.mcp.servers.${name} // { timeout = resolved.mcp.timeouts.startup * 1000; }
     );
 in
 {

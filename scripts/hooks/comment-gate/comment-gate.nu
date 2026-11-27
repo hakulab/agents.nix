@@ -9,6 +9,10 @@ use std-rfc/str
 const MIN_CHARS = 12
 const MAX_TOKENS = 8192
 
+# --------------------------------------------------------------------------------------------------
+# Prefilter constants
+# --------------------------------------------------------------------------------------------------
+
 # Line comment openers by file extension. A payload carrying none of its language's openers cannot
 # carry a comment, which is the whole prefilter.
 const OPENERS = {
@@ -57,6 +61,10 @@ const OPENERS = {
 # banner, so it never justifies a judge call on its own.
 const BANNER_RULE = '(?m)^\s*(?://|#|--|;)\s*[=*_-]{4,}\s*$'
 
+# --------------------------------------------------------------------------------------------------
+# Payload extraction and prefiltering
+# --------------------------------------------------------------------------------------------------
+
 def payload [input: record, config: record]: nothing -> list<record> {
   let args = $input.tool_input
   match $input.tool_name {
@@ -99,6 +107,10 @@ def commentish [path: string, text: string]: nothing -> bool {
   let stripped = ($text | str replace --regex --all $BANNER_RULE "")
   $openers | any {|opener| $stripped | str contains $opener }
 }
+
+# --------------------------------------------------------------------------------------------------
+# Model judgment and verdict
+# --------------------------------------------------------------------------------------------------
 
 # The model's reply, or the caller's reason for having none.
 def judge [text: string, config: record]: nothing -> record {
@@ -169,6 +181,10 @@ def reason [raw: string]: nothing -> string {
   )
   if ($body | is-empty) { "comment doctrine violation" } else { $body }
 }
+
+# --------------------------------------------------------------------------------------------------
+# Entry point
+# --------------------------------------------------------------------------------------------------
 
 def gate [config: record]: nothing -> any {
   let input = (^cat | from json)

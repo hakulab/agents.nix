@@ -92,6 +92,7 @@ in
       # --------------------------------------------------------------------------------------------
       "hostnamectl status"
       "localectl status"
+
       "loginctl list-seats"
       "loginctl list-sessions"
       "loginctl list-users"
@@ -100,6 +101,7 @@ in
       "loginctl show-session"
       "loginctl show-user"
       "loginctl user-status"
+
       "systemctl --user is-active"
       "systemctl --user is-enabled"
       "systemctl --user is-failed"
@@ -115,6 +117,7 @@ in
       "systemctl --user list-units"
       "systemctl --user show"
       "systemctl --user status"
+
       "systemctl is-active"
       "systemctl is-enabled"
       "systemctl is-failed"
@@ -130,6 +133,7 @@ in
       "systemctl list-units"
       "systemctl show"
       "systemctl status"
+
       "timedatectl show"
       "timedatectl status"
       "timedatectl timesync-status"
@@ -169,6 +173,7 @@ in
       "git shortlog"
       "git status"
       "git worktree list"
+
       "workmux path"
 
       # --------------------------------------------------------------------------------------------
@@ -188,6 +193,7 @@ in
       "gh run watch"
       "gh search code"
       "gh search issues"
+
       "glab ci list"
       "glab ci status"
       "glab ci trace"
@@ -218,6 +224,7 @@ in
       "docker ps"
       "docker version"
       "docker volume ls"
+
       "helm dependency list"
       "helm env"
       "helm lint"
@@ -226,6 +233,7 @@ in
       "helm search"
       "helm verify"
       "helm version"
+
       "podman compose ls"
       "podman compose ps"
       "podman images"
@@ -330,7 +338,9 @@ in
       "docker compose logs"
       "docker inspect"
       "docker logs"
+
       "kubectl config"
+
       "podman compose config"
       "podman compose logs"
       "podman inspect"
@@ -361,16 +371,19 @@ in
       "confluence_search"
       "confluence_search_user"
     ];
+
     deepwiki = [
       "ask_wiki_question"
       "read_wiki_contents"
       "read_wiki_structure"
     ];
+
     exa = [
       "web_fetch_exa"
       "web_search_advanced_exa"
       "web_search_exa"
     ];
+
     github = [
       "get_commit"
       "get_file_contents"
@@ -399,6 +412,7 @@ in
       "search_repositories"
       "search_users"
     ];
+
     gitlab = [
       "get_branch"
       "get_branch_diffs"

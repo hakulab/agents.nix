@@ -14,6 +14,10 @@ const FIXTURES = ($SCRIPT_DIR | path join "fixtures")
 const PROMPT = "Shared rules."
 const REPAIR_PROMPT = "Repair rules."
 
+# --------------------------------------------------------------------------------------------------
+# Test helpers
+# --------------------------------------------------------------------------------------------------
+
 # Runs the script with stub rules and its generated config, as the wrapper does. `run` is the
 # completed script, `calls` records each model call's `model`, `user` message, and `passages`, and
 # `config` holds the record written for the run.
@@ -135,6 +139,10 @@ def long-document [count: int]: nothing -> string {
   1..$count | each {|n| $"Paragraph ($n). ($filler)" } | str join "\n\n"
 }
 
+# --------------------------------------------------------------------------------------------------
+# Configuration and model selection
+# --------------------------------------------------------------------------------------------------
+
 def "test a caller-supplied config replaces the default" [] {
   let target = (case "polish" "ideographic-indent")
   let input = (bytes ($target.dir | path join "input.md"))
@@ -164,6 +172,10 @@ def "test the default model and --model" [] {
   assert equal $chosen.run.exit_code 0 $chosen.run.stderr
   assert equal ($chosen.calls | get model) ["gateway/gemini-4-neon"]
 }
+
+# --------------------------------------------------------------------------------------------------
+# Fixture suites
+# --------------------------------------------------------------------------------------------------
 
 def "test polish cases" [] {
   for case in (cases "polish") {
@@ -210,6 +222,10 @@ def "test refuse cases" [] {
     }
   }
 }
+
+# --------------------------------------------------------------------------------------------------
+# Retry and batching
+# --------------------------------------------------------------------------------------------------
 
 def "test a refused rewrite is retried with its reason" [] {
   let target = (case "polish" "repair-succeeds")
@@ -331,6 +347,10 @@ def "test a long document repairs each batch with the whole document as context"
     assert equal $kept $variant.kept $"($variant.name): kept passages"
   }
 }
+
+# --------------------------------------------------------------------------------------------------
+# Failure handling
+# --------------------------------------------------------------------------------------------------
 
 def "test fail cases" [] {
   for case in (cases "fail") {

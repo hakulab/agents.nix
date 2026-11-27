@@ -3,10 +3,10 @@
 # ==================================================================================================
 
 {
+  llm-agents,
   agentsLib,
-  sharedHomeModule,
-  llmAgentsPackagesFor,
   repoRoot,
+  sharedModule,
 }:
 
 {
@@ -18,8 +18,8 @@
 
 let
   cfg = config.agents.omp;
-  shared = config.agents.resolved;
-  inherit (shared) agentRoleOptions instructions;
+  resolved = config.agents.resolved;
+  inherit (resolved) agentRoleOptions instructions;
 
   extensions = import ./extensions.nix {
     inherit pkgs;
@@ -31,13 +31,12 @@ let
       pkgs
       lib
       agentsLib
-      shared
       ;
   };
 in
 {
   imports = [
-    sharedHomeModule
+    sharedModule
   ];
 
   # ------------------------------------------------------------------------------------------------
@@ -48,7 +47,7 @@ in
 
     package = lib.mkOption {
       type = lib.types.package;
-      default = (llmAgentsPackagesFor pkgs.stdenv.hostPlatform.system).omp;
+      default = llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.omp;
       defaultText = lib.literalExpression "inputs.llm-agents.packages.\${system}.omp";
       description = "Oh My Pi package to wrap and install";
     };
@@ -61,8 +60,8 @@ in
       };
     };
 
-    mcp = shared.mcp.mkMcpOptions {
-      default = shared.mcp.serverNames;
+    mcp = resolved.mcp.mkMcpOptions {
+      default = resolved.mcp.serverNames;
       description = "MCP servers for OMP";
     };
 
@@ -124,17 +123,17 @@ in
       # Submodule outputs
       # --------------------------------------------------------------------------------------------
       agents = import ./agents.nix {
-        inherit lib shared;
+        inherit lib resolved;
         inherit (cfg.agents) enabledAgents;
       };
 
       mcp = import ./mcp.nix {
-        inherit lib shared;
-        enabledServers = shared.mcp.computeEnabledServers cfg.mcp;
+        inherit lib resolved;
+        enabledServers = resolved.mcp.computeEnabledServers cfg.mcp;
       };
 
       baseSettings = import ./settings.nix {
-        inherit shared;
+        inherit resolved;
       };
 
       settingsConfigFile = yaml.generate "omp-settings.yml" (
@@ -143,7 +142,7 @@ in
 
       permissionConfigFile = yaml.generate "omp-permissions.yml" (
         import ./permissions.nix {
-          inherit lib shared;
+          inherit lib resolved;
         }
       );
 
@@ -216,7 +215,7 @@ in
             ".omp/agent/extensions/file-formatter.ts".source =
               pkgs.replaceVars (repoRoot + "/scripts/omp/file-formatter.ts")
                 {
-                  inherit (shared) fileFormatter;
+                  inherit (resolved) fileFormatter;
                 };
           }
           // lib.optionalAttrs cfg.extensions.telegram.enable {

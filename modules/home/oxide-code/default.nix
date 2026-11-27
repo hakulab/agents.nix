@@ -3,11 +3,10 @@
 # ==================================================================================================
 
 {
+  oxide-code,
   agentsLib,
-  sharedHomeModule,
-  oxideCodeHomeModule,
-  oxideCodePackagesFor,
   repoRoot,
+  sharedModule,
 }:
 
 {
@@ -19,7 +18,6 @@
 
 let
   cfg = config.agents.oxide-code;
-  shared = config.agents.resolved;
 
   profiles = import ./profiles.nix {
     inherit
@@ -27,7 +25,6 @@ let
       pkgs
       lib
       agentsLib
-      shared
       repoRoot
       ;
   };
@@ -56,8 +53,8 @@ let
 in
 {
   imports = [
-    sharedHomeModule
-    oxideCodeHomeModule
+    sharedModule
+    oxide-code.homeModules.default
   ];
 
   # ------------------------------------------------------------------------------------------------
@@ -68,7 +65,7 @@ in
 
     package = lib.mkOption {
       type = lib.types.package;
-      default = (oxideCodePackagesFor pkgs.stdenv.hostPlatform.system).oxide-code;
+      default = oxide-code.packages.${pkgs.stdenv.hostPlatform.system}.oxide-code;
       defaultText = lib.literalExpression "inputs.oxide-code.packages.\${system}.oxide-code";
       description = "oxide-code package to wrap and install";
     };

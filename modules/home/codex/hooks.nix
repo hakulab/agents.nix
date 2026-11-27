@@ -39,9 +39,9 @@ let
   };
 
   installed = sharedHooks.install (
-    lib.optional hooksCfg.compactContext.enable compactContext
-    ++ lib.optional hooksCfg.autoFormat.enable sharedHooks.hooks.autoFormat
+    lib.optional hooksCfg.autoFormat.enable sharedHooks.hooks.autoFormat
     ++ lib.optional hooksCfg.commentGate.enable sharedHooks.hooks.commentGate
+    ++ lib.optional hooksCfg.compactContext.enable compactContext
   );
 in
 {

@@ -31,9 +31,9 @@ let
 in
 {
   inherit
-    joinSections
-    mkPromptRenderer
-    renderFile
     renderText
+    renderFile
+    mkPromptRenderer
+    joinSections
     ;
 }

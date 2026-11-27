@@ -5,12 +5,13 @@
 {
   pkgs,
   lib,
-  check,
-  evalModules,
+  harness,
   homeModules,
 }:
 
 let
+  inherit (harness) check evalModules;
+
   stubClaude = pkgs.writeShellScriptBin "claude" ''
     exit 0
   '';
@@ -29,11 +30,6 @@ let
     homeModules.default
     {
       agents = {
-        acp.enable = true;
-        activity-report.enable = true;
-        agent-project-move.enable = true;
-        ccusage.enable = true;
-
         claude-code = {
           enable = true;
           package = stubClaude;
@@ -53,9 +49,14 @@ let
           ];
         };
 
-        ctx7.enable = true;
         omp.enable = true;
         oxide-code.enable = true;
+
+        acp.enable = true;
+        activity-report.enable = true;
+        agent-project-move.enable = true;
+        ccusage.enable = true;
+        ctx7.enable = true;
         t3code.enable = true;
         workmux.enable = true;
       };
@@ -93,15 +94,15 @@ check "home-default" [
   {
     name = "homeModules.default keeps every assistant and peripheral tool disabled by default";
     ok =
-      !defaultDisabledCfg.agents.acp.enable
+      !defaultDisabledCfg.agents.claude-code.enable
+      && !defaultDisabledCfg.agents.codex.enable
+      && !defaultDisabledCfg.agents.omp.enable
+      && !defaultDisabledCfg.agents.oxide-code.enable
+      && !defaultDisabledCfg.agents.acp.enable
       && !defaultDisabledCfg.agents.activity-report.enable
       && !defaultDisabledCfg.agents.agent-project-move.enable
       && !defaultDisabledCfg.agents.ccusage.enable
-      && !defaultDisabledCfg.agents.claude-code.enable
-      && !defaultDisabledCfg.agents.codex.enable
       && !defaultDisabledCfg.agents.ctx7.enable
-      && !defaultDisabledCfg.agents.omp.enable
-      && !defaultDisabledCfg.agents.oxide-code.enable
       && !defaultDisabledCfg.agents.t3code.enable
       && !defaultDisabledCfg.agents.workmux.enable
       && !defaultDisabledCfg.programs.claude-code.enable

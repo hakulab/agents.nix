@@ -3,8 +3,8 @@
 # ==================================================================================================
 
 {
+  self,
   agentsLib,
-  packagesFor,
 }:
 
 {
@@ -183,6 +183,9 @@ let
       exec ${lib.escapeShellArgs command} "$@"
     '';
 
+  # ------------------------------------------------------------------------------------------------
+  # Server resolution
+  # ------------------------------------------------------------------------------------------------
   resolveServer =
     name: server:
     if server.type == "http" then
@@ -203,7 +206,7 @@ in
 {
   imports = [
     (import ./presets {
-      inherit agentsLib packagesFor;
+      inherit self agentsLib;
     })
   ];
 
@@ -211,20 +214,15 @@ in
   # Options
   # ------------------------------------------------------------------------------------------------
   options.agents = {
-    _internal.mcp = lib.mkOption {
-      type = lib.types.anything;
-      internal = true;
-    };
-
     mcp = {
-      disabledServers = agentsLib.mcp.mkDisabledServersOption {
-        description = "Global MCP servers to disable across all assistants";
-      };
-
       servers = lib.mkOption {
         type = lib.types.attrsOf mcpServerSubmodule;
         default = { };
         description = "Declared MCP servers wrapped and exposed to assistants";
+      };
+
+      disabledServers = agentsLib.mcp.mkDisabledServersOption {
+        description = "Global MCP servers to disable across all assistants";
       };
 
       timeouts = {
@@ -243,20 +241,20 @@ in
         };
       };
     };
+
+    _internal.mcp = lib.mkOption {
+      type = lib.types.anything;
+      internal = true;
+    };
   };
 
   # ------------------------------------------------------------------------------------------------
   # Config
   # ------------------------------------------------------------------------------------------------
   config = {
-    agents._internal.mcp = {
-      inherit displayNames;
-      inherit (cfg) disabledServers timeouts;
-      inherit (agentsLib.mcp) computeEnabledServers mkMcpOptions;
-      serverNames = builtins.attrNames resolvedServers;
-      servers = resolvedServers;
-    };
-
+    # ----------------------------------------------------------------------------------------------
+    # Assertions
+    # ----------------------------------------------------------------------------------------------
     assertions = lib.mapAttrsToList (name: server: {
       assertion =
         server.enable -> (if server.type == "http" then server.url != null else server.command != [ ]);
@@ -266,5 +264,16 @@ in
         else
           "agents.mcp.servers.${name}.command must be non-empty for stdio MCP servers";
     }) cfg.servers;
+
+    # ----------------------------------------------------------------------------------------------
+    # Internal exports
+    # ----------------------------------------------------------------------------------------------
+    agents._internal.mcp = {
+      inherit displayNames;
+      inherit (cfg) disabledServers timeouts;
+      inherit (agentsLib.mcp) computeEnabledServers mkMcpOptions;
+      serverNames = builtins.attrNames resolvedServers;
+      servers = resolvedServers;
+    };
   };
 }

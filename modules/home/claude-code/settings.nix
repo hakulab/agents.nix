@@ -4,13 +4,12 @@
 
 {
   lib,
+  cfg,
   resolved,
   hooks,
   permissionSettings,
   plugins,
   profileSettings,
-  statuslineEnable,
-  extraSettings,
 }:
 
 let
@@ -79,26 +78,28 @@ let
     env = {
       API_FORCE_IDLE_TIMEOUT = "0";
       API_TIMEOUT_MS = "1800000";
-      CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = "1";
+      MCP_TIMEOUT = toString (resolved.mcp.timeouts.startup * 1000);
+      ENABLE_PROMPT_CACHING_1H = "1";
+
       CLAUDE_CODE_ENABLE_AUTO_MODE = "1";
       CLAUDE_CODE_ENABLE_TODO_TOOLS = "1";
       CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = "1";
       # Also stops the subagent progress summaries, which fork the subagent's context.
       CLAUDE_CODE_FORK_SUBAGENT = "0";
-      CLAUDE_CODE_SCROLL_SPEED = "1";
       CLAUDE_CODE_STOP_HOOK_BLOCK_CAP = "3";
-      DISABLE_INSTALLATION_CHECKS = "1";
       ENABLE_CLAUDEAI_MCP_SERVERS = "0";
-      ENABLE_PROMPT_CACHING_1H = "1";
+
+      CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = "1";
+      DISABLE_INSTALLATION_CHECKS = "1";
       FORCE_AUTOUPDATE_PLUGINS = "1";
-      MCP_TIMEOUT = toString (resolved.mcp.timeouts.startup * 1000);
+      CLAUDE_CODE_SCROLL_SPEED = "1";
     };
   }
-  // lib.optionalAttrs statuslineEnable {
+  // lib.optionalAttrs cfg.statusline.enable {
     statusLine = {
       type = "command";
       command = "claude-statusline";
     };
   };
 in
-lib.recursiveUpdate baseSettings extraSettings
+lib.recursiveUpdate baseSettings cfg.extraSettings

@@ -3,14 +3,14 @@
 # ==================================================================================================
 
 {
+  self,
+  devkit,
   agentsLib,
-  devkitLib,
-  devkitOutPath,
   repoRoot,
-  packagesFor,
 }:
 
 let
+  devkitLib = devkit.lib;
   assetsDir = repoRoot + "/assets";
   scriptsDir = repoRoot + "/scripts";
 
@@ -37,7 +37,7 @@ in
 
 let
   cfg = config.agents;
-  selfPackages = packagesFor pkgs.stdenv.hostPlatform.system;
+  selfPackages = self.packages.${pkgs.stdenv.hostPlatform.system};
 
   configDirs = {
     claude = "${config.home.homeDirectory}/.claude";
@@ -55,58 +55,35 @@ in
   key = "agents-nix/home/shared";
 
   imports = [
-    (import ./hooks {
-      inherit
-        devkitLib
-        mkNuModules
-        packagesFor
-        scriptsDir
-        ;
-    })
     (import ./instructions.nix {
-      inherit
-        agentsLib
-        assetsDir
-        devkitOutPath
-        ;
-    })
-    (import ./mcp {
-      inherit
-        agentsLib
-        packagesFor
-        ;
-    })
-    (import ./model-call.nix {
-      inherit
-        devkitLib
-        scriptsDir
-        ;
-    })
-    (import ./notify.nix {
-      inherit
-        devkitLib
-        scriptsDir
-        ;
-    })
-    (import ./permissions.nix {
-      inherit agentsLib;
-    })
-    (import ./profiles {
-      inherit
-        agentsLib
-        devkitLib
-        mkNuModules
-        scriptsDir
-        ;
+      inherit agentsLib assetsDir;
+      devkitOutPath = devkit.outPath;
     })
     (import ./roles {
       inherit assetsDir;
     })
+    (import ./permissions.nix {
+      inherit agentsLib;
+    })
+
+    (import ./profiles {
+      inherit agentsLib devkitLib scriptsDir;
+    })
+    (import ./model-call.nix {
+      inherit devkitLib scriptsDir;
+    })
+
+    (import ./mcp {
+      inherit self agentsLib;
+    })
+    (import ./notify.nix {
+      inherit devkitLib scriptsDir;
+    })
+    (import ./hooks {
+      inherit self devkitLib scriptsDir;
+    })
     (import ./skills {
-      inherit
-        assetsDir
-        devkitLib
-        ;
+      inherit assetsDir devkitLib;
     })
   ];
 
@@ -130,6 +107,12 @@ in
       };
     };
 
+    resolved = lib.mkOption {
+      type = lib.types.attrsOf lib.types.anything;
+      readOnly = true;
+      description = "Resolved read-only interface consumed by assistant adapters and external modules";
+    };
+
     _internal = {
       configDirs = lib.mkOption {
         type = lib.types.anything;
@@ -140,12 +123,6 @@ in
         type = lib.types.anything;
         internal = true;
       };
-    };
-
-    resolved = lib.mkOption {
-      type = lib.types.attrsOf lib.types.anything;
-      readOnly = true;
-      description = "Resolved read-only interface consumed by assistant adapters and external modules";
     };
   };
 
@@ -160,33 +137,40 @@ in
 
     resolved = {
       inherit (cfg) dataDir;
-      inherit (cfg._internal)
-        agentRoleOptions
-        agentRoles
-        anthropicProfiles
-        configDirs
-        fileFormatter
-        instructionDocs
-        instructions
-        instructionsDir
-        mcp
-        mkHooks
-        mkModelCall
-        mkProfileSwitch
-        mkSkillScriptPaths
-        modelCatalog
-        notify
-        permissions
-        profileResolver
-        promptFragments
-        resolveProfiles
-        timeouts
-        workloadPolicy
-        ;
+      inherit (cfg._internal) configDirs;
       preferences = {
         askTimeout = 300;
         plansDir = ".agents/plans";
       };
+
+      inherit (cfg._internal)
+        instructionDocs
+        instructions
+        instructionsDir
+        promptFragments
+        agentRoles
+        agentRoleOptions
+        permissions
+        ;
+
+      inherit (cfg._internal)
+        modelCatalog
+        workloadPolicy
+        profileResolver
+        resolveProfiles
+        anthropicProfiles
+        mkProfileSwitch
+        mkModelCall
+        ;
+
+      inherit (cfg._internal)
+        mcp
+        notify
+        fileFormatter
+        mkHooks
+        timeouts
+        mkSkillScriptPaths
+        ;
     };
   };
 }

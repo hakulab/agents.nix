@@ -13,11 +13,11 @@ Within a minor version, stable releases keep exported flake outputs and document
 
 - `lib`
 - `homeModules.default`
+- `homeModules.shared`
 - `homeModules.claude-code`
 - `homeModules.codex`
 - `homeModules.omp`
 - `homeModules.oxide-code`
-- `homeModules.shared`
 - `homeModules.{acp,activity-report,agent-project-move,ccusage,ctx7,t3code,workmux}`
 - `overlays.default`
 - `packages.<system>`

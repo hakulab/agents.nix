@@ -4,11 +4,12 @@
 
 {
   agentsLib,
-  check,
-  throws,
+  harness,
 }:
 
 let
+  inherit (harness) check throws;
+
   # ------------------------------------------------------------------------------------------------
   # Catalog and provider fixtures
   # ------------------------------------------------------------------------------------------------
@@ -71,6 +72,7 @@ let
       nativeWebSearch = false;
       clients = [ "claude-code" ];
     };
+
     direct-prose = {
       provider = "direct";
       channel = null;
@@ -80,6 +82,7 @@ let
       nativeWebSearch = null;
       clients = null;
     };
+
     gateway-anthropic = {
       provider = "gateway";
       channel = "anthropic";
@@ -88,18 +91,21 @@ let
       proseModel = null;
       nativeWebSearch = null;
     };
+
     gateway-custom-prose = {
       provider = "gateway";
       channel = "anthropic";
       family = "claude";
       proseModel = "gemini-4-hydrogen";
     };
+
     gateway-unknown-prose = {
       provider = "gateway";
       channel = "anthropic";
       family = "claude";
       proseModel = "nonexistent-model";
     };
+
     gateway-hybrid = {
       provider = "gateway";
       defaultsKey = "hybrid";

@@ -98,11 +98,6 @@ in
   # Options
   # ------------------------------------------------------------------------------------------------
   options.agents = {
-    _internal.permissions = lib.mkOption {
-      type = lib.types.anything;
-      internal = true;
-    };
-
     permissions = {
       ownRepositories = lib.mkOption {
         type = lib.types.listOf lib.types.str;
@@ -153,6 +148,11 @@ in
         default = [ ];
         description = "Extra policy entries appended to the gate list";
       };
+    };
+
+    _internal.permissions = lib.mkOption {
+      type = lib.types.anything;
+      internal = true;
     };
   };
 

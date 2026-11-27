@@ -70,6 +70,49 @@ in
   # Options
   # ------------------------------------------------------------------------------------------------
   options.agents = {
+    instructions = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Install shared agent instruction documents";
+      };
+
+      docsDir = lib.mkOption {
+        type = lib.types.str;
+        default = "${cfg.dataDir}/instructions";
+        description = "Directory where companion instruction guides are installed";
+      };
+
+      docs = lib.mkOption {
+        type = lib.types.attrsOf lib.types.str;
+        default = { };
+        description = "Companion instruction guide files installed under docsDir";
+      };
+
+      extraLinks = lib.mkOption {
+        type = lib.types.attrsOf lib.types.str;
+        default = { };
+        description = "Placeholder substitutions applied when rendering baseText";
+      };
+
+      baseText = lib.mkOption {
+        type = lib.types.lines;
+        default = renderBase (
+          cfg.instructions.extraLinks
+          // {
+            "@docsDir@" = cfg.instructions.docsDir;
+          }
+        );
+        description = "Base cross-assistant instruction text";
+      };
+
+      extraSections = lib.mkOption {
+        type = lib.types.lines;
+        default = "";
+        description = "Additional instruction sections appended after baseText";
+      };
+    };
+
     _internal = {
       instructionDocs = lib.mkOption {
         type = lib.types.anything;
@@ -89,49 +132,6 @@ in
       promptFragments = lib.mkOption {
         type = lib.types.anything;
         internal = true;
-      };
-    };
-
-    instructions = {
-      enable = lib.mkOption {
-        type = lib.types.bool;
-        default = true;
-        description = "Install shared agent instruction documents";
-      };
-
-      docsDir = lib.mkOption {
-        type = lib.types.str;
-        default = "${cfg.dataDir}/instructions";
-        description = "Directory where companion instruction guides are installed";
-      };
-
-      baseText = lib.mkOption {
-        type = lib.types.lines;
-        default = renderBase (
-          cfg.instructions.extraLinks
-          // {
-            "@docsDir@" = cfg.instructions.docsDir;
-          }
-        );
-        description = "Base cross-assistant instruction text";
-      };
-
-      extraSections = lib.mkOption {
-        type = lib.types.lines;
-        default = "";
-        description = "Additional instruction sections appended after baseText";
-      };
-
-      docs = lib.mkOption {
-        type = lib.types.attrsOf lib.types.str;
-        default = { };
-        description = "Companion instruction guide files installed under docsDir";
-      };
-
-      extraLinks = lib.mkOption {
-        type = lib.types.attrsOf lib.types.str;
-        default = { };
-        description = "Placeholder substitutions applied when rendering baseText";
       };
     };
   };

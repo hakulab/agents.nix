@@ -5,7 +5,6 @@
 {
   agentsLib,
   devkitLib,
-  mkNuModules,
   scriptsDir,
 }:
 
@@ -19,7 +18,7 @@
 let
   cfg = config.agents;
   dk = devkitLib.mkLib pkgs;
-  nuModules = mkNuModules lib;
+  inherit (cfg._internal) nuModules;
 
   # ------------------------------------------------------------------------------------------------
   # Submodule types
@@ -195,38 +194,6 @@ in
   # Options
   # ------------------------------------------------------------------------------------------------
   options.agents = {
-    _internal = {
-      anthropicProfiles = lib.mkOption {
-        type = lib.types.anything;
-        internal = true;
-      };
-
-      mkProfileSwitch = lib.mkOption {
-        type = lib.types.anything;
-        internal = true;
-      };
-
-      modelCatalog = lib.mkOption {
-        type = lib.types.anything;
-        internal = true;
-      };
-
-      profileResolver = lib.mkOption {
-        type = lib.types.anything;
-        internal = true;
-      };
-
-      resolveProfiles = lib.mkOption {
-        type = lib.types.anything;
-        internal = true;
-      };
-
-      workloadPolicy = lib.mkOption {
-        type = lib.types.anything;
-        internal = true;
-      };
-    };
-
     models = {
       catalog = lib.mkOption {
         type = lib.types.attrsOf (lib.types.attrsOf lib.types.anything);
@@ -258,19 +225,51 @@ in
       default = { };
       description = "Authentication and model-routing profiles shared across assistants";
     };
+
+    _internal = {
+      modelCatalog = lib.mkOption {
+        type = lib.types.anything;
+        internal = true;
+      };
+
+      workloadPolicy = lib.mkOption {
+        type = lib.types.anything;
+        internal = true;
+      };
+
+      profileResolver = lib.mkOption {
+        type = lib.types.anything;
+        internal = true;
+      };
+
+      resolveProfiles = lib.mkOption {
+        type = lib.types.anything;
+        internal = true;
+      };
+
+      anthropicProfiles = lib.mkOption {
+        type = lib.types.anything;
+        internal = true;
+      };
+
+      mkProfileSwitch = lib.mkOption {
+        type = lib.types.anything;
+        internal = true;
+      };
+    };
   };
 
   # ------------------------------------------------------------------------------------------------
   # Config
   # ------------------------------------------------------------------------------------------------
   config.agents._internal = {
-    inherit
-      anthropicProfiles
-      mkProfileSwitch
-      profileResolver
-      resolveProfiles
-      ;
     modelCatalog = resolvedModelCatalog;
     workloadPolicy = resolvedWorkloadPolicy;
+    inherit
+      profileResolver
+      resolveProfiles
+      anthropicProfiles
+      mkProfileSwitch
+      ;
   };
 }

@@ -16,6 +16,9 @@ let
   p = config.agents.mcp.presets.atlassian;
 in
 {
+  # ------------------------------------------------------------------------------------------------
+  # Options
+  # ------------------------------------------------------------------------------------------------
   options.agents.mcp.presets.atlassian = {
     enable = lib.mkEnableOption "Atlassian MCP server preset";
 
@@ -38,6 +41,9 @@ in
     };
   };
 
+  # ------------------------------------------------------------------------------------------------
+  # Config
+  # ------------------------------------------------------------------------------------------------
   config.agents.mcp.servers = lib.mkIf p.enable {
     atlassian = {
       displayName = lib.mkDefault agentsLib.mcp.presetDisplayNames.atlassian;

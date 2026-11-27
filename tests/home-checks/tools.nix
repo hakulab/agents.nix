@@ -5,14 +5,14 @@
 {
   pkgs,
   lib,
-  check,
+  harness,
   homeModules,
   darwinPkgs,
-  evalHomeWith,
-  homeDirectory,
 }:
 
 let
+  inherit (harness) check evalModulesWith homeDirectory;
+
   allToolModules = [
     homeModules.acp
     homeModules.activity-report
@@ -35,18 +35,20 @@ let
       chmod +x "$out/bin/${name}"
     '';
 
+  hasPkgPrefix = prefix: packages: lib.any (pkg: lib.hasPrefix prefix (pkg.name or "")) packages;
+
   # ------------------------------------------------------------------------------------------------
   # Evaluated profiles
   # ------------------------------------------------------------------------------------------------
-  sharedOnlyCfg = evalHomeWith {
+  sharedOnlyCfg = evalModulesWith {
     modules = [ homeModules.shared ];
   };
 
-  defaultCfg = evalHomeWith {
+  defaultCfg = evalModulesWith {
     modules = allToolModules;
   };
 
-  desktopCfg = evalHomeWith {
+  desktopCfg = evalModulesWith {
     modules = allToolModules ++ [
       ompStubModule
       {
@@ -63,6 +65,8 @@ let
         };
 
         agents = {
+          omp.enable = true;
+
           acp.enable = true;
 
           activity-report = {
@@ -96,8 +100,6 @@ let
             apiKeyFile = "/run/secrets/context7-api-key";
           };
 
-          omp.enable = true;
-
           t3code = {
             enable = true;
             caCertFile = "/run/secrets/ca.crt";
@@ -109,7 +111,7 @@ let
     ];
   };
 
-  headlessCfg = evalHomeWith {
+  headlessCfg = evalModulesWith {
     modules = allToolModules ++ [
       {
         agents = {
@@ -151,7 +153,7 @@ let
     ];
   };
 
-  headlessServeCfg = evalHomeWith {
+  headlessServeCfg = evalModulesWith {
     modules = [
       homeModules.activity-report
       homeModules.t3code
@@ -170,20 +172,20 @@ let
     ];
   };
 
-  ompCcusageCfg = evalHomeWith {
+  ompCcusageCfg = evalModulesWith {
     modules = [
       homeModules.ccusage
       ompStubModule
       {
         agents = {
-          ccusage.enable = true;
           omp.enable = true;
+          ccusage.enable = true;
         };
       }
     ];
   };
 
-  t3codeDefaultCfg = evalHomeWith {
+  t3codeDefaultCfg = evalModulesWith {
     modules = [
       homeModules.t3code
       {
@@ -192,7 +194,7 @@ let
     ];
   };
 
-  t3codePartialCfg = evalHomeWith {
+  t3codePartialCfg = evalModulesWith {
     modules = [
       homeModules.t3code
       {
@@ -205,7 +207,7 @@ let
     ];
   };
 
-  t3codeExplicitCfg = evalHomeWith {
+  t3codeExplicitCfg = evalModulesWith {
     modules = [
       homeModules.t3code
       {
@@ -247,7 +249,7 @@ let
     ];
   };
 
-  darwinCfg = evalHomeWith {
+  darwinCfg = evalModulesWith {
     evalPkgs = darwinPkgs;
     modules = allToolModules ++ [
       {
@@ -270,7 +272,7 @@ let
     ];
   };
 
-  darwinDefaultLabelCfg = evalHomeWith {
+  darwinDefaultLabelCfg = evalModulesWith {
     evalPkgs = darwinPkgs;
     modules = [
       homeModules.t3code
@@ -279,8 +281,6 @@ let
       }
     ];
   };
-
-  hasPkgPrefix = prefix: packages: lib.any (pkg: lib.hasPrefix prefix (pkg.name or "")) packages;
 in
 check "home-peripheral-tools" [
   # ------------------------------------------------------------------------------------------------

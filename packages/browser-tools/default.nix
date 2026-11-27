@@ -20,6 +20,7 @@ pkgs.runCommand "browser-tools"
     ];
 
     passthru = { inherit driver browsers chromium; };
+
     meta = {
       description = "Playwright CLI and its matching browsers";
       license = lib.licenses.asl20;

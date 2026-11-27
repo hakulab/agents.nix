@@ -5,13 +5,17 @@
 {
   pkgs,
   lib,
-  check,
-  throws,
-  evalHome,
-  homeDirectory,
+  harness,
 }:
 
 let
+  inherit (harness)
+    check
+    throws
+    evalHome
+    homeDirectory
+    ;
+
   defaultCfg = evalHome { };
   resolved = defaultCfg.agents.resolved;
 

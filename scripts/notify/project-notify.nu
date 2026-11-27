@@ -7,6 +7,10 @@
 const SCRIPT_DIR = path self "."
 const DEFAULT_NOTIFY = ($SCRIPT_DIR | path join "notify.nu")
 
+# --------------------------------------------------------------------------------------------------
+# Payload helpers
+# --------------------------------------------------------------------------------------------------
+
 # Return true when `$value` is a Nushell record.
 def is-record [value: any]: nothing -> bool {
   $value | describe | str starts-with "record"
@@ -31,6 +35,10 @@ def parse-json-record [text: string]: nothing -> oneof<record, nothing> {
     null
   }
 }
+
+# --------------------------------------------------------------------------------------------------
+# Transcript background-task tracking
+# --------------------------------------------------------------------------------------------------
 
 # Extract a tag's inner text from a Claude Code `<task-notification>` XML payload.
 def extract-xml-tag [text: string, tag: string]: nothing -> string {
@@ -235,6 +243,10 @@ def has-pending-background-tasks [transcript_path: path]: nothing -> bool {
 
   $pending | is-not-empty
 }
+
+# --------------------------------------------------------------------------------------------------
+# Entry point
+# --------------------------------------------------------------------------------------------------
 
 # Notify with the title and message, prefixed by the project's directory name.
 def main [

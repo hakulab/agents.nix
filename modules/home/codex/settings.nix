@@ -3,9 +3,9 @@
 # ==================================================================================================
 
 {
+  resolved,
   hooks,
   mcp,
-  notify,
   permissions,
 }:
 
@@ -75,7 +75,7 @@
   # Interface
   # ------------------------------------------------------------------------------------------------
   notify = [
-    "${notify.mkProjectNotifyScript}"
+    "${resolved.notify.mkProjectNotifyScript}"
     "--app"
     "codex"
     "Codex"

@@ -12,6 +12,12 @@ const SCRIPT_DIR = path self "."
 const SCRIPT = ($SCRIPT_DIR | path join "file-formatter.nu")
 const REPORT_PREFIX = "The pre-commit hooks reported problems in the edited files."
 
+source $SCRIPT
+
+# --------------------------------------------------------------------------------------------------
+# Test helpers
+# --------------------------------------------------------------------------------------------------
+
 # A gate in which each hook record runs its `entry` on files matching its `files`.
 def gate [hooks: list<record>]: nothing -> string {
   let hooks = (
@@ -34,8 +40,6 @@ def gate [hooks: list<record>]: nothing -> string {
   }
   | to yaml
 }
-
-source $SCRIPT
 
 # Creates a repository with gate `config` and a Git hook unless `--no-hook` or `--no-config`.
 def make-repo [dir: string, config: string, --no-hook, --no-config]: nothing -> string {
@@ -91,6 +95,10 @@ def run-formatter [cwd: string, ...paths: string]: nothing -> record {
     report: ($run.stdout | str trim)
   }
 }
+
+# --------------------------------------------------------------------------------------------------
+# CLI and repository discovery
+# --------------------------------------------------------------------------------------------------
 
 def "test help prints the usage" [] {
   let result = run-script $SCRIPT --help
@@ -162,6 +170,10 @@ def "test repositories without an installed hook or a gate config are skipped" [
     assert equal (open --raw $file) "{a=1;}" $case.name
   }
 }
+
+# --------------------------------------------------------------------------------------------------
+# Direnv environment
+# --------------------------------------------------------------------------------------------------
 
 def "test an allowed, blocked, or absent envrc decides the gate environment" [] {
   let config = (
@@ -245,6 +257,10 @@ def "test a caller direnv diff that hides prek still runs the gate" [] {
   assert equal $result.run.exit_code 0 $result.run.stderr
   assert equal $result.report ""
 }
+
+# --------------------------------------------------------------------------------------------------
+# Hook execution and reporting
+# --------------------------------------------------------------------------------------------------
 
 def "test a failing hook is reported" [] {
   let config = (

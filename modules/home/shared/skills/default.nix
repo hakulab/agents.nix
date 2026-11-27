@@ -46,8 +46,8 @@ let
       lib
       dk
       assetsDir
+      internal
       ;
-    inherit (internal) modelCatalog modelIdFor promptFragments;
     modelCall = internal.mkModelCall {
       assistant = "prose-polish";
       timeout = 300;
@@ -94,26 +94,7 @@ in
   # Options
   # ------------------------------------------------------------------------------------------------
   options.agents = {
-    _internal.mkSkillScriptPaths = lib.mkOption {
-      type = lib.types.anything;
-      internal = true;
-    };
-
     skills = {
-      prosePolish = {
-        enable = lib.mkOption {
-          type = lib.types.bool;
-          default = cfg.modelCall.enable;
-          description = "Install the built-in prose-polish skill when modelCall is enabled";
-        };
-
-        model = lib.mkOption {
-          type = lib.types.nullOr lib.types.str;
-          default = null;
-          description = "Override model ID used by the prose-polish skill";
-        };
-      };
-
       sources = lib.mkOption {
         type = lib.types.attrsOf (
           lib.types.either (lib.types.either lib.types.path lib.types.str) skillSourceSubmodule
@@ -141,6 +122,25 @@ in
           description = "Install skills into the Oh My Pi skills directory";
         };
       };
+
+      prosePolish = {
+        enable = lib.mkOption {
+          type = lib.types.bool;
+          default = cfg.modelCall.enable;
+          description = "Install the built-in prose-polish skill when modelCall is enabled";
+        };
+
+        model = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          description = "Override model ID used by the prose-polish skill";
+        };
+      };
+    };
+
+    _internal.mkSkillScriptPaths = lib.mkOption {
+      type = lib.types.anything;
+      internal = true;
     };
   };
 

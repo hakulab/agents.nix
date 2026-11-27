@@ -7,8 +7,6 @@
 }:
 
 {
-  agent-usage-reset-enabled = true;
-
   appearanceDarkChromeTheme = {
     accent = "#0169cc";
     accentSource = "custom";
@@ -27,11 +25,15 @@
   };
 
   appearanceDarkCodeThemeId = "codex";
-  avatar-overlay-pet-visible = false;
-  browser-show-full-url = true;
   codeFontSize = 14;
-  composerEnterBehavior = "cmdAlways";
+  sansFontSize = 14;
   dock-icon-preference = "codex-system";
+  selected-avatar-id = "codex";
+  avatar-overlay-pet-visible = false;
+  usePointerCursors = true;
+
+  composerEnterBehavior = "cmdAlways";
+  followUpQueueMode = "steer";
 
   enabled-reasoning-efforts = [
     "low"
@@ -43,6 +45,20 @@
     "persistent"
   ];
 
+  show-context-window-usage = true;
+  agent-usage-reset-enabled = true;
+  notifications-sound = "default";
+
+  projectlessWorkspaceRoot = "${homeDir}/Codex";
+  hotkey-window-projectless-default-enabled = true;
+  open-link-in-target-preference = "in-app-browser";
+  browser-show-full-url = true;
+  git-pull-request-merge-method = "squash";
+  worktree-upstream-refresh-mode = "best-effort";
+
+  preventSleepWhileRunning = true;
+  keepRemoteControlAwakeWhilePluggedIn = true;
+
   external-agent-import-sync-enabled = false;
   external-agent-import-sync-item-types = {
     CONFIG = "original";
@@ -52,18 +68,4 @@
     SESSIONS = "original";
     SKILLS = "original";
   };
-
-  followUpQueueMode = "steer";
-  git-pull-request-merge-method = "squash";
-  hotkey-window-projectless-default-enabled = true;
-  keepRemoteControlAwakeWhilePluggedIn = true;
-  notifications-sound = "default";
-  open-link-in-target-preference = "in-app-browser";
-  preventSleepWhileRunning = true;
-  projectlessWorkspaceRoot = "${homeDir}/Codex";
-  sansFontSize = 14;
-  selected-avatar-id = "codex";
-  show-context-window-usage = true;
-  usePointerCursors = true;
-  worktree-upstream-refresh-mode = "best-effort";
 }

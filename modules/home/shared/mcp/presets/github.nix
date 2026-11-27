@@ -3,8 +3,8 @@
 # ==================================================================================================
 
 {
+  self,
   agentsLib,
-  packagesFor,
 }:
 
 {
@@ -16,7 +16,7 @@
 
 let
   p = config.agents.mcp.presets.github;
-  selfPackages = packagesFor pkgs.stdenv.hostPlatform.system;
+  selfPackages = self.packages.${pkgs.stdenv.hostPlatform.system};
   esc = lib.escapeShellArg;
 
   curlBin = lib.getExe pkgs.curl;
@@ -43,6 +43,9 @@ let
   '';
 in
 {
+  # ------------------------------------------------------------------------------------------------
+  # Options
+  # ------------------------------------------------------------------------------------------------
   options.agents.mcp.presets.github = {
     enable = lib.mkEnableOption "GitHub MCP server preset";
 
@@ -65,6 +68,9 @@ in
     };
   };
 
+  # ------------------------------------------------------------------------------------------------
+  # Config
+  # ------------------------------------------------------------------------------------------------
   config.agents.mcp.servers = lib.mkIf p.enable {
     github = {
       displayName = lib.mkDefault agentsLib.mcp.presetDisplayNames.github;

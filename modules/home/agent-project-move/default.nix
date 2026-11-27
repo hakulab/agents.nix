@@ -3,9 +3,8 @@
 # ==================================================================================================
 
 {
+  agent-project-move,
   sharedModule,
-  agentProjectMoveModule,
-  agentProjectMovePackagesFor,
 }:
 
 {
@@ -17,12 +16,12 @@
 
 let
   cfg = config.agents.agent-project-move;
-  agentProjectMovePackages = agentProjectMovePackagesFor pkgs.stdenv.hostPlatform.system;
+  agentProjectMovePackages = agent-project-move.packages.${pkgs.stdenv.hostPlatform.system};
 in
 {
   imports = [
     sharedModule
-    agentProjectMoveModule
+    agent-project-move.homeModules.default
   ];
 
   # ------------------------------------------------------------------------------------------------

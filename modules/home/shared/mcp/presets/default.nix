@@ -3,8 +3,8 @@
 # ==================================================================================================
 
 {
+  self,
   agentsLib,
-  packagesFor,
 }:
 
 {
@@ -13,8 +13,8 @@
     (import ./chrome-devtools.nix { inherit agentsLib; })
     (import ./deepwiki.nix { inherit agentsLib; })
     (import ./exa.nix { inherit agentsLib; })
-    (import ./github.nix { inherit agentsLib packagesFor; })
-    (import ./gitlab.nix { inherit agentsLib packagesFor; })
+    (import ./github.nix { inherit self agentsLib; })
+    (import ./gitlab.nix { inherit self agentsLib; })
     (import ./scrapling.nix { inherit agentsLib; })
   ];
 }

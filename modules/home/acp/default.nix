@@ -3,10 +3,10 @@
 # ==================================================================================================
 
 {
+  self,
+  llm-agents,
   agentsLib,
   sharedModule,
-  packagesFor,
-  llmAgentsPackagesFor,
 }:
 
 {
@@ -19,8 +19,8 @@
 let
   cfg = config.agents.acp;
   system = pkgs.stdenv.hostPlatform.system;
-  selfPackages = packagesFor system;
-  llmAgentsPackages = llmAgentsPackagesFor system;
+  selfPackages = self.packages.${system};
+  llmAgentsPackages = llm-agents.packages.${system};
   json = pkgs.formats.json { };
 
   # ------------------------------------------------------------------------------------------------

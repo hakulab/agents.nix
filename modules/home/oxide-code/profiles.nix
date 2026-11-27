@@ -7,12 +7,12 @@
   pkgs,
   lib,
   agentsLib,
-  shared,
   repoRoot,
 }:
 
 let
   cfg = config.agents.oxide-code.auth;
+  resolved = config.agents.resolved;
   stateDir = "${config.xdg.stateHome}/oxide-code";
 
   # ------------------------------------------------------------------------------------------------
@@ -20,7 +20,7 @@ let
   # ------------------------------------------------------------------------------------------------
   mkProfile =
     _:
-    shared.anthropicProfiles.mkProfileAuth {
+    resolved.anthropicProfiles.mkProfileAuth {
       client = "oxide-code";
       caEnvVar = "OX_EXTRA_CA_CERTS";
     };
@@ -28,7 +28,7 @@ let
   # ------------------------------------------------------------------------------------------------
   # Profile definitions
   # ------------------------------------------------------------------------------------------------
-  resolvedProfiles = shared.resolveProfiles {
+  resolvedProfiles = resolved.resolveProfiles {
     nativeFamily = "claude";
     client = "oxide-code";
   };
@@ -52,13 +52,13 @@ let
   mkProfileScript =
     name: profile:
     pkgs.writeShellScript "ox-profile-${name}" (
-      lib.concatStringsSep "\n" (shared.anthropicProfiles.mkEnvLines { label = "ox"; } profile)
+      lib.concatStringsSep "\n" (resolved.anthropicProfiles.mkEnvLines { label = "ox"; } profile)
     );
 
   # ------------------------------------------------------------------------------------------------
   # Profile loader
   # ------------------------------------------------------------------------------------------------
-  profileEnvVars = shared.anthropicProfiles.mkProfileEnvVars {
+  profileEnvVars = resolved.anthropicProfiles.mkProfileEnvVars {
     extraKnownEnvVars = [
       "NODE_EXTRA_CA_CERTS"
       "OX_EXTRA_CA_CERTS"
@@ -73,7 +73,7 @@ let
   # ------------------------------------------------------------------------------------------------
   # Profile switcher
   # ------------------------------------------------------------------------------------------------
-  switch = shared.mkProfileSwitch {
+  switch = resolved.mkProfileSwitch {
     name = "ox-switch";
     assistant = "oxide-code";
     inherit stateDir;
@@ -103,6 +103,9 @@ in
     # ----------------------------------------------------------------------------------------------
     assertions = [ switch.assertion ];
 
+    # ----------------------------------------------------------------------------------------------
+    # Packages, files, and activation
+    # ----------------------------------------------------------------------------------------------
     home = {
       packages = [ switch.package ];
       file = switch.files;

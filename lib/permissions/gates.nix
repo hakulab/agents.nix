@@ -124,6 +124,7 @@
         reason = "Submits pull request reviews, which can approve on the user's behalf.";
       }
     ];
+
     gitlab = [
       {
         tool = "approve_merge_request";
@@ -134,6 +135,7 @@
         reason = "Integrates a merge request into a shared branch.";
       }
     ];
+
     scrapling = [
       {
         tool = "browser_fetch_once";

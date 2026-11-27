@@ -5,13 +5,17 @@
 {
   pkgs,
   lib,
-  check,
-  throws,
-  evalHome,
-  homeDirectory,
+  harness,
 }:
 
 let
+  inherit (harness)
+    check
+    throws
+    evalHome
+    homeDirectory
+    ;
+
   sampleSkill = pkgs.runCommand "sample-skill" { } ''
     mkdir -p "$out/scripts"
     echo "# Sample" > "$out/SKILL.md"

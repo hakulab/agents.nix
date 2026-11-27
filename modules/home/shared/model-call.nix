@@ -80,18 +80,6 @@ in
   # Options
   # ------------------------------------------------------------------------------------------------
   options.agents = {
-    _internal = {
-      mkModelCall = lib.mkOption {
-        type = lib.types.anything;
-        internal = true;
-      };
-
-      modelIdFor = lib.mkOption {
-        type = lib.types.anything;
-        internal = true;
-      };
-    };
-
     modelCall = {
       enable = lib.mkEnableOption "OpenAI-compatible model call endpoint for LLM-backed hooks and skills";
 
@@ -157,21 +145,39 @@ in
         };
       };
     };
+
+    _internal = {
+      mkModelCall = lib.mkOption {
+        type = lib.types.anything;
+        internal = true;
+      };
+
+      modelIdFor = lib.mkOption {
+        type = lib.types.anything;
+        internal = true;
+      };
+    };
   };
 
   # ------------------------------------------------------------------------------------------------
   # Config
   # ------------------------------------------------------------------------------------------------
   config = {
-    agents._internal = {
-      inherit mkModelCall modelIdFor;
-    };
-
+    # ----------------------------------------------------------------------------------------------
+    # Assertions
+    # ----------------------------------------------------------------------------------------------
     assertions = [
       {
         assertion = cfg.enable -> cfg.baseUrl != null;
         message = "agents.modelCall.baseUrl must be set when agents.modelCall.enable is true";
       }
     ];
+
+    # ----------------------------------------------------------------------------------------------
+    # Internal exports
+    # ----------------------------------------------------------------------------------------------
+    agents._internal = {
+      inherit mkModelCall modelIdFor;
+    };
   };
 }
