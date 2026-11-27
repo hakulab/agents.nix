@@ -17,10 +17,12 @@ envrc
 esep
 feff
 fetchurl
+foldl
 glab
 gopls
 hakula
 hakulab
+imap
 ints
 journalctl
 localectl

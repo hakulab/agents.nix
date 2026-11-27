@@ -52,6 +52,8 @@ let
   };
 in
 {
+  key = "agents-nix/home/shared";
+
   imports = [
     (import ./hooks {
       inherit

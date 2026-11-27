@@ -95,13 +95,24 @@
           inherit sharedHomeModule;
         }
       );
+
+      codexHomeModule = mkHomeModule "codex" (
+        import ./modules/home/codex {
+          inherit agentsLib;
+          devkitLib = devkit.lib;
+          llmAgents = llm-agents;
+          repoRoot = ./.;
+          inherit sharedHomeModule;
+        }
+      );
     in
     {
       lib = agentsLib;
 
       homeModules = {
-        shared = sharedHomeModule;
         claude-code = claudeCodeHomeModule;
+        codex = codexHomeModule;
+        shared = sharedHomeModule;
       };
 
       overlays.default =
@@ -158,6 +169,7 @@
           inherit home-manager;
           sharedModule = sharedHomeModule;
           claudeCodeModule = claudeCodeHomeModule;
+          codexModule = codexHomeModule;
         };
 
         nuTests = dk.nuTests {
