@@ -9,7 +9,6 @@ use test-runner.testlib.nu [run-script]
 
 const SCRIPT_DIR = path self "."
 const PROJECT_NOTIFY = ($SCRIPT_DIR | path join "project-notify.nu")
-const NOTIFY_SH = ($SCRIPT_DIR | path join "notify.sh")
 
 # Read all JSONL invocations recorded by the notify stub.
 def read-calls [log: path]: nothing -> list<list<string>> {
@@ -361,49 +360,5 @@ def "test claude-stop notifies when background launch fails or TaskStop resolves
   assert equal $result.run.exit_code 0 $result.run.stderr
   assert equal $result.calls [
     ["Claude Code" "[demo-repo] Response complete" "--app" "claude"]
-  ]
-}
-
-# --------------------------------------------------------------------------------------------------
-# notify.sh: platform dispatch
-# --------------------------------------------------------------------------------------------------
-
-def "test notify.sh forwards app and icon flags to toasty on WSL" [] {
-  let dir = (mktemp --directory)
-  let log = ($dir | path join "toasty.jsonl")
-  let stub = ($env.NU_TEST_STUBS | path join "notify")
-
-  let run = with-env {
-    NOTIFY_LOG: $log
-    NOTIFY_PLATFORM: "wsl"
-    TOASTY_BIN: $stub
-  } {
-    ^bash $NOTIFY_SH "Claude Code" "[demo] Response complete" --app claude --icon /tmp/icon.png
-    | complete
-  }
-
-  assert equal $run.exit_code 0 $run.stderr
-  assert equal (read-calls $log) [
-    ["[demo] Response complete" "-t" "Claude Code" "--app" "claude" "--icon" "/tmp/icon.png"]
-  ]
-}
-
-def "test notify.sh forwards app and icon flags to notify-send on Linux" [] {
-  let dir = (mktemp --directory)
-  let log = ($dir | path join "linux.jsonl")
-  let stub = ($env.NU_TEST_STUBS | path join "notify")
-
-  let run = with-env {
-    NOTIFY_LOG: $log
-    NOTIFY_PLATFORM: "linux"
-    NOTIFY_SEND_BIN: $stub
-  } {
-    ^bash $NOTIFY_SH "Codex" "[demo] Response complete" --app codex --icon dialog-information
-    | complete
-  }
-
-  assert equal $run.exit_code 0 $run.stderr
-  assert equal (read-calls $log) [
-    ["-a" "codex" "-i" "dialog-information" "Codex" "[demo] Response complete"]
   ]
 }

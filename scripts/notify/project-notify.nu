@@ -4,6 +4,9 @@
 # Project-Scoped Notification
 # ==================================================================================================
 
+const SCRIPT_DIR = path self "."
+const DEFAULT_NOTIFY = ($SCRIPT_DIR | path join "notify.nu")
+
 # Parse a JSON string into a record, returning null when the input is empty or not a JSON object.
 def parse-json-record [text: string]: nothing -> oneof<record, nothing> {
   if ($text | str trim | is-empty) {
@@ -243,5 +246,9 @@ def main [
     $args = ($args | append [--icon $icon])
   }
 
-  ^$notify ...$args
+  if $notify != null {
+    ^$notify ...$args
+  } else {
+    ^$nu.current-exe $DEFAULT_NOTIFY ...$args
+  }
 }

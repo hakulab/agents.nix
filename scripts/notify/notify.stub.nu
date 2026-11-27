@@ -3,7 +3,7 @@
 # ==================================================================================================
 # Notification Stub
 # ==================================================================================================
-# Stands in for the notification backend in project-notify and notify.sh tests. Each invocation
+# Stands in for the notification backend in project-notify and notify.nu tests. Each invocation
 # appends its argument list as a JSON line to `$env.NOTIFY_LOG`.
 # ==================================================================================================
 
