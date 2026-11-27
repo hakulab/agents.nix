@@ -63,37 +63,7 @@ let
         };
 
         agents = {
-          omp.enable = true;
-
           acp.enable = true;
-
-          workmux.enable = true;
-
-          t3code = {
-            enable = true;
-            caCertFile = "/run/secrets/ca.crt";
-          };
-
-          ccusage = {
-            enable = true;
-            pricingOverrides."custom-model" = {
-              inputCostPerToken = 0.000001;
-              outputCostPerToken = 0.000002;
-            };
-            piStores = [
-              {
-                name = "extra";
-                path = "${homeDirectory}/.extra/sessions";
-              }
-            ];
-          };
-
-          ctx7 = {
-            enable = true;
-            apiKeyFile = "/run/secrets/context7-api-key";
-          };
-
-          agent-project-move.enable = true;
 
           activity-report = {
             enable = true;
@@ -104,6 +74,36 @@ let
             };
             extraSettings.custom_flag = true;
           };
+
+          agent-project-move.enable = true;
+
+          ccusage = {
+            enable = true;
+            piStores = [
+              {
+                name = "extra";
+                path = "${homeDirectory}/.extra/sessions";
+              }
+            ];
+            pricingOverrides."custom-model" = {
+              inputCostPerToken = 0.000001;
+              outputCostPerToken = 0.000002;
+            };
+          };
+
+          ctx7 = {
+            enable = true;
+            apiKeyFile = "/run/secrets/context7-api-key";
+          };
+
+          omp.enable = true;
+
+          t3code = {
+            enable = true;
+            caCertFile = "/run/secrets/ca.crt";
+          };
+
+          workmux.enable = true;
         };
       }
     ];
@@ -120,13 +120,18 @@ let
             timeout = 120;
           };
 
-          workmux = {
+          activity-report = {
             enable = true;
-            settings.worktree_prefix = "wm-";
-            installSkills = false;
-            installOmpExtension = false;
-            tmuxIntegration = false;
+            installSkill = false;
           };
+
+          agent-project-move = {
+            enable = true;
+            installSkill = false;
+          };
+
+          ccusage.enable = true;
+          ctx7.enable = true;
 
           t3code = {
             enable = true;
@@ -134,18 +139,12 @@ let
             telemetryOptOut = false;
           };
 
-          ccusage.enable = true;
-
-          ctx7.enable = true;
-
-          agent-project-move = {
+          workmux = {
             enable = true;
-            installSkill = false;
-          };
-
-          activity-report = {
-            enable = true;
-            installSkill = false;
+            settings.worktree_prefix = "wm-";
+            installSkills = false;
+            installOmpExtension = false;
+            tmuxIntegration = false;
           };
         };
       }
@@ -154,18 +153,95 @@ let
 
   headlessServeCfg = evalHomeWith {
     modules = [
-      homeModules.t3code
       homeModules.activity-report
+      homeModules.t3code
       {
         agents = {
+          activity-report.enable = true;
+
           t3code = {
             enable = true;
             headless = true;
             lan = true;
             service.enable = true;
           };
+        };
+      }
+    ];
+  };
 
-          activity-report.enable = true;
+  ompCcusageCfg = evalHomeWith {
+    modules = [
+      homeModules.ccusage
+      ompStubModule
+      {
+        agents = {
+          ccusage.enable = true;
+          omp.enable = true;
+        };
+      }
+    ];
+  };
+
+  t3codeDefaultCfg = evalHomeWith {
+    modules = [
+      homeModules.t3code
+      {
+        agents.t3code.enable = true;
+      }
+    ];
+  };
+
+  t3codePartialCfg = evalHomeWith {
+    modules = [
+      homeModules.t3code
+      {
+        agents.t3code = {
+          enable = true;
+          settings.defaultRuntimeMode = "manual";
+          providerInstances.codex.enabled = false;
+        };
+      }
+    ];
+  };
+
+  t3codeExplicitCfg = evalHomeWith {
+    modules = [
+      homeModules.t3code
+      {
+        agents.t3code = {
+          enable = true;
+
+          settings = {
+            defaultRuntimeMode = "manual";
+            pullRequestMergeMethod = "squash";
+          };
+
+          providerInstances = {
+            claudeAgent = {
+              driver = "claudeAgent";
+              enabled = true;
+              config.binaryPath = "claude";
+            };
+
+            codex = {
+              driver = "codex";
+              enabled = false;
+              config.binaryPath = "codex";
+            };
+
+            omp = {
+              driver = "acpRegistry";
+              displayName = "Oh My Pi";
+              enabled = true;
+              config = {
+                source = "local";
+                agentId = "";
+                commandPath = "omp";
+                commandArgs = [ "acp" ];
+              };
+            };
+          };
         };
       }
     ];
@@ -177,16 +253,18 @@ let
       {
         agents = {
           acp.enable = true;
-          workmux.enable = true;
+          activity-report.enable = true;
+          agent-project-move.enable = true;
+          ccusage.enable = true;
+          ctx7.enable = true;
+
           t3code = {
             enable = true;
             lan = true;
             service.launchdLabel = "org.example.t3code";
           };
-          ccusage.enable = true;
-          ctx7.enable = true;
-          agent-project-move.enable = true;
-          activity-report.enable = true;
+
+          workmux.enable = true;
         };
       }
     ];
@@ -212,12 +290,12 @@ check "home-peripheral-tools" [
     name = "all 7 peripheral modules import together cleanly and default to disabled";
     ok =
       !defaultCfg.agents.acp.enable
-      && !defaultCfg.agents.workmux.enable
-      && !defaultCfg.agents.t3code.enable
+      && !defaultCfg.agents.activity-report.enable
+      && !defaultCfg.agents.agent-project-move.enable
       && !defaultCfg.agents.ccusage.enable
       && !defaultCfg.agents.ctx7.enable
-      && !defaultCfg.agents.agent-project-move.enable
-      && !defaultCfg.agents.activity-report.enable;
+      && !defaultCfg.agents.t3code.enable
+      && !defaultCfg.agents.workmux.enable;
   }
   {
     name = "disabled peripheral modules add no packages";
@@ -227,8 +305,8 @@ check "home-peripheral-tools" [
     name = "disabled peripheral modules create no tool config files";
     ok =
       !(defaultCfg.home.file ? ".acpx/config.json")
-      && !(defaultCfg.xdg.configFile ? "workmux/config.yaml")
-      && !(defaultCfg.xdg.configFile ? "claude/ccusage.json");
+      && !(defaultCfg.xdg.configFile ? "claude/ccusage.json")
+      && !(defaultCfg.xdg.configFile ? "workmux/config.yaml");
   }
   {
     name = "disabled peripheral modules register no background services";
@@ -238,11 +316,17 @@ check "home-peripheral-tools" [
   {
     name = "all evaluated profiles have no failing assertions";
     ok =
-      lib.all (a: a.assertion) defaultCfg.assertions
+      lib.all (a: a.assertion) sharedOnlyCfg.assertions
+      && lib.all (a: a.assertion) defaultCfg.assertions
       && lib.all (a: a.assertion) desktopCfg.assertions
       && lib.all (a: a.assertion) headlessCfg.assertions
       && lib.all (a: a.assertion) headlessServeCfg.assertions
-      && lib.all (a: a.assertion) darwinCfg.assertions;
+      && lib.all (a: a.assertion) ompCcusageCfg.assertions
+      && lib.all (a: a.assertion) t3codeDefaultCfg.assertions
+      && lib.all (a: a.assertion) t3codePartialCfg.assertions
+      && lib.all (a: a.assertion) t3codeExplicitCfg.assertions
+      && lib.all (a: a.assertion) darwinCfg.assertions
+      && lib.all (a: a.assertion) darwinDefaultLabelCfg.assertions;
   }
 
   # ------------------------------------------------------------------------------------------------
@@ -270,31 +354,80 @@ check "home-peripheral-tools" [
       headlessCfg.agents.acp.claudeAdapter.executable == null
       && headlessCfg.agents.acp.codexAdapter.executable == null
       && !(hasPkgPrefix "claude-agent-acp-" headlessCfg.home.packages)
+      && hasPkgPrefix "codex-acp-" headlessCfg.home.packages
       && hasPkgPrefix "acpx-" headlessCfg.home.packages;
   }
 
   # ------------------------------------------------------------------------------------------------
-  # Workmux (agents.workmux)
+  # activity-report (agents.activity-report)
   # ------------------------------------------------------------------------------------------------
   {
-    name = "workmux installs package, config, 5 bundled skills, OMP extension, and tmux config";
+    name = "activity-report auto-adds Workmux prefix, sets assistants, labels, and skill";
     ok =
-      desktopCfg.xdg.configFile ? "workmux/config.yaml"
-      && desktopCfg.home.file ? ".agents/skills/coordinator"
-      && desktopCfg.home.file ? ".agents/skills/merge"
-      && desktopCfg.home.file ? ".agents/skills/rebase"
-      && desktopCfg.home.file ? ".agents/skills/workmux"
-      && desktopCfg.home.file ? ".agents/skills/worktree"
-      && desktopCfg.home.file ? ".omp/agent/extensions/workmux-status.ts"
-      && lib.hasInfix "@workmux_status" desktopCfg.programs.tmux.extraConfig;
+      desktopCfg.programs.activity-report.enable
+      && desktopCfg.programs.activity-report.skillDirectories == [ ]
+      && desktopCfg.programs.activity-report.settings.assistants == desktopCfg.agents.resolved.configDirs
+      &&
+        desktopCfg.programs.activity-report.settings.excluded_dirs == [
+          "/[^/]+__worktrees/workmux-"
+          "/tmp/scratch"
+        ]
+      && desktopCfg.programs.activity-report.settings.labels.default == [ "work" ]
+      && desktopCfg.programs.activity-report.settings.custom_flag == true
+      && desktopCfg.agents.skills.sources ? activity-report;
   }
   {
-    name = "workmux honors opt-out flags for skills, OMP extension, and tmux integration";
+    name = "activity-report tracks custom worktree_prefix and omits regex when workmux is disabled";
     ok =
-      headlessCfg.xdg.configFile ? "workmux/config.yaml"
-      && !(headlessCfg.home.file ? ".agents/skills/workmux")
-      && !(headlessCfg.home.file ? ".omp/agent/extensions/workmux-status.ts")
-      && !(lib.hasInfix "@workmux_status" headlessCfg.programs.tmux.extraConfig);
+      headlessCfg.programs.activity-report.settings.excluded_dirs == [ "/[^/]+__worktrees/wm-" ]
+      && !(headlessCfg.agents.skills.sources ? activity-report)
+      && !(headlessServeCfg.programs.activity-report.settings ? excluded_dirs);
+  }
+
+  # ------------------------------------------------------------------------------------------------
+  # agent-project-move (agents.agent-project-move)
+  # ------------------------------------------------------------------------------------------------
+  {
+    name = "agent-project-move enables upstream program and wires skill into agents.skills.sources";
+    ok =
+      desktopCfg.programs.agent-project-move.enable
+      && desktopCfg.programs.agent-project-move.skillDirectories == [ ]
+      && desktopCfg.agents.skills.sources ? agent-project-move
+      && headlessCfg.programs.agent-project-move.enable
+      && !(headlessCfg.agents.skills.sources ? agent-project-move);
+  }
+
+  # ------------------------------------------------------------------------------------------------
+  # ccusage (agents.ccusage)
+  # ------------------------------------------------------------------------------------------------
+  {
+    name = "ccusage auto-registers OMP store and writes claude/ccusage.json without overrides";
+    ok =
+      ompCcusageCfg.xdg.configFile ? "claude/ccusage.json"
+      && lib.any (pkg: pkg == ompCcusageCfg.agents.ccusage.package) ompCcusageCfg.home.packages;
+  }
+  {
+    name = "ccusage writes claude/ccusage.json when piStores and pricingOverrides are configured";
+    ok =
+      desktopCfg.xdg.configFile ? "claude/ccusage.json"
+      && lib.any (pkg: pkg == desktopCfg.agents.ccusage.package) desktopCfg.home.packages;
+  }
+  {
+    name = "ccusage omits claude/ccusage.json when neither piStores nor pricingOverrides are set";
+    ok =
+      !(headlessCfg.xdg.configFile ? "claude/ccusage.json")
+      && lib.any (pkg: pkg == headlessCfg.agents.ccusage.package) headlessCfg.home.packages;
+  }
+
+  # ------------------------------------------------------------------------------------------------
+  # Context7 (agents.ctx7)
+  # ------------------------------------------------------------------------------------------------
+  {
+    name = "ctx7 wraps package when apiKeyFile is set and uses raw package otherwise";
+    ok =
+      !(lib.any (pkg: pkg == desktopCfg.agents.ctx7.package) desktopCfg.home.packages)
+      && hasPkgPrefix "ctx7-" desktopCfg.home.packages
+      && lib.any (pkg: pkg == headlessCfg.agents.ctx7.package) headlessCfg.home.packages;
   }
 
   # ------------------------------------------------------------------------------------------------
@@ -321,6 +454,15 @@ check "home-peripheral-tools" [
         && !(lib.any (lib.hasInfix "--lan") (
           lib.toList desktopCfg.systemd.user.services.t3code-serve.Service.ExecStart
         ));
+  }
+  {
+    name = "t3code partial settings and providerInstances overrides preserve defaults";
+    ok =
+      t3codePartialCfg.home.activation.t3codeMutableConfig.data
+      == t3codeExplicitCfg.home.activation.t3codeMutableConfig.data
+      &&
+        t3codePartialCfg.home.activation.t3codeMutableConfig.data
+        != t3codeDefaultCfg.home.activation.t3codeMutableConfig.data;
   }
   {
     name = "t3code headless installs CLI-only package and disables background service by default";
@@ -354,68 +496,28 @@ check "home-peripheral-tools" [
   }
 
   # ------------------------------------------------------------------------------------------------
-  # ccusage (agents.ccusage)
+  # Workmux (agents.workmux)
   # ------------------------------------------------------------------------------------------------
   {
-    name = "ccusage auto-registers OMP store and writes claude/ccusage.json when configured";
+    name = "workmux installs package, config, 5 bundled skills, OMP extension, and tmux config";
     ok =
-      desktopCfg.xdg.configFile ? "claude/ccusage.json"
-      && lib.any (pkg: pkg == desktopCfg.agents.ccusage.package) desktopCfg.home.packages;
+      lib.any (pkg: pkg == desktopCfg.agents.workmux.package) desktopCfg.home.packages
+      && desktopCfg.xdg.configFile ? "workmux/config.yaml"
+      && desktopCfg.home.file ? ".agents/skills/coordinator"
+      && desktopCfg.home.file ? ".agents/skills/merge"
+      && desktopCfg.home.file ? ".agents/skills/rebase"
+      && desktopCfg.home.file ? ".agents/skills/workmux"
+      && desktopCfg.home.file ? ".agents/skills/worktree"
+      && desktopCfg.home.file ? ".omp/agent/extensions/workmux-status.ts"
+      && lib.hasInfix "@workmux_status" desktopCfg.programs.tmux.extraConfig;
   }
   {
-    name = "ccusage omits claude/ccusage.json when neither piStores nor pricingOverrides are set";
+    name = "workmux omits OMP extension by default when OMP is disabled and honors opt-out flags";
     ok =
-      !(headlessCfg.xdg.configFile ? "claude/ccusage.json")
-      && lib.any (pkg: pkg == headlessCfg.agents.ccusage.package) headlessCfg.home.packages;
-  }
-
-  # ------------------------------------------------------------------------------------------------
-  # Context7 (agents.ctx7)
-  # ------------------------------------------------------------------------------------------------
-  {
-    name = "ctx7 wraps package when apiKeyFile is set and uses raw package otherwise";
-    ok =
-      !(lib.any (pkg: pkg == desktopCfg.agents.ctx7.package) desktopCfg.home.packages)
-      && hasPkgPrefix "ctx7-" desktopCfg.home.packages
-      && lib.any (pkg: pkg == headlessCfg.agents.ctx7.package) headlessCfg.home.packages;
-  }
-
-  # ------------------------------------------------------------------------------------------------
-  # agent-project-move (agents.agent-project-move)
-  # ------------------------------------------------------------------------------------------------
-  {
-    name = "agent-project-move enables upstream program and wires skill into agents.skills.sources";
-    ok =
-      desktopCfg.programs.agent-project-move.enable
-      && desktopCfg.programs.agent-project-move.skillDirectories == [ ]
-      && desktopCfg.agents.skills.sources ? agent-project-move
-      && headlessCfg.programs.agent-project-move.enable
-      && !(headlessCfg.agents.skills.sources ? agent-project-move);
-  }
-
-  # ------------------------------------------------------------------------------------------------
-  # activity-report (agents.activity-report)
-  # ------------------------------------------------------------------------------------------------
-  {
-    name = "activity-report auto-adds Workmux prefix, sets assistants, labels, and skill";
-    ok =
-      desktopCfg.programs.activity-report.enable
-      && desktopCfg.programs.activity-report.skillDirectories == [ ]
-      && desktopCfg.programs.activity-report.settings.assistants == desktopCfg.agents.resolved.configDirs
-      &&
-        desktopCfg.programs.activity-report.settings.excluded_dirs == [
-          "/[^/]+__worktrees/workmux-"
-          "/tmp/scratch"
-        ]
-      && desktopCfg.programs.activity-report.settings.labels.default == [ "work" ]
-      && desktopCfg.programs.activity-report.settings.custom_flag == true
-      && desktopCfg.agents.skills.sources ? activity-report;
-  }
-  {
-    name = "activity-report tracks custom worktree_prefix and omits regex when workmux is disabled";
-    ok =
-      headlessCfg.programs.activity-report.settings.excluded_dirs == [ "/[^/]+__worktrees/wm-" ]
-      && !(headlessCfg.agents.skills.sources ? activity-report)
-      && !(headlessServeCfg.programs.activity-report.settings ? excluded_dirs);
+      !(darwinCfg.home.file ? ".omp/agent/extensions/workmux-status.ts")
+      && headlessCfg.xdg.configFile ? "workmux/config.yaml"
+      && !(headlessCfg.home.file ? ".agents/skills/workmux")
+      && !(headlessCfg.home.file ? ".omp/agent/extensions/workmux-status.ts")
+      && !(lib.hasInfix "@workmux_status" headlessCfg.programs.tmux.extraConfig);
   }
 ]

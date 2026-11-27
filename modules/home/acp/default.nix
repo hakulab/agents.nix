@@ -48,7 +48,6 @@ let
   acpxBin = agentsLib.wrapPackage {
     inherit pkgs;
     pkg = cfg.acpxPackage;
-    name = "acpx-${cfg.acpxPackage.version}";
     bin = "acpx";
     envVars.ACPX_CLAUDE_INCLUDE_USER_SETTINGS = "1";
   };
@@ -65,7 +64,6 @@ let
     if executable != null then
       agentsLib.wrapPackage {
         inherit pkgs pkg bin;
-        name = "${bin}-${pkg.version}";
         envVars.${executableVar} = executable;
       }
     else

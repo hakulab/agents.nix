@@ -86,14 +86,14 @@ in
 
     installOmpExtension = lib.mkOption {
       type = lib.types.bool;
-      default = true;
+      default = config.agents.omp.enable or false;
       description = "Install the Workmux status extension for Oh My Pi";
     };
 
     tmuxIntegration = lib.mkOption {
       type = lib.types.bool;
       default = true;
-      description = "Configure tmux status hooks and dashboard popup for Workmux";
+      description = "Add Workmux status to Catppuccin tmux windows and bind the dashboard popup";
     };
   };
 

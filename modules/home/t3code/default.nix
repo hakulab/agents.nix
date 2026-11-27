@@ -12,20 +12,6 @@
 
 let
   scriptsDir = repoRoot + "/scripts";
-
-  mkNuModules =
-    lib:
-    lib.fileset.toSource {
-      root = scriptsDir + "/lib";
-      fileset = lib.fileset.fileFilter (
-        file:
-        !(
-          lib.hasSuffix ".test.nu" file.name
-          || lib.hasSuffix ".stub.nu" file.name
-          || lib.hasSuffix ".testlib.nu" file.name
-        )
-      ) (scriptsDir + "/lib");
-    };
 in
 {
   config,
@@ -89,19 +75,21 @@ let
     };
 
   t3CliPkg = agentsLib.wrapPackage {
-    inherit pkgs envVars;
+    inherit pkgs;
     pkg = cfg.package;
-    name = "t3code-cli-${cfg.package.version}";
+    name = "t3code-cli-${cfg.package.version or cfg.package.name}";
     bin = "t3";
     wrapArgs = cliWrapArgs;
+    inherit envVars;
   };
 
   t3DesktopPkg = agentsLib.wrapPackage {
-    inherit pkgs envVars;
+    inherit pkgs;
     pkg = t3CliPkg;
-    name = "t3code-${cfg.package.version}";
+    name = cfg.package.name;
     bin = "t3code-desktop";
     wrapArgs = baseWrapArgs;
+    inherit envVars;
   };
 
   # Headless hosts expose only the CLI, leaving the Electron app off PATH and out of menus.
@@ -150,15 +138,18 @@ let
     };
   };
 
+  mergedSettings = lib.recursiveUpdate defaultSettings cfg.settings;
+  mergedProviderInstances = lib.recursiveUpdate defaultProviderInstances cfg.providerInstances;
+
   activateConfig = dk.writeNuApplication {
     name = "activate-t3code-config";
     text = builtins.readFile (scriptsDir + "/t3code/activate-config.nu");
     runtimeInputs = [ pkgs.coreutils ];
-    libDirs = [ (mkNuModules lib) ];
+    libDirs = [ config.agents._internal.nuModules ];
     flags.config = json.generate "activate-t3code-config.json" {
       inherit baseDir;
-      inherit (cfg) providerInstances;
-      defaults = cfg.settings;
+      providerInstances = mergedProviderInstances;
+      defaults = mergedSettings;
     };
   };
 
@@ -209,14 +200,14 @@ in
     };
 
     settings = lib.mkOption {
-      inherit (json) type;
-      default = defaultSettings;
+      type = lib.types.attrsOf json.type;
+      default = { };
       description = "Managed default settings merged into T3 Code userdata/settings.json";
     };
 
     providerInstances = lib.mkOption {
-      inherit (json) type;
-      default = defaultProviderInstances;
+      type = lib.types.attrsOf json.type;
+      default = { };
       description = "Managed provider instance definitions written to T3 Code userdata/settings.json";
     };
 

@@ -68,16 +68,16 @@ in
       description = "Package providing the ccusage CLI";
     };
 
-    pricingOverrides = lib.mkOption {
-      type = lib.types.attrsOf json.type;
-      default = { };
-      description = "Per-model token pricing overrides written to claude.defaults.pricingOverrides";
-    };
-
     piStores = lib.mkOption {
       type = lib.types.listOf piStoreSubmodule;
       default = [ ];
       description = "Pi-compatible session stores registered in ccusage.json";
+    };
+
+    pricingOverrides = lib.mkOption {
+      type = lib.types.attrsOf json.type;
+      default = { };
+      description = "Per-model token pricing overrides written to claude.defaults.pricingOverrides";
     };
   };
 

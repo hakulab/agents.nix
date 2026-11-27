@@ -117,40 +117,6 @@
         }
       );
 
-      acpHomeModule = mkHomeModule "acp" (
-        import ./modules/home/acp {
-          inherit agentsLib;
-          sharedModule = sharedHomeModule;
-          inherit
-            packagesFor
-            llmAgentsPackagesFor
-            ;
-        }
-      );
-
-      activityReportHomeModule = mkHomeModule "activity-report" (
-        import ./modules/home/activity-report {
-          sharedModule = sharedHomeModule;
-          activityReportModule = activity-report.homeModules.default;
-          activityReportPackagesFor = system: activity-report.packages.${system};
-        }
-      );
-
-      agentProjectMoveHomeModule = mkHomeModule "agent-project-move" (
-        import ./modules/home/agent-project-move {
-          sharedModule = sharedHomeModule;
-          agentProjectMoveModule = agent-project-move.homeModules.default;
-          agentProjectMovePackagesFor = system: agent-project-move.packages.${system};
-        }
-      );
-
-      ccusageHomeModule = mkHomeModule "ccusage" (
-        import ./modules/home/ccusage {
-          sharedModule = sharedHomeModule;
-          inherit llmAgentsPackagesFor;
-        }
-      );
-
       claudeCodeHomeModule = mkHomeModule "claude-code" (
         import ./modules/home/claude-code {
           inherit agentsLib;
@@ -172,14 +138,6 @@
         }
       );
 
-      ctx7HomeModule = mkHomeModule "ctx7" (
-        import ./modules/home/ctx7 {
-          inherit agentsLib;
-          sharedModule = sharedHomeModule;
-          inherit unstablePackagesFor;
-        }
-      );
-
       ompHomeModule = mkHomeModule "omp" (
         import ./modules/home/omp {
           inherit agentsLib sharedHomeModule;
@@ -197,36 +155,69 @@
         }
       );
 
-      t3codeHomeModule = mkHomeModule "t3code" (
-        import ./modules/home/t3code {
-          inherit agentsLib;
-          devkitLib = devkit.lib;
-          repoRoot = ./.;
-          sharedModule = sharedHomeModule;
-          inherit unstablePackagesFor;
-        }
-      );
-
-      workmuxHomeModule = mkHomeModule "workmux" (
-        import ./modules/home/workmux {
-          sharedModule = sharedHomeModule;
-          inherit llmAgentsPackagesFor;
-        }
-      );
-
       homeModules = {
-        acp = acpHomeModule;
-        activity-report = activityReportHomeModule;
-        agent-project-move = agentProjectMoveHomeModule;
-        ccusage = ccusageHomeModule;
+        acp = mkHomeModule "acp" (
+          import ./modules/home/acp {
+            inherit agentsLib;
+            sharedModule = sharedHomeModule;
+            inherit packagesFor llmAgentsPackagesFor;
+          }
+        );
+
+        activity-report = mkHomeModule "activity-report" (
+          import ./modules/home/activity-report {
+            sharedModule = sharedHomeModule;
+            activityReportModule = activity-report.homeModules.default;
+            activityReportPackagesFor = system: activity-report.packages.${system};
+          }
+        );
+
+        agent-project-move = mkHomeModule "agent-project-move" (
+          import ./modules/home/agent-project-move {
+            sharedModule = sharedHomeModule;
+            agentProjectMoveModule = agent-project-move.homeModules.default;
+            agentProjectMovePackagesFor = system: agent-project-move.packages.${system};
+          }
+        );
+
+        ccusage = mkHomeModule "ccusage" (
+          import ./modules/home/ccusage {
+            sharedModule = sharedHomeModule;
+            inherit llmAgentsPackagesFor;
+          }
+        );
+
         claude-code = claudeCodeHomeModule;
         codex = codexHomeModule;
-        ctx7 = ctx7HomeModule;
+
+        ctx7 = mkHomeModule "ctx7" (
+          import ./modules/home/ctx7 {
+            inherit agentsLib;
+            sharedModule = sharedHomeModule;
+            inherit unstablePackagesFor;
+          }
+        );
+
         omp = ompHomeModule;
         oxide-code = oxideCodeHomeModule;
         shared = sharedHomeModule;
-        t3code = t3codeHomeModule;
-        workmux = workmuxHomeModule;
+
+        t3code = mkHomeModule "t3code" (
+          import ./modules/home/t3code {
+            inherit agentsLib;
+            devkitLib = devkit.lib;
+            repoRoot = ./.;
+            sharedModule = sharedHomeModule;
+            inherit unstablePackagesFor;
+          }
+        );
+
+        workmux = mkHomeModule "workmux" (
+          import ./modules/home/workmux {
+            sharedModule = sharedHomeModule;
+            inherit llmAgentsPackagesFor;
+          }
+        );
       };
     in
     {

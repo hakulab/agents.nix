@@ -33,7 +33,7 @@ in
 
     package = lib.mkOption {
       type = lib.types.package;
-      inherit (agentProjectMovePackages) default;
+      default = agentProjectMovePackages.agent-project-move;
       description = "Package providing the agent-project-move CLI and skill";
     };
 

@@ -25,7 +25,7 @@ let
 
   # Workmux worker sessions count as unattended since prompts come from the launching agent.
   workmuxExcludedDirs = lib.optionals (workmuxEnabled && workmuxPrefix != "") [
-    "/[^/]+__worktrees/${workmuxPrefix}"
+    "/[^/]+__worktrees/${lib.strings.escapeRegex workmuxPrefix}"
   ];
 
   excludedDirs = lib.unique (workmuxExcludedDirs ++ cfg.excludedDirs);
@@ -54,7 +54,7 @@ in
 
     package = lib.mkOption {
       type = lib.types.package;
-      inherit (activityReportPackages) default;
+      default = activityReportPackages.activity-report;
       description = "Package providing the activity-report CLI and skill";
     };
 
