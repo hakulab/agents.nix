@@ -26,6 +26,11 @@
         nixpkgs-unstable.follows = "nixpkgs-unstable";
       };
     };
+
+    home-manager = {
+      url = "github:nix-community/home-manager/release-26.05";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   # ------------------------------------------------------------------------------------------------
@@ -37,6 +42,7 @@
       nixpkgs,
       nixpkgs-unstable,
       devkit,
+      home-manager,
     }:
     let
       agentsLib = import ./lib {
@@ -46,9 +52,21 @@
       # Pull Playwright from nixpkgs-unstable because Chrome DevTools MCP tracks latest npm and
       # requires current stable Chrome, while stable nixpkgs freezes Chromium.
       playwrightDriverFor = system: nixpkgs-unstable.legacyPackages.${system}.playwright-driver;
+
+      sharedHomeModule = import ./modules/home/shared {
+        inherit agentsLib;
+        devkitLib = devkit.lib;
+        devkitOutPath = devkit.outPath;
+        repoRoot = ./.;
+        packagesFor = system: self.packages.${system};
+      };
     in
     {
       lib = agentsLib;
+
+      homeModules = {
+        shared = sharedHomeModule;
+      };
 
       overlays.default =
         final: _:
@@ -96,6 +114,13 @@
           inherit pkgs;
           inherit (nixpkgs) lib;
           inherit agentsLib;
+        };
+
+        homeChecks = import ./tests/home-checks {
+          inherit pkgs;
+          inherit (nixpkgs) lib;
+          inherit home-manager;
+          sharedModule = sharedHomeModule;
         };
 
         nuTests = dk.nuTests {
@@ -150,6 +175,7 @@
         checks =
           self.packages.${system}
           // libChecks
+          // homeChecks
           // {
             nu-tests = nuTests;
             ts-tests = tsTests;

@@ -9,9 +9,10 @@ Declarative Nix and Home Manager modules for coding agents, MCP servers, hooks, 
 ## Flake outputs
 
 - `lib`: pure Nix helpers for models, profiles, permissions, MCP servers, prompts, proxies, and package wrappers.
+- `homeModules.shared`: shared Home Manager module defining the core `agents.*` options (`dataDir`, `proxy`, `browser`, `instructions`, `roles`, `permissions`, `models`, `providers`, `profiles`, `modelCall`, `mcp`, `skills`, `hooks`, `notify`) and the read-only `config.agents.resolved` interface.
 - `overlays.default`: overlay exposing the companion packages.
 - `packages.<system>`: companion packages (`acpx`, `browser-tools`, `file-formatter`, `mcp-server-github`, `mcp-server-gitlab`).
-- `checks.<system>`: library evaluation checks, Nushell script tests, TypeScript tests (`ts-tests` via `bun test`), and package builds.
+- `checks.<system>`: library evaluation checks, Home Manager module evaluation checks, Nushell script tests, TypeScript tests (`ts-tests` via `bun test`), and package builds.
 - `devShells.<system>.default`: development shell with Nushell, `nu-test`, `bun`, and pre-commit hooks.
 - `formatter.<system>`: `nixfmt-tree` formatter.
 
