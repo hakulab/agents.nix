@@ -12,6 +12,7 @@ Use the [release skill](https://github.com/hakulab/plugins/blob/main/plugins/hak
 Within a minor version, stable releases keep exported flake outputs and documented module interfaces compatible. Currently exported outputs:
 
 - `lib`
+- `homeModules.shared`
 - `overlays.default`
 - `packages.<system>`
 - `checks.<system>`

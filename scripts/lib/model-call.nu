@@ -36,17 +36,46 @@ def main [
     $body
   }
   let curl = $config.curl
-  # Keep the token off curl's command line, which other local users can read.
+  let ca_file = ($gateway | get -o caFile | default "")
+  let token_file = ($gateway | get -o tokenFile | default "")
+  let extra_headers = ($gateway | get -o extraHeaders | default {})
+
+  mut curl_args = [
+    $"($gateway.baseUrl)/v1/chat/completions"
+    ...$config.curlArgs
+  ]
+  if ($ca_file | is-not-empty) {
+    $curl_args = ($curl_args | append [--cacert $ca_file])
+  }
+  if ($token_file | is-not-empty) {
+    # Keep the token off curl's command line, which other local users can read.
+    $curl_args = (
+      $curl_args
+      | append [
+        --variable
+        $"token@($token_file)"
+        --expand-header
+        "Authorization: Bearer {{token:trim}}"
+      ]
+    )
+  }
+  for entry in ($extra_headers | transpose key value | sort-by key) {
+    $curl_args = ($curl_args | append [--header $"($entry.key): ($entry.value)"])
+  }
+  $curl_args = (
+    $curl_args
+    | append [
+      --header
+      "content-type: application/json"
+      --data
+      @-
+    ]
+  )
+
   let run = (
     $shaped
     | to json
-    | ^$curl $"($gateway.baseUrl)/v1/chat/completions"
-      ...$config.curlArgs
-      --cacert $gateway.caFile
-      --variable $"token@($gateway.tokenFile)"
-      --expand-header "Authorization: Bearer {{token:trim}}"
-      --header "content-type: application/json"
-      --data @-
+    | ^$curl ...$curl_args
     | complete
   )
   if $run.exit_code != 0 {
