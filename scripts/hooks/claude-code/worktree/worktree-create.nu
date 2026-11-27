@@ -10,12 +10,7 @@
 
 # The commit a new worktree branches from, without fetching.
 def base-ref [cwd: string]: nothing -> string {
-  let remote = (
-    ^git
-      -C $cwd
-      rev-parse --abbrev-ref origin/HEAD
-    | complete
-  )
+  let remote = (^git -C $cwd rev-parse --abbrev-ref origin/HEAD | complete)
   if $remote.exit_code == 0 {
     $remote.stdout | str trim
   } else {
