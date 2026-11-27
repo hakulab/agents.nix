@@ -12,6 +12,7 @@ profile:
 
 let
   esc = lib.escapeShellArg;
+  defaultRole = profile.roles.default;
 
   # ------------------------------------------------------------------------------------------------
   # GPT models
@@ -20,7 +21,11 @@ let
     _: workload: lib.nameValuePair workload.modelId workload.model.thinking.defaultLevel
   ) profile.workloads;
 
-  slugPrefix = lib.removeSuffix profile.roles.default.modelKey profile.roles.default.modelId;
+  slugPrefix =
+    if lib.hasSuffix defaultRole.modelKey defaultRole.modelId then
+      lib.removeSuffix defaultRole.modelKey defaultRole.modelId
+    else
+      "";
 
   # Codex requires its native catalog's capabilities and prompt metadata.
   gptCatalog =
@@ -60,11 +65,13 @@ let
           slug = modelId;
           display_name = model.name;
           description = "${model.name} via ${profile.provider}";
+
           default_reasoning_level = model.thinking.defaultLevel;
           supported_reasoning_levels = map (effort: {
             inherit effort;
             description = "${effort} reasoning effort";
           }) model.thinking.efforts;
+
           shell_type = "unified_exec";
           visibility = "list";
           supported_in_api = true;
@@ -72,6 +79,7 @@ let
           supports_reasoning_summary_parameter = false;
           default_reasoning_summary = "none";
           support_verbosity = false;
+
           truncation_policy = {
             mode = "bytes";
             limit = 10000;
@@ -89,6 +97,8 @@ let
               "flagship"
               "standard"
               "mini"
+              "default"
+              "prose"
             ]
           )
         );
@@ -118,4 +128,4 @@ let
         fi
       '';
 in
-if profile.roles.default.family == "gpt" then gptCatalog else customCatalog
+if defaultRole.family == "gpt" then gptCatalog else customCatalog

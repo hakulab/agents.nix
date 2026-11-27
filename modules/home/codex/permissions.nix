@@ -23,7 +23,7 @@ let
     prefix_rule(
         pattern = [${toPattern gate.command}],
         decision = "prompt",
-        justification = "${gate.reason}",
+        justification = ${builtins.toJSON gate.reason},
     )
   '') policy.gates.commands;
 
@@ -46,16 +46,17 @@ let
     inherit (gate) reason;
   }) policy.mcpGates;
 
+  indentMultiline = text: lib.replaceStrings [ "\n" ] [ "\n  " ] (lib.trim text);
+
   toPolicyItems = lib.concatMapStringsSep "\n" (
     entry:
     if builtins.isString entry then
-      "- ${lib.trim entry}"
+      "- ${indentMultiline entry}"
     else
       let
         name = entry.name or "`${entry.command}`";
-        reason = lib.replaceStrings [ "\n" ] [ "\n  " ] (lib.trim entry.reason);
       in
-      "- ${name}: ${reason}"
+      "- ${name}: ${indentMultiline entry.reason}"
   );
 in
 {

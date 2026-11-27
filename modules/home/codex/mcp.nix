@@ -10,11 +10,6 @@
 }:
 
 let
-  fieldRenames = {
-    command = "command";
-    url = "url";
-  };
-
   availableServers = lib.filter (name: resolved.mcp.servers ? ${name}) enabledServers;
 
   mkEntry =
@@ -27,9 +22,10 @@ let
       {
         startup_timeout_sec = resolved.mcp.timeouts.startup;
       }
-      // lib.mapAttrs' (field: toml: lib.nameValuePair toml server.${field}) (
-        lib.intersectAttrs server fieldRenames
-      )
+      // builtins.intersectAttrs {
+        command = null;
+        url = null;
+      } server
       // mcpApprovals.${name} or { }
     );
 in

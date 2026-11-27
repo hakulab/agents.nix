@@ -130,9 +130,16 @@ in
       };
     };
 
-    _internal.configDirs = lib.mkOption {
-      type = lib.types.anything;
-      internal = true;
+    _internal = {
+      configDirs = lib.mkOption {
+        type = lib.types.anything;
+        internal = true;
+      };
+
+      nuModules = lib.mkOption {
+        type = lib.types.anything;
+        internal = true;
+      };
     };
 
     resolved = lib.mkOption {
@@ -148,6 +155,7 @@ in
   config.agents = {
     _internal = {
       inherit configDirs;
+      nuModules = mkNuModules lib;
     };
 
     resolved = {

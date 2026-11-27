@@ -7,12 +7,12 @@
   pkgs,
   lib,
   agentsLib,
-  resolved,
-  cfg,
-  configDir,
 }:
 
 let
+  cfg = config.agents.codex;
+  resolved = config.agents.resolved;
+  configDir = resolved.configDirs.codex;
   toml = pkgs.formats.toml { };
   stateDir = "${config.xdg.stateHome}/codex";
 
@@ -26,8 +26,8 @@ let
   # ------------------------------------------------------------------------------------------------
   resolvedProfiles = resolved.resolveProfiles {
     nativeFamily = "gpt";
-    client = "codex";
     inherit (cfg.auth) allowedProviders allowedChannels;
+    client = "codex";
   };
 
   providerNames = lib.unique (
@@ -122,12 +122,12 @@ let
   # Profile switcher
   # ------------------------------------------------------------------------------------------------
   switch = resolved.mkProfileSwitch {
-    inherit stateDir;
-    inherit (cfg.auth) defaultProfile;
     name = "codex-switch";
     assistant = "Codex";
+    inherit stateDir;
     extension = "config.toml";
     profiles = lib.mapAttrs (name: toml.generate "codex-profile-${name}.toml") profiles;
+    inherit (cfg.auth) defaultProfile;
     configFile = "${configDir}/config.toml";
     # Preserve user-defined agents while removing disabled managed roles.
     resetKeys = [

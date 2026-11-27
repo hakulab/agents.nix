@@ -12,20 +12,6 @@
 
 let
   scriptsDir = repoRoot + "/scripts";
-
-  mkNuModules =
-    lib:
-    lib.fileset.toSource {
-      root = scriptsDir + "/lib";
-      fileset = lib.fileset.fileFilter (
-        file:
-        !(
-          lib.hasSuffix ".test.nu" file.name
-          || lib.hasSuffix ".stub.nu" file.name
-          || lib.hasSuffix ".testlib.nu" file.name
-        )
-      ) (scriptsDir + "/lib");
-    };
 in
 {
   config,
@@ -39,7 +25,7 @@ let
   resolved = config.agents.resolved;
   configDir = resolved.configDirs.codex;
   dk = devkitLib.mkLib pkgs;
-  nuModules = mkNuModules lib;
+  inherit (config.agents._internal) nuModules;
   json = pkgs.formats.json { };
 
   defaultPlugins = import ./plugins.nix {
@@ -128,7 +114,7 @@ in
           };
         }
       );
-      default = defaultPlugins;
+      default = { };
       description = "Codex plugin enablement table merged into config.toml";
     };
 
@@ -190,17 +176,17 @@ in
           pkgs
           lib
           agentsLib
-          resolved
-          cfg
-          configDir
           ;
       };
 
-      desktopSettings = lib.optionalAttrs cfg.desktop.enable (
-        lib.recursiveUpdate (import ./desktop.nix {
-          homeDir = config.home.homeDirectory;
-        }) cfg.desktop.settings
-      );
+      desktopDefaults = import ./desktop.nix {
+        homeDir = config.home.homeDirectory;
+      };
+
+      desktopSettings = lib.optionalAttrs cfg.desktop.enable {
+        desktop = lib.recursiveUpdate desktopDefaults cfg.desktop.settings;
+        features.chronicle = true;
+      };
 
       hooks = import ./hooks.nix {
         inherit lib resolved scriptsDir;
@@ -220,12 +206,17 @@ in
       # --------------------------------------------------------------------------------------------
       # Package wrapper
       # --------------------------------------------------------------------------------------------
+      codexVersion =
+        let
+          v = lib.getVersion cfg.package;
+        in
+        if v != "" then v else "0.94.0";
+
       # Home Manager uses the version in the name to select the config layout.
       codexBin = agentsLib.wrapPackage {
         inherit pkgs;
-        inherit (profiles) envVars envFiles;
         pkg = cfg.package;
-        name = "codex-${cfg.package.version or "0.0.0"}";
+        name = "codex-${codexVersion}";
         bin = "codex";
         wrapArgs =
           lib.optionals pkgs.stdenv.isLinux [
@@ -235,6 +226,7 @@ in
             (lib.makeBinPath [ pkgs.bubblewrap ])
           ]
           ++ agentsLib.proxy.mkProxyWrapArgs config.agents.proxy;
+        inherit (profiles) envVars envFiles;
       };
 
       # --------------------------------------------------------------------------------------------
@@ -242,12 +234,9 @@ in
       # --------------------------------------------------------------------------------------------
       baseSettings =
         (import ./settings.nix {
-          inherit
-            hooks
-            mcp
-            permissions
-            ;
+          inherit hooks mcp;
           inherit (resolved) notify;
+          inherit permissions;
         })
         // profiles.settings
         // lib.optionalAttrs (cfg.plugins != { }) {
@@ -296,6 +285,7 @@ in
         agents = {
           codex = {
             mcp.disabledServers = lib.mkDefault config.agents.mcp.disabledServers;
+            plugins = lib.mapAttrs (_: plugin: { enabled = lib.mkDefault plugin.enabled; }) defaultPlugins;
             _internal = {
               settings = codexSettings;
               inherit (profiles)

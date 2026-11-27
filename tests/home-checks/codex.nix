@@ -74,6 +74,27 @@ let
             };
             channelId.local = "local/coder";
           };
+
+          "local-writer" = {
+            name = "Local Writer";
+            vendor = "local";
+            apis = [ "openai-responses" ];
+            contextWindow = 131072;
+            maxTokens = 32768;
+            autoCompactTokens = 96000;
+            input = [ "text" ];
+            reasoning = true;
+            thinking = {
+              mode = "effort";
+              efforts = [
+                "low"
+                "medium"
+                "high"
+              ];
+              defaultLevel = "medium";
+            };
+            channelId.local = "local/writer";
+          };
         };
 
         defaults.local = {
@@ -117,6 +138,7 @@ let
           provider = "my-gateway";
           family = "local";
           channel = "local";
+          proseModel = "local-writer";
           clients = [ "codex" ];
         };
 
@@ -161,22 +183,38 @@ let
         rulesFileName = "custom.rules";
         auth.defaultProfile = "gw-gpt";
 
-        hooks.extraEvents.Stop = [
-          {
-            hooks = [
-              {
-                type = "command";
-                command = "workmux set-window-status done";
-              }
-            ];
-          }
-        ];
+        hooks.extraEvents = {
+          SessionStart = [
+            {
+              hooks = [
+                {
+                  type = "command";
+                  command = "echo session-started";
+                }
+              ];
+            }
+          ];
 
-        plugins."custom@example".enabled = true;
+          Stop = [
+            {
+              hooks = [
+                {
+                  type = "command";
+                  command = "workmux set-window-status done";
+                }
+              ];
+            }
+          ];
+        };
+
+        plugins = {
+          "custom@example".enabled = true;
+          "browser@openai-bundled".enabled = false;
+        };
 
         desktop = {
           enable = true;
-          settings.desktop.codeFontSize = 16;
+          settings.codeFontSize = 16;
         };
 
         extraSettings = {
@@ -213,6 +251,85 @@ let
       mcp.enabledServers = [ "does-not-exist" ];
     };
   };
+
+  conflictingCaCertCfg = evalCodex {
+    agents = {
+      providers = {
+        gw-a = {
+          baseUrl = "https://gw-a.example.test";
+          caCertFile = "/run/secrets/ca-a.pem";
+        };
+        gw-b = {
+          baseUrl = "https://gw-b.example.test";
+          caCertFile = "/run/secrets/ca-b.pem";
+        };
+      };
+      profiles = {
+        a = {
+          provider = "gw-a";
+          family = "gpt";
+          clients = [ "codex" ];
+        };
+        b = {
+          provider = "gw-b";
+          family = "gpt";
+          clients = [ "codex" ];
+        };
+      };
+      codex.enable = true;
+    };
+  };
+
+  noResearcherCfg = evalCodex {
+    agents.codex = {
+      enable = true;
+      agents.enabledAgents = [ "implementer" ];
+    };
+  };
+
+  renamedGptCfg = evalCodex {
+    agents = {
+      models.catalog."gpt-6.2-sol".channelId.renamed = "custom/renamed-gpt";
+      providers.renamed-gw = {
+        baseUrl = "https://renamed.example.test";
+        channels.renamed = {
+          family = "gpt";
+          nativeWebSearch = false;
+        };
+      };
+      profiles.renamed = {
+        provider = "renamed-gw";
+        family = "gpt";
+        channel = "renamed";
+        clients = [ "codex" ];
+      };
+      codex.enable = true;
+    };
+  };
+
+  mkModelCatalog =
+    cfg:
+    import ../../modules/home/codex/models.nix {
+      inherit pkgs lib;
+      codexPackage = cfg.agents.codex.package;
+    };
+
+  fullResolvedProfiles = fullCfg.agents.resolved.resolveProfiles {
+    nativeFamily = "gpt";
+    client = "codex";
+  };
+
+  localCustomCatalog = mkModelCatalog fullCfg fullResolvedProfiles.gw-local;
+  localCustomSlugs =
+    map (model: model.slug)
+      (builtins.fromJSON localCustomCatalog.modelMetadata).models;
+
+  renamedResolvedProfiles = renamedGptCfg.agents.resolved.resolveProfiles {
+    nativeFamily = "gpt";
+    client = "codex";
+  };
+
+  renamedGptCatalog = mkModelCatalog renamedGptCfg renamedResolvedProfiles.renamed;
 
   enabledInternal = enabledCfg.agents.codex._internal;
   fullInternal = fullCfg.agents.codex._internal;
@@ -350,9 +467,11 @@ check "home-codex" [
       && fullInternal.settings.mcp_servers.CustomHttp.tools.list_items.approval_mode == "approve";
   }
   {
-    name = "enabled modelCall installs commentGate and hooks.extraEvents merges into config.toml";
+    name = "enabled modelCall installs commentGate and hooks.extraEvents merges with built-in and new events";
     ok =
       fullCfg.xdg.dataFile ? "agents-nix/hooks/codex-comment-gate"
+      && fullInternal.settings.hooks ? SessionStart
+      && builtins.length fullInternal.settings.hooks.SessionStart == 2
       && fullInternal.settings.hooks ? Stop
       && builtins.length fullInternal.settings.hooks.Stop == 1;
   }
@@ -362,11 +481,39 @@ check "home-codex" [
       fullCfg.home.file.codexRules.target == ".config/codex/rules/custom.rules"
       && lib.hasInfix "${fullConfigDir}/skills/trusted/scripts/check.sh" fullCfg.home.file.codexRules.text
       && fullInternal.settings.plugins."custom@example".enabled
+      && !fullInternal.settings.plugins."browser@openai-bundled".enabled
       && fullInternal.settings.desktop.codeFontSize == 16
       && fullInternal.settings.desktop.projectlessWorkspaceRoot == "${homeDirectory}/Codex"
       && fullInternal.settings.features.chronicle
       && fullInternal.settings.model_verbosity == "medium"
       && lib.all (a: a.assertion) fullCfg.assertions;
+  }
+  {
+    name = "Darwin plugin overrides merge with bundled defaults";
+    ok =
+      !pkgs.stdenv.isDarwin
+      || (
+        fullInternal.settings.plugins."custom@example".enabled
+        && !fullInternal.settings.plugins."browser@openai-bundled".enabled
+        && fullInternal.settings.plugins."chrome@openai-bundled".enabled
+      );
+  }
+  {
+    name = "slugPrefix falls back to empty when default modelId does not end with modelKey";
+    ok =
+      lib.hasInfix "--arg prefix ''" renamedGptCatalog.buildCommand
+      && !(lib.hasInfix "--arg prefix 'custom/renamed-gpt'" renamedGptCatalog.buildCommand);
+  }
+  {
+    name = "custom model catalog includes distinct prose workload model";
+    ok = lib.elem "local/coder" localCustomSlugs && lib.elem "local/writer" localCustomSlugs;
+  }
+  {
+    name = "explorer override is omitted when researcher agent is disabled";
+    ok =
+      noResearcherCfg.agents.codex._internal.profiles.official.agents ? implementer
+      && !(noResearcherCfg.agents.codex._internal.profiles.official.agents ? researcher)
+      && !(noResearcherCfg.agents.codex._internal.profiles.official.agents ? explorer);
   }
   {
     name = "platform defaults enable desktop, plugins, and keybindings only on Darwin";
@@ -390,5 +537,9 @@ check "home-codex" [
   {
     name = "enabledServers referencing an unavailable MCP server fails module assertions";
     ok = throws missingMcpServerCfg.assertions;
+  }
+  {
+    name = "multiple distinct provider caCertFile values fail module assertions";
+    ok = throws conflictingCaCertCfg.assertions;
   }
 ]
