@@ -1,0 +1,17 @@
+cachix
+devkit
+direnv
+doctoc
+hakula
+hakulab
+nixfmt
+nixos
+nixpkgs
+nushell
+pkgs
+prek
+shellcheck
+shfmt
+substituters
+taplo
+worktree
