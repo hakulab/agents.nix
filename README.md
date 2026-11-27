@@ -12,6 +12,8 @@ Declarative Nix and Home Manager modules for coding agents, MCP servers, hooks, 
 - `homeModules.shared`: shared Home Manager module defining the core `agents.*` options (`dataDir`, `proxy`, `browser`, `instructions`, `roles`, `permissions`, `models`, `providers`, `profiles`, `modelCall`, `mcp`, `skills`, `hooks`, `notify`) and the read-only `config.agents.resolved` interface.
 - `homeModules.claude-code`: opt-in Home Manager module for Claude Code (`agents.claude-code.*`), importing `homeModules.shared` and configuring settings, permissions, hooks, custom agents, MCP servers, plugins, auth profiles, and `claude-statusline`.
 - `homeModules.codex`: standalone Home Manager module (`agents.codex`) configuring the Codex CLI, permission rules, hooks, custom agents, MCP servers, auth profiles, plugins, and desktop preferences.
+- `homeModules.omp`: standalone Home Manager module (`agents.omp`) configuring Oh My Pi (`omp`), settings, permissions, custom agents, MCP servers, extensions, and auth profiles.
+- `homeModules.oxide-code`: standalone Home Manager module (`agents.oxide-code`) configuring `oxide-code` (`ox`), `programs.oxide-code` integration, settings, and Anthropic auth profiles.
 - `overlays.default`: overlay exposing the companion packages.
 - `packages.<system>`: companion packages (`acpx`, `browser-tools`, `file-formatter`, `mcp-server-github`, `mcp-server-gitlab`).
 - `checks.<system>`: library evaluation checks, Home Manager module evaluation checks, Nushell script tests, TypeScript tests (`ts-tests` via `bun test`), and package builds.

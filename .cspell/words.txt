@@ -42,7 +42,9 @@ pgrep
 pkgs
 pkill
 pname
+poppler
 prek
+prio
 qwen
 raine
 readelf
@@ -53,6 +55,7 @@ scrapling
 shellcheck
 shfmt
 shortlog
+smol
 statix
 stdenv
 substituters

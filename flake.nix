@@ -44,6 +44,15 @@
         devkit.follows = "devkit";
       };
     };
+
+    oxide-code = {
+      url = "github:hakulab/oxide-code";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        devkit.follows = "devkit";
+        home-manager.follows = "home-manager";
+      };
+    };
   };
 
   # ------------------------------------------------------------------------------------------------
@@ -58,6 +67,7 @@
       home-manager,
       llm-agents,
       claude-statusline,
+      oxide-code,
     }:
     let
       agentsLib = import ./lib {
@@ -105,6 +115,23 @@
           inherit sharedHomeModule;
         }
       );
+
+      ompHomeModule = mkHomeModule "omp" (
+        import ./modules/home/omp {
+          inherit agentsLib sharedHomeModule;
+          llmAgentsPackagesFor = system: llm-agents.packages.${system};
+          repoRoot = ./.;
+        }
+      );
+
+      oxideCodeHomeModule = mkHomeModule "oxide-code" (
+        import ./modules/home/oxide-code {
+          inherit agentsLib sharedHomeModule;
+          oxideCodeHomeModule = oxide-code.homeModules.default;
+          oxideCodePackagesFor = system: oxide-code.packages.${system};
+          repoRoot = ./.;
+        }
+      );
     in
     {
       lib = agentsLib;
@@ -112,6 +139,8 @@
       homeModules = {
         claude-code = claudeCodeHomeModule;
         codex = codexHomeModule;
+        omp = ompHomeModule;
+        oxide-code = oxideCodeHomeModule;
         shared = sharedHomeModule;
       };
 
@@ -170,6 +199,8 @@
           sharedModule = sharedHomeModule;
           claudeCodeModule = claudeCodeHomeModule;
           codexModule = codexHomeModule;
+          ompModule = ompHomeModule;
+          oxideCodeModule = oxideCodeHomeModule;
         };
 
         nuTests = dk.nuTests {

@@ -14,6 +14,8 @@ Within a minor version, stable releases keep exported flake outputs and document
 - `lib`
 - `homeModules.claude-code`
 - `homeModules.codex`
+- `homeModules.omp`
+- `homeModules.oxide-code`
 - `homeModules.shared`
 - `overlays.default`
 - `packages.<system>`
