@@ -200,7 +200,7 @@ in
     caCertFile = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = defaultCaCertFile;
-      defaultText = lib.literalExpression "unique non-null agents.providers.<name>.caCertFile, or null";
+      defaultText = lib.literalMD "unique non-null `agents.providers.<name>.caCertFile`, or `null`";
       description = "Path to an extra CA certificate bundle exported as NODE_EXTRA_CA_CERTS, defaulting to the unique provider caCertFile when one exists";
     };
 

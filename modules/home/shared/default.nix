@@ -24,7 +24,7 @@ let
   };
 
   promptFragments = {
-    inherit (renderer) fragments renderPrompt readPrompt;
+    inherit (renderer) renderPrompt readPrompt;
     phrasing = renderer.fragments."@phrasing@\n";
     roleSections = {
       preamble = builtins.readFile (fragmentsDir + "/preamble.md");

@@ -106,7 +106,7 @@ in
     channels = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = if providerCfg != null then builtins.attrNames providerCfg.channels else [ ];
-      defaultText = lib.literalExpression "builtins.attrNames agents.providers.<provider>.channels or [ ]";
+      defaultText = lib.literalExpression "builtins.attrNames (agents.providers.<provider>.channels or { })";
       description = "Preferred provider channel names used when resolving model IDs";
     };
 

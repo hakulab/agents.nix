@@ -521,7 +521,7 @@ let
     }
 
     # ----------------------------------------------------------------------------------------------
-    # Validation and secret path constraints
+    # Assertions and validation
     # ----------------------------------------------------------------------------------------------
     {
       name = "api-key profile without baseUrl fails assertion";

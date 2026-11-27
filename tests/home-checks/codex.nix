@@ -346,6 +346,7 @@ let
       finalSettings = lib.mkForce { };
     };
   };
+
   mkModelCatalog =
     cfg:
     import ../../modules/home/codex/models.nix {
