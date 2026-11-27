@@ -65,13 +65,13 @@ in
     };
 
     labels = lib.mkOption {
-      inherit (toml) type;
+      type = lib.types.attrsOf toml.type;
       default = { };
       description = "Label rules written to activity-report's [labels] configuration table";
     };
 
     extraSettings = lib.mkOption {
-      inherit (toml) type;
+      type = lib.types.attrsOf toml.type;
       default = { };
       description = "Additional settings recursively merged into activity-report/config.toml";
     };

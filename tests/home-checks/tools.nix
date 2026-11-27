@@ -141,7 +141,7 @@ let
 
           workmux = {
             enable = true;
-            settings.worktree_prefix = "wm-";
+            settings.worktree_prefix = "wm.v1-";
             installSkills = false;
             installOmpExtension = false;
             tmuxIntegration = false;
@@ -379,7 +379,7 @@ check "home-peripheral-tools" [
   {
     name = "activity-report tracks custom worktree_prefix and omits regex when workmux is disabled";
     ok =
-      headlessCfg.programs.activity-report.settings.excluded_dirs == [ "/[^/]+__worktrees/wm-" ]
+      headlessCfg.programs.activity-report.settings.excluded_dirs == [ "/[^/]+__worktrees/wm\\.v1-" ]
       && !(headlessCfg.agents.skills.sources ? activity-report)
       && !(headlessServeCfg.programs.activity-report.settings ? excluded_dirs);
   }

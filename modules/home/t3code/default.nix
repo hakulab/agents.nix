@@ -202,13 +202,13 @@ in
     settings = lib.mkOption {
       type = lib.types.attrsOf json.type;
       default = { };
-      description = "Managed default settings merged into T3 Code userdata/settings.json";
+      description = "Managed default settings recursively merged onto built-in defaults for T3 Code userdata/settings.json";
     };
 
     providerInstances = lib.mkOption {
       type = lib.types.attrsOf json.type;
       default = { };
-      description = "Managed provider instance definitions written to T3 Code userdata/settings.json";
+      description = "Provider instances recursively merged onto built-in defaults for T3 Code userdata/settings.json";
     };
 
     service = {
