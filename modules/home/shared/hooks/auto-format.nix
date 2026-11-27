@@ -18,7 +18,7 @@
   statusMessage = "Formatting edited files";
   command = mkNuHook {
     slug = "auto-format";
-    script = scriptsDir + "/hooks/auto-format/auto-format.nu";
+    script = scriptsDir + "/shared/hooks/auto-format/auto-format.nu";
     config = {
       inherit fileFormatter patchInput;
     };

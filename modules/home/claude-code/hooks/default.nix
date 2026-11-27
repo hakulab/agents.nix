@@ -12,8 +12,6 @@
 }:
 
 let
-  hooksDir = scriptsDir + "/hooks/claude-code";
-
   sharedHooks = resolved.mkHooks {
     assistant = "claude-code";
     toolClasses = {
@@ -27,54 +25,25 @@ let
   # ------------------------------------------------------------------------------------------------
   # Assistant-specific hooks
   # ------------------------------------------------------------------------------------------------
-  autoDream = {
-    event = "SessionStart";
-    type = "command";
-    timeout = sharedHooks.timeouts.tool;
-    statusMessage = "Checking memory consolidation";
-    command = sharedHooks.mkNuHook {
-      slug = "auto-dream";
-      script = hooksDir + "/auto-dream/auto-dream.nu";
-      config = {
-        git = lib.getExe pkgs.git;
-        model = agentsLib.models.modelAliases.claude.flagship;
-        prompt = builtins.readFile (hooksDir + "/auto-dream/prompt.md");
-      };
-    };
+  autoDream = import ./auto-dream.nix {
+    inherit
+      pkgs
+      lib
+      agentsLib
+      scriptsDir
+      ;
+    inherit (sharedHooks) mkNuHook timeouts;
   };
 
-  teammateIdle = {
-    event = "TeammateIdle";
-    type = "command";
-    command = sharedHooks.mkNuHook {
-      slug = "teammate-idle";
-      script = hooksDir + "/teammate-idle/teammate-idle.nu";
-    };
+  teammateIdle = import ./teammate-idle.nix {
+    inherit scriptsDir;
+    inherit (sharedHooks) mkNuHook;
   };
 
-  worktreeRuntimeInputs = [
-    pkgs.git
-    hooksCfg.worktree.workmuxPackage
-  ];
-
-  worktreeCreate = {
-    event = "WorktreeCreate";
-    type = "command";
-    command = sharedHooks.mkNuHook {
-      slug = "worktree-create";
-      script = hooksDir + "/worktree/worktree-create.nu";
-      runtimeInputs = worktreeRuntimeInputs;
-    };
-  };
-
-  worktreeRemove = {
-    event = "WorktreeRemove";
-    type = "command";
-    command = sharedHooks.mkNuHook {
-      slug = "worktree-remove";
-      script = hooksDir + "/worktree/worktree-remove.nu";
-      runtimeInputs = worktreeRuntimeInputs;
-    };
+  worktree = import ./worktree.nix {
+    inherit pkgs scriptsDir;
+    inherit (sharedHooks) mkNuHook;
+    inherit (hooksCfg.worktree) workmuxPackage;
   };
 
   # ------------------------------------------------------------------------------------------------
@@ -86,10 +55,7 @@ let
     ++ lib.optional hooksCfg.completeness.enable sharedHooks.hooks.completeness
     ++ lib.optional hooksCfg.autoDream.enable autoDream
     ++ lib.optional hooksCfg.teammateIdle.enable teammateIdle
-    ++ lib.optionals hooksCfg.worktree.enable [
-      worktreeCreate
-      worktreeRemove
-    ]
+    ++ lib.optionals hooksCfg.worktree.enable worktree
   );
 
   projectNotify = resolved.notify.mkProjectNotifyScript;

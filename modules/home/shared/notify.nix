@@ -52,7 +52,7 @@ let
 
   notifyPackage = dk.writeNuApplication {
     name = "agents-notify";
-    text = builtins.readFile (scriptsDir + "/notify/notify.nu");
+    text = builtins.readFile (scriptsDir + "/shared/notify/notify.nu");
     makeWrapperArgs = notifyWrapperArgs;
   };
 
@@ -60,7 +60,7 @@ let
 
   projectNotifyPackage = dk.writeNuApplication {
     name = "project-notify";
-    text = builtins.readFile (scriptsDir + "/notify/project-notify.nu");
+    text = builtins.readFile (scriptsDir + "/shared/notify/project-notify.nu");
     runtimeInputs = [ pkgs.coreutils ];
     flags.notify = notifyScript;
   };

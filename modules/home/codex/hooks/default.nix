@@ -21,21 +21,9 @@ let
     };
   };
 
-  compactContextDir = scriptsDir + "/hooks/codex/compact-context";
-
-  compactContext = {
-    event = "SessionStart";
-    type = "command";
-    matcher = "compact";
-    timeout = sharedHooks.timeouts.tool;
-    statusMessage = "Restoring compacted context";
-    command = sharedHooks.mkNuHook {
-      slug = "compact-context";
-      script = compactContextDir + "/compact-context.nu";
-      config = {
-        prompt = builtins.readFile (compactContextDir + "/prompt.md");
-      };
-    };
+  compactContext = import ./compact-context.nix {
+    inherit scriptsDir;
+    inherit (sharedHooks) mkNuHook timeouts;
   };
 
   installed = sharedHooks.install (

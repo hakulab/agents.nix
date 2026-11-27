@@ -57,7 +57,7 @@ let
     lib.getExe (
       dk.writeNuApplication {
         name = "${assistant}-model-call";
-        text = builtins.readFile (scriptsDir + "/lib/model-call.nu");
+        text = builtins.readFile (scriptsDir + "/shared/model-call/model-call.nu");
         runtimeInputs = [ pkgs.coreutils ];
         flags.config = configFile;
       }

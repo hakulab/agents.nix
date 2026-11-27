@@ -122,7 +122,7 @@ All prompts, instructions, skills, and helper scripts are plain files in this re
 - `assets/prompt-fragments/`: reusable Markdown fragments composed into assistant and hook prompts.
 - `assets/agent-roles/`: subagent role definitions and coordination prompts.
 - `assets/skills/`: standalone skills such as `prose-polish`.
-- `scripts/`: Nushell, POSIX shell, and TypeScript helpers and prompts for hooks (`hooks/`), cross-platform desktop notifications (`notify/`), profile switching (`profile-switch/`), and Oh My Pi extensions (`omp/`).
+- `scripts/`: importable Nushell libraries, shared helpers, and client-specific scripts and hook prompts.
 
 ## Cache
 
