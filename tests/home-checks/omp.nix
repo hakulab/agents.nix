@@ -235,6 +235,32 @@ let
     };
   };
 
+  namespaceCfg =
+    primaryName: secondaryName: disabledServers:
+    evalHomeWith [ homeModules.omp ] {
+      agents = {
+        mcp.servers = {
+          primary = {
+            type = "http";
+            displayName = primaryName;
+            url = "https://primary.example.test/mcp";
+          };
+
+          secondary = {
+            type = "http";
+            displayName = secondaryName;
+            url = "https://secondary.example.test/mcp";
+          };
+        };
+
+        omp = {
+          enable = true;
+          package = stubOmp;
+          mcp.disabledServers = disabledServers;
+        };
+      };
+    };
+
   missingBaseUrlCfg = evalHomeWith [ homeModules.omp ] {
     agents = {
       browser.chromiumPackage = null;
@@ -257,7 +283,8 @@ let
   filteredStateDir = "${filteredProfilesCfg.xdg.stateHome}/omp";
 
   combinedOmpBin = findPackageNamed "omp" combinedCfg.home.packages;
-  combinedMcp = builtins.fromJSON combinedCfg.home.file.".omp/agent/mcp.json".source.value;
+  mcpConfig = cfg: builtins.fromJSON cfg.home.file.".omp/agent/mcp.json".source.value;
+  combinedMcp = mcpConfig combinedCfg;
   workClaudeProfile =
     builtins.fromJSON
       combinedCfg.home.file."${stateDir}/profiles/work-claude.config.yml".source.value;
@@ -342,7 +369,25 @@ check "home-omp" [
   }
   {
     name = "unknown MCP server in enabledServers fails settings evaluation";
-    ok = throws missingMcpServerCfg.home.file.".omp/agent/mcp.json".source.value;
+    ok = throws (mcpConfig missingMcpServerCfg);
+  }
+  {
+    name = "OMP rejects selected servers that normalize to the same namespace";
+    ok =
+      throws (mcpConfig (namespaceCfg "Team-API" "team_api" [ ]))
+      && throws (mcpConfig (namespaceCfg "---" "Server" [ ]))
+      && throws (mcpConfig (namespaceCfg "Key" "Key" [ ]));
+  }
+  {
+    name = "disabling an OMP alias leaves the selected server in the generated MCP config";
+    ok =
+      (mcpConfig (namespaceCfg "Team-API" "team_api" [ "secondary" ])).mcpServers == {
+        "Team-API" = {
+          type = "http";
+          timeout = 120000;
+          url = "https://primary.example.test/mcp";
+        };
+      };
   }
 
   # ------------------------------------------------------------------------------------------------

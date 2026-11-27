@@ -183,14 +183,16 @@ in
         hooksCfg = cfg.hooks;
       };
 
+      enabledServers = resolved.mcp.computeEnabledServers cfg.mcp;
+
       permissions = import ./permissions.nix {
-        inherit lib resolved;
+        inherit lib resolved enabledServers;
       };
 
       mcp = import ./mcp.nix {
         inherit lib resolved;
         inherit (permissions) mcpApprovals;
-        enabledServers = resolved.mcp.computeEnabledServers cfg.mcp;
+        inherit enabledServers;
       };
 
       # --------------------------------------------------------------------------------------------

@@ -5,28 +5,12 @@
 {
   lib,
   resolved,
-  enabledServers,
+  mcp,
 }:
 
 let
   policy = resolved.permissions;
-  mcpGates = lib.filter (gate: lib.elem gate.server enabledServers) policy.mcpGates;
-
-  sanitize =
-    value:
-    lib.concatStringsSep "_" (
-      lib.filter (part: lib.isString part && part != "") (builtins.split "[^a-z0-9]+" (lib.toLower value))
-    );
-
-  # Mirrors OMP's mintMCPToolName, which hashes names over 64 characters in a way Nix can't
-  # reproduce, so a longer name fails evaluation.
-  toToolName =
-    entry:
-    let
-      server = sanitize entry.displayName;
-      name = "mcp__${server}_${lib.removePrefix "${server}_" (sanitize entry.tool)}";
-    in
-    lib.throwIf (lib.stringLength name > 64) "OMP would hash the MCP tool name `${name}`" name;
+  mcpGates = lib.filter (gate: lib.elem gate.server mcp.enabledServers) policy.mcpGates;
 
   toPromptRules = lib.concatMap (
     command:
@@ -50,7 +34,7 @@ in
       # Eval can execute shells without passing through Bash's command rules.
       eval = "prompt";
     }
-    // lib.listToAttrs (map (gate: lib.nameValuePair (toToolName gate) "prompt") mcpGates);
+    // lib.listToAttrs (map (gate: lib.nameValuePair (mcp.toToolName gate) "prompt") mcpGates);
   };
 
   bash.patterns = toPromptRules policy.gateCommands;
