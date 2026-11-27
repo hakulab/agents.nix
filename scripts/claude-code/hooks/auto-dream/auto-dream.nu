@@ -62,6 +62,21 @@ def transcript-cwd [path: string]: nothing -> string {
   | default ""
 }
 
+def checkout-contains [root: list<string>, parts: list<string>]: nothing -> bool {
+  let depth = ($root | length)
+  if ($parts | first $depth) != $root {
+    return false
+  }
+
+  $parts
+  | skip $depth
+  | enumerate
+  | all {|entry|
+    let directory = ($parts | first ($depth + $entry.index + 1) | path join)
+    not ($directory | path join ".git" | path exists)
+  }
+}
+
 def sessions-since [worktrees: list<string>, since: datetime, current: string]: nothing -> int {
   let slugs = ($worktrees | each {|root| project-slug $root })
   let roots = ($worktrees | each {|root| $root | path expand | path split })
@@ -84,7 +99,7 @@ def sessions-since [worktrees: list<string>, since: datetime, current: string]: 
     }
 
     let parts = ($cwd | path expand | path split)
-    $roots | any {|root| ($parts | first ($root | length)) == $root }
+    $roots | any {|root| checkout-contains $root $parts }
   }
   | length
 }

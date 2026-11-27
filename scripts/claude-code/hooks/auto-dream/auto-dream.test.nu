@@ -27,14 +27,16 @@ def add-session [projects: string, directory: string, id: string, cwd: string]: 
 def "test auto-dream counts recent sessions from this repository and its worktrees" [] {
   let root = (mktemp --directory | path expand)
   let main = ($root | path join "app")
+  let nested = ($main | path join "vendor/lib")
   let subdir = ($main | path join "examples")
   let worktree = ($root | path join "linked checkout")
   let worktree_subdir = ($worktree | path join "docs")
   let sibling = ($root | path join "app-examples")
   let other = ($root | path join "application")
 
-  mkdir $main $subdir $sibling $other
+  mkdir $main $nested $subdir $sibling $other
   ^git -C $main init --quiet --initial-branch main
+  ^git -C $nested init --quiet --initial-branch main
   ^git -C $main -c user.name=Test -c user.email=test@example.com commit --quiet --allow-empty -m root
   ^git -C $main worktree add --quiet -b linked $worktree
   mkdir $worktree_subdir
@@ -58,6 +60,7 @@ def "test auto-dream counts recent sessions from this repository and its worktre
 
   add-session $projects $sibling "sibling" $sibling | ignore
   add-session $projects $other "other" $other | ignore
+  add-session $projects $nested "nested" $nested | ignore
   '{"type":"summary"}' | save ($projects | path join $slug "missing-cwd.jsonl")
 
   let config = ($root | path join "config.json")
