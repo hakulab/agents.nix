@@ -117,6 +117,28 @@ def "test a request passes the token by file and prints the reply" [] {
   ]
 }
 
+def "test gateway base URLs resolve to one version segment" [] {
+  let request = {
+    model: "stub"
+    maxTokens: 64
+    system: "Judge."
+    user: "Text."
+  }
+  let cases = [
+    [base_url endpoint];
+    ["https://gateway.test/v1" "https://gateway.test/v1/chat/completions"]
+    ["https://gateway.test/team/v1/" "https://gateway.test/team/v1/chat/completions"]
+    ["https://gateway.test/team/" "https://gateway.test/team/v1/chat/completions"]
+    ["https://v1" "https://v1/v1/chat/completions"]
+  ]
+
+  for case in $cases {
+    let result = (call $request (reply "ok" "stop") --gateway {baseUrl: $case.base_url})
+    assert equal $result.run.exit_code 0 $result.run.stderr
+    assert equal $result.calls.0.args.0 $case.endpoint $case.base_url
+  }
+}
+
 def "test a reply cut short fails with its finish reason" [] {
   let request = {
     model: "stub"
