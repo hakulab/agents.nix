@@ -136,6 +136,62 @@ let
     };
   };
 
+  evalEndpoint =
+    provider: settings:
+    evalHomeWith [ homeModules.oxide-code ] {
+      agents = {
+        providers.gateway = {
+          apiKeyFile = "/run/secrets/gw-key";
+        }
+        // provider;
+        profiles.gateway = {
+          provider = "gateway";
+          family = "claude";
+        };
+        oxide-code = {
+          enable = true;
+          package = stubOx;
+          extraSettings = settings;
+        };
+      };
+    };
+
+  endpointCases = [
+    {
+      name = "static environment";
+      provider.extraEnv.ANTHROPIC_BASE_URL = "https://gw.example.test";
+      settings = { };
+      valid = true;
+    }
+    {
+      name = "runtime environment file";
+      provider.extraEnvFiles.ANTHROPIC_BASE_URL = "/run/secrets/gw-endpoint";
+      settings = { };
+      valid = true;
+    }
+    {
+      name = "client settings";
+      provider = { };
+      settings.client.base_url = "https://gw.example.test";
+      valid = true;
+    }
+    {
+      name = "missing";
+      provider = { };
+      settings = { };
+      valid = false;
+    }
+    {
+      name = "erased by environment override";
+      provider = {
+        baseUrl = "https://gw.example.test";
+        extraEnv.ANTHROPIC_BASE_URL = "";
+      };
+      settings = { };
+      valid = false;
+    }
+  ];
+
   stateDir = "${combinedCfg.xdg.stateHome}/oxide-code";
   filteredStateDir = "${filteredProfilesCfg.xdg.stateHome}/oxide-code";
 
@@ -210,6 +266,15 @@ check "home-oxide-code" [
     ok =
       filteredProfilesCfg.home.file ? "${filteredStateDir}/profiles/official.env.sh"
       && !(filteredProfilesCfg.home.file ? "${filteredStateDir}/profiles/gw-claude.env.sh");
+  }
+  {
+    name = "provider profiles require an explicit endpoint and honor overrides";
+    ok = lib.all (
+      case:
+      lib.assertMsg (
+        throws (evalEndpoint case.provider case.settings).assertions != case.valid
+      ) "oxide-code profile endpoint test failed for ${case.name}"
+    ) endpointCases;
   }
   {
     name = "invalid auth.defaultProfile fails module assertion";

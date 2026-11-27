@@ -47,12 +47,32 @@ let
   profiles = lib.mapAttrs mkProfile enabledProfiles;
 
   # ------------------------------------------------------------------------------------------------
+  # Profile endpoints
+  # ------------------------------------------------------------------------------------------------
+  hasValue = value: builtins.isString value && value != "";
+  endpointFile = profile: profile.extraEnvFiles.ANTHROPIC_BASE_URL or null;
+
+  hasEndpoint =
+    profile:
+    hasValue (endpointFile profile)
+    || hasValue (profile.extraEnv.ANTHROPIC_BASE_URL or (profile.baseUrl or null))
+    || hasValue (config.programs.oxide-code.settings.client.base_url or null);
+
+  # ------------------------------------------------------------------------------------------------
   # Profile scripts
   # ------------------------------------------------------------------------------------------------
   mkProfileScript =
     name: profile:
     pkgs.writeShellScript "ox-profile-${name}" (
-      lib.concatStringsSep "\n" (resolved.anthropicProfiles.mkEnvLines { label = "ox"; } profile)
+      lib.concatStringsSep "\n" (
+        resolved.anthropicProfiles.mkEnvLines { label = "ox"; } profile
+        ++ lib.optional (hasValue (endpointFile profile)) ''
+          if [[ -z "$ANTHROPIC_BASE_URL" ]]; then
+            echo "ox: the profile endpoint file produced an empty ANTHROPIC_BASE_URL" >&2
+            return 1
+          fi
+        ''
+      )
     );
 
   # ------------------------------------------------------------------------------------------------
@@ -95,7 +115,13 @@ in
     # ----------------------------------------------------------------------------------------------
     # Assertions
     # ----------------------------------------------------------------------------------------------
-    assertions = [ switch.assertion ];
+    assertions = [
+      switch.assertion
+    ]
+    ++ lib.mapAttrsToList (name: profile: {
+      assertion = profile.type == "api-key" -> hasEndpoint profile;
+      message = "agents.oxide-code: provider profile '${name}' requires an explicit Anthropic endpoint";
+    }) profiles;
 
     # ----------------------------------------------------------------------------------------------
     # Packages, files, and activation
