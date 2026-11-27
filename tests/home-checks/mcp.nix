@@ -3,12 +3,17 @@
 # ==================================================================================================
 
 {
+  pkgs,
   lib,
   harness,
 }:
 
 let
   inherit (harness) check throws evalHome;
+
+  stubChromium = pkgs.writeShellScriptBin "chromium" ''
+    exit 0
+  '';
 
   cfg = evalHome {
     agents = {
@@ -57,7 +62,15 @@ let
             type = "http";
             displayName = "CustomHttp";
             url = "https://mcp.example.test/mcp";
-            permissions.allowTools = [ "list_items" ];
+            permissions = {
+              allowTools = [ "list_items" ];
+              gateTools = [
+                {
+                  tool = "delete_item";
+                  reason = "Deletes remote state";
+                }
+              ];
+            };
           };
 
           disabledServer = {
@@ -65,11 +78,21 @@ let
             type = "http";
             displayName = "DisabledServer";
             url = "https://disabled.example.test/mcp";
+            permissions.allowTools = [ "ping" ];
           };
         };
       };
+    };
+  };
 
-      permissions.mcpAllows.disabledServer = [ "ping" ];
+  browserCfg = evalHome {
+    agents = {
+      browser.chromiumPackage = stubChromium;
+
+      mcp.presets = {
+        chromeDevtools.enable = true;
+        scrapling.enable = true;
+      };
     };
   };
 
@@ -130,6 +153,14 @@ check "home-shared-mcp" [
       && mcp.servers.customHttp.url == "https://mcp.example.test/mcp";
   }
   {
+    name = "agents.browser.chromiumPackage propagates --executable-path to browser MCP presets";
+    ok =
+      lib.elem "--executable-path=${lib.getExe stubChromium}" browserCfg.agents.mcp.servers.chromeDevtools.command
+      && lib.elem "--executable-path=${lib.getExe stubChromium}" browserCfg.agents.mcp.servers.scrapling.command
+      && !(lib.any (lib.hasPrefix "--executable-path=") cfg.agents.mcp.servers.chromeDevtools.command)
+      && !(lib.any (lib.hasPrefix "--executable-path=") cfg.agents.mcp.servers.scrapling.command);
+  }
+  {
     name = "uv.isolatedConfig controls --no-config in uvx wrappers";
     ok =
       isolatedUvCfg.agents.mcp.uv.isolatedConfig
@@ -158,7 +189,7 @@ check "home-shared-mcp" [
   # Server-declared permissions and validation
   # ------------------------------------------------------------------------------------------------
   {
-    name = "custom server allowTools fold into resolved.permissions.mcpAllows and disabled servers remain valid";
+    name = "enabled server permissions fold into resolved.permissions while disabled servers are omitted";
     ok =
       lib.any (
         entry:
@@ -166,8 +197,9 @@ check "home-shared-mcp" [
       ) permissions.mcpAllows
       && lib.any (
         entry:
-        entry.server == "disabledServer" && entry.displayName == "DisabledServer" && entry.tool == "ping"
-      ) permissions.mcpAllows;
+        entry.server == "customHttp" && entry.displayName == "CustomHttp" && entry.tool == "delete_item"
+      ) permissions.mcpGates
+      && !(lib.any (entry: entry.server == "disabledServer") permissions.mcpAllows);
   }
   {
     name = "valid MCP configuration passes all module assertions";

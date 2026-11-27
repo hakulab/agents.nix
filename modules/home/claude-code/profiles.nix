@@ -137,27 +137,44 @@ let
     client = "claude-code";
   };
 
-  profiles = lib.mapAttrs mkProfile resolvedProfiles;
+  enabledProfiles =
+    if cfg.auth.enabledProfiles == null then
+      resolvedProfiles
+    else
+      lib.filterAttrs (name: _: lib.elem name cfg.auth.enabledProfiles) resolvedProfiles;
 
-  officialProfile =
-    profiles.official or (mkProfile "official" (
-      resolved.profileResolver.resolveProfile {
-        name = "official";
-        profile = {
-          provider = null;
-          channel = null;
-          family = "claude";
-          nativeWebSearch = true;
-          oauthTokenFile = null;
-        };
-      }
-    ));
+  baseProfiles = lib.mapAttrs mkProfile enabledProfiles;
+
+  applyOverride =
+    name: base:
+    let
+      ov = cfg.auth.profileOverrides.${name} or null;
+    in
+    if ov == null then
+      base
+    else
+      base
+      // {
+        extraEnv = (base.extraEnv or { }) // ov.extraEnv;
+        extraHeaders = (base.extraHeaders or { }) // ov.extraHeaders;
+        nativeWebSearch = if ov.nativeWebSearch != null then ov.nativeWebSearch else base.nativeWebSearch;
+        sessionEffort = if ov.sessionEffort != null then ov.sessionEffort else base.sessionEffort;
+        modelEfforts = (base.modelEfforts or { }) // ov.modelEfforts;
+        compactWindows = (base.compactWindows or { }) // ov.compactWindows;
+        modelOverrides = (base.modelOverrides or { }) // ov.modelOverrides;
+      };
+
+  effectiveProfiles = lib.mapAttrs applyOverride baseProfiles;
+
+  unknownOverrideProfiles = lib.filter (name: !(enabledProfiles ? ${name})) (
+    builtins.attrNames cfg.auth.profileOverrides
+  );
 
   # ------------------------------------------------------------------------------------------------
-  # Profile submodule
+  # Profile override submodule
   # ------------------------------------------------------------------------------------------------
-  profileType = import ./profile-module.nix {
-    inherit lib officialProfile;
+  profileOverrideType = import ./profile-module.nix {
+    inherit lib;
   };
 
   # ------------------------------------------------------------------------------------------------
@@ -166,7 +183,7 @@ let
   fieldConstraints = [
     {
       field = "baseUrl";
-      isSet = p: p.baseUrl != null;
+      isSet = p: (p.baseUrl or null) != null;
       required = [ "api-key" ];
       forbidden = [
         "oauth-token"
@@ -175,7 +192,7 @@ let
     }
     {
       field = "tokenFile";
-      isSet = p: p.tokenFile != null;
+      isSet = p: (p.tokenFile or null) != null;
       required = [
         "oauth-token"
         "api-key"
@@ -184,7 +201,7 @@ let
     }
     {
       field = "extraEnvFiles";
-      isSet = p: p.extraEnvFiles != { };
+      isSet = p: (p.extraEnvFiles or { }) != { };
       forbidden = [ "subscription" ];
     }
   ];
@@ -217,8 +234,8 @@ let
     in
     lib.concatMap fieldAssertions fieldConstraints
     ++ [
-      (mkPosixNameAssertion "extraEnv" (builtins.attrNames profile.extraEnv))
-      (mkPosixNameAssertion "extraEnvFiles" (builtins.attrNames profile.extraEnvFiles))
+      (mkPosixNameAssertion "extraEnv" (builtins.attrNames (profile.extraEnv or { })))
+      (mkPosixNameAssertion "extraEnvFiles" (builtins.attrNames (profile.extraEnvFiles or { })))
     ];
 
   # ------------------------------------------------------------------------------------------------
@@ -284,7 +301,7 @@ let
       agents = mkAgentsDir profile;
     };
 
-  profileBundles = lib.mapAttrs mkProfileBundle cfg.auth.profiles;
+  profileBundles = lib.mapAttrs mkProfileBundle effectiveProfiles;
 
   switch = resolved.mkProfileSwitch {
     name = "claude-switch";
@@ -298,7 +315,7 @@ let
   # ------------------------------------------------------------------------------------------------
   # Profile loader and session helpers
   # ------------------------------------------------------------------------------------------------
-  profileEnvVars = resolved.anthropicProfiles.mkProfileEnvVars { } cfg.auth.profiles;
+  profileEnvVars = resolved.anthropicProfiles.mkProfileEnvVars { } effectiveProfiles;
 
   profileLoader = pkgs.replaceVars (claudeScriptsDir + "/profile-loader.sh") {
     inherit stateDir;
@@ -319,11 +336,11 @@ in
   # ------------------------------------------------------------------------------------------------
   # Module options
   # ------------------------------------------------------------------------------------------------
-  options = agentsLib.profiles.mkOptions { defaultProfile = "official"; } // {
-    profiles = lib.mkOption {
-      type = lib.types.attrsOf profileType;
+  options = agentsLib.profiles.mkOptions { } // {
+    profileOverrides = lib.mkOption {
+      type = lib.types.attrsOf profileOverrideType;
       default = { };
-      description = "Named authentication profiles for Claude Code";
+      description = "Per-profile Claude Code overrides merged onto resolved shared profiles";
     };
   };
 
@@ -336,19 +353,12 @@ in
     # ----------------------------------------------------------------------------------------------
     assertions = [
       switch.assertion
+      {
+        assertion = unknownOverrideProfiles == [ ];
+        message = "agents.claude-code.auth.profileOverrides references unknown or disabled profile(s): ${lib.concatStringsSep ", " unknownOverrideProfiles}";
+      }
     ]
-    ++ lib.concatLists (lib.mapAttrsToList mkProfileAssertions cfg.auth.profiles);
-
-    # ----------------------------------------------------------------------------------------------
-    # Default profiles
-    # ----------------------------------------------------------------------------------------------
-    agents.claude-code.auth.profiles = lib.mapAttrs (
-      _: profile:
-      lib.mapAttrs (
-        _: value:
-        if builtins.isAttrs value then lib.mapAttrs (_: lib.mkDefault) value else lib.mkDefault value
-      ) profile
-    ) profiles;
+    ++ lib.concatLists (lib.mapAttrsToList mkProfileAssertions effectiveProfiles);
 
     # ----------------------------------------------------------------------------------------------
     # Packages, files, and activation

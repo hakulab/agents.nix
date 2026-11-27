@@ -15,13 +15,14 @@ let
 
   models = defaultModels // statuslineCfg.models;
 
-  settings = {
+  baseSettings = {
     inherit models;
   }
   // lib.optionalAttrs (statuslineCfg.costSources != [ ]) {
     cost_sources = statuslineCfg.costSources;
-  }
-  // statuslineCfg.extraSettings;
+  };
+
+  settings = lib.recursiveUpdate baseSettings statuslineCfg.extraSettings;
 in
 {
   enable = true;

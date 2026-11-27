@@ -111,6 +111,7 @@ let
             enable = true;
             package = stubOmp;
             auth.defaultProfile = "work-claude";
+            mcp.disabledServers = [ "github" ];
             agents.enabledAgents = [ "reviewer" ];
             extensions = {
               fileFormatter.enable = false;
@@ -144,7 +145,7 @@ let
       omp = {
         enable = true;
         package = stubOmp;
-        auth.profiles = [ "official" ];
+        auth.enabledProfiles = [ "official" ];
       };
     };
   };
@@ -207,13 +208,15 @@ let
   longMcpToolCfg = evalHomeWith [ homeModules.omp ] {
     agents = {
       browser.chromiumPackage = null;
-      mcp.presets.github.enable = true;
-      permissions.mcpGates.github = [
-        {
-          tool = "this_mcp_tool_name_is_intentionally_longer_than_sixty_four_characters";
-          reason = "test";
-        }
-      ];
+      mcp = {
+        presets.github.enable = true;
+        servers.github.permissions.gateTools = [
+          {
+            tool = "this_mcp_tool_name_is_intentionally_longer_than_sixty_four_characters";
+            reason = "test";
+          }
+        ];
+      };
       omp = {
         enable = true;
         package = stubOmp;
@@ -301,9 +304,10 @@ check "home-omp" [
   # MCP integration and permissions
   # ------------------------------------------------------------------------------------------------
   {
-    name = "global agents.mcp.disabledServers propagates to omp and filters generated mcp.json";
+    name = "global agents.mcp.disabledServers merges with per-assistant disabledServers in omp";
     ok =
-      combinedCfg.agents.omp.mcp.disabledServers == [ "exa" ]
+      lib.elem "exa" combinedCfg.agents.omp.mcp.disabledServers
+      && lib.elem "github" combinedCfg.agents.omp.mcp.disabledServers
       && combinedMcp.mcpServers ? DeepWiki
       && combinedMcp.mcpServers.DeepWiki.type == "http"
       && combinedMcp.mcpServers.DeepWiki.url == "https://mcp.deepwiki.com/mcp"
@@ -358,7 +362,7 @@ check "home-omp" [
       && lib.hasInfix (lib.escapeShellArg "${combinedCfg.home.homeDirectory}/.omp/agent/models.yml") ompModelsActivation;
   }
   {
-    name = "auth.profiles allowlist filters installed profile files";
+    name = "auth.enabledProfiles allowlist filters installed profile files";
     ok =
       filteredProfilesCfg.home.file ? "${filteredStateDir}/profiles/official.config.yml"
       && !(filteredProfilesCfg.home.file ? "${filteredStateDir}/profiles/gw-gpt.config.yml");

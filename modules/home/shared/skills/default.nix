@@ -3,8 +3,10 @@
 # ==================================================================================================
 
 {
+  agentsLib,
   assetsDir,
   devkitLib,
+  promptFragments,
 }:
 
 {
@@ -16,8 +18,9 @@
 
 let
   cfg = config.agents;
-  internal = cfg._internal;
+  inherit (cfg) resolved;
   dk = devkitLib.mkLib pkgs;
+  modelIdFor = agentsLib.models.modelIdFor cfg.modelCall.channels;
 
   # ------------------------------------------------------------------------------------------------
   # Submodule types
@@ -46,9 +49,10 @@ let
       lib
       dk
       assetsDir
-      internal
       ;
-    modelCall = internal.mkModelCall {
+    inherit (resolved) modelCatalog;
+    inherit modelIdFor promptFragments;
+    modelCall = cfg.modelCall.mkCall {
       assistant = "prose-polish";
       timeout = 300;
     };
@@ -138,9 +142,10 @@ in
       };
     };
 
-    _internal.mkSkillScriptPaths = lib.mkOption {
+    resolved.mkSkillScriptPaths = lib.mkOption {
       type = lib.types.anything;
       internal = true;
+      readOnly = true;
     };
   };
 
@@ -157,7 +162,7 @@ in
           };
         };
 
-        _internal = {
+        resolved = {
           inherit mkSkillScriptPaths;
         };
       };
@@ -165,21 +170,21 @@ in
 
     (lib.mkIf cfg.skills.targets.claude {
       home.file = mkSkillFiles {
-        directory = "${internal.configDirs.claude}/skills";
+        directory = "${resolved.configDirs.claude}/skills";
         recursive = true;
       };
     })
 
     (lib.mkIf cfg.skills.targets.codex {
       home.file = mkSkillFiles {
-        directory = "${internal.configDirs.codex}/skills";
+        directory = "${resolved.configDirs.codex}/skills";
         recursive = false;
       };
     })
 
     (lib.mkIf cfg.skills.targets.omp {
       home.file = mkSkillFiles {
-        directory = "${internal.configDirs.omp}/skills";
+        directory = "${resolved.configDirs.omp}/skills";
         recursive = true;
       };
     })

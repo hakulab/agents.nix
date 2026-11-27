@@ -5,6 +5,7 @@
 {
   lib,
   resolved,
+  instructionsDir,
 }:
 
 let
@@ -34,7 +35,7 @@ let
       "Edit(/${path}/**)"
     ]) allows.paths
     ++ [
-      "Read(/${resolved.instructionsDir}/**)"
+      "Read(/${instructionsDir}/**)"
     ];
 
   # The built-in IDE server is outside the shared MCP registry.

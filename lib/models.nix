@@ -250,6 +250,21 @@ let
     in
     lib.unique ([ channelId ] ++ lib.optional (stripped != null) (builtins.head stripped));
 
+  modelIdFor =
+    channels: modelCatalog: key:
+    let
+      model = modelCatalog.models.${key} or { };
+      modelChannelIds = model.channelId or { };
+      selected = lib.filter (ch: modelChannelIds ? ${ch}) channels;
+      allChannels = builtins.attrValues modelChannelIds;
+    in
+    if selected != [ ] then
+      modelChannelIds.${lib.head selected}
+    else if allChannels != [ ] then
+      lib.head allChannels
+    else
+      key;
+
   extendCatalog =
     {
       base ? defaultCatalog,
@@ -269,6 +284,7 @@ in
     familyApis
     modelAliases
     channelIds
+    modelIdFor
     extendCatalog
     ;
 }

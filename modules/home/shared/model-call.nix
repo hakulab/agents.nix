@@ -19,24 +19,12 @@ let
   dk = devkitLib.mkLib pkgs;
   json = pkgs.formats.json { };
 
-  # ------------------------------------------------------------------------------------------------
-  # Model ID resolution and model call builder
-  # ------------------------------------------------------------------------------------------------
-  modelIdFor =
-    modelCatalog: key:
-    let
-      model = modelCatalog.models.${key} or { };
-      channelIds = model.channelId or { };
-      selected = lib.filter (ch: channelIds ? ${ch}) cfg.channels;
-      allChannels = builtins.attrValues channelIds;
-    in
-    if selected != [ ] then
-      channelIds.${lib.head selected}
-    else if allChannels != [ ] then
-      lib.head allChannels
-    else
-      key;
+  providerCfg =
+    if cfg.provider != null then config.agents.providers.${cfg.provider} or null else null;
 
+  # ------------------------------------------------------------------------------------------------
+  # Model call builder
+  # ------------------------------------------------------------------------------------------------
   mkModelCall =
     {
       assistant,
@@ -79,105 +67,106 @@ in
   # ------------------------------------------------------------------------------------------------
   # Options
   # ------------------------------------------------------------------------------------------------
-  options.agents = {
-    modelCall = {
-      enable = lib.mkEnableOption "OpenAI-compatible model call endpoint for LLM-backed hooks and skills";
+  options.agents.modelCall = {
+    enable = lib.mkEnableOption "OpenAI-compatible model call endpoint for LLM-backed hooks and skills";
 
-      baseUrl = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        description = "Base URL of the OpenAI-compatible chat completions endpoint";
+    provider = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "Provider name from agents.providers to inherit endpoint, credentials, and channels from";
+    };
+
+    baseUrl = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = if providerCfg != null then providerCfg.baseUrl else null;
+      defaultText = lib.literalExpression "agents.providers.<provider>.baseUrl or null";
+      description = "Base URL of the OpenAI-compatible chat completions endpoint";
+    };
+
+    apiKeyFile = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = if providerCfg != null then providerCfg.apiKeyFile else null;
+      defaultText = lib.literalExpression "agents.providers.<provider>.apiKeyFile or null";
+      description = "Runtime file path containing the default API key for model calls";
+    };
+
+    clientApiKeyFiles = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = { };
+      description = "Per-caller runtime API key file paths overriding apiKeyFile";
+    };
+
+    caCertFile = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = if providerCfg != null then providerCfg.caCertFile else null;
+      defaultText = lib.literalExpression "agents.providers.<provider>.caCertFile or null";
+      description = "Runtime file path to a custom CA certificate bundle for model calls";
+    };
+
+    channels = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = if providerCfg != null then builtins.attrNames providerCfg.channels else [ ];
+      defaultText = lib.literalExpression "builtins.attrNames (agents.providers.<provider>.channels or { })";
+      description = "Preferred provider channel names used when resolving model IDs";
+    };
+
+    extraHeaders = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = { };
+      description = "Extra HTTP headers included in model call requests";
+    };
+
+    timeouts = {
+      modelConnect = lib.mkOption {
+        type = lib.types.int;
+        default = 5;
+        description = "TCP connection timeout in seconds for model calls";
       };
 
-      apiKeyFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        description = "Runtime file path containing the default API key for model calls";
-      };
-
-      clientApiKeyFiles = lib.mkOption {
-        type = lib.types.attrsOf lib.types.str;
-        default = { };
-        description = "Per-caller runtime API key file paths overriding apiKeyFile";
-      };
-
-      caCertFile = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        description = "Runtime file path to a custom CA certificate bundle for model calls";
-      };
-
-      channels = lib.mkOption {
-        type = lib.types.listOf lib.types.str;
-        default = [ ];
-        description = "Preferred provider channel names used when resolving model IDs";
-      };
-
-      extraHeaders = lib.mkOption {
-        type = lib.types.attrsOf lib.types.str;
-        default = { };
-        description = "Extra HTTP headers included in model call requests";
-      };
-
-      commentGateModel = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        description = "Override model ID used by the comment-gate hook";
-      };
-
-      timeouts = {
-        modelConnect = lib.mkOption {
-          type = lib.types.int;
-          default = 5;
-          description = "TCP connection timeout in seconds for model calls";
-        };
-
-        modelCall = lib.mkOption {
-          type = lib.types.int;
-          default = 90;
-          description = "Default request timeout in seconds for model calls";
-        };
-
-        modelHookMargin = lib.mkOption {
-          type = lib.types.int;
-          default = 10;
-          description = "Extra seconds a hook outlives its model call so timeouts can be reported";
-        };
+      modelCall = lib.mkOption {
+        type = lib.types.int;
+        default = 90;
+        description = "Default request timeout in seconds for model calls";
       };
     };
 
-    _internal = {
-      mkModelCall = lib.mkOption {
-        type = lib.types.anything;
-        internal = true;
-      };
-
-      modelIdFor = lib.mkOption {
-        type = lib.types.anything;
-        internal = true;
-      };
+    mkCall = lib.mkOption {
+      type = lib.types.anything;
+      internal = true;
+      readOnly = true;
     };
   };
 
   # ------------------------------------------------------------------------------------------------
   # Config
   # ------------------------------------------------------------------------------------------------
-  config = {
-    # ----------------------------------------------------------------------------------------------
-    # Assertions
-    # ----------------------------------------------------------------------------------------------
-    assertions = [
-      {
-        assertion = cfg.enable -> cfg.baseUrl != null;
-        message = "agents.modelCall.baseUrl must be set when agents.modelCall.enable is true";
-      }
-    ];
+  config = lib.mkMerge [
+    {
+      # --------------------------------------------------------------------------------------------
+      # Assertions
+      # --------------------------------------------------------------------------------------------
+      assertions = [
+        {
+          assertion = cfg.provider == null || config.agents.providers ? ${cfg.provider};
+          message = "agents.modelCall.provider references undeclared provider '${toString cfg.provider}'";
+        }
+        {
+          assertion = cfg.enable -> cfg.baseUrl != null;
+          message = "agents.modelCall.baseUrl must be set when agents.modelCall.enable is true";
+        }
+      ];
 
-    # ----------------------------------------------------------------------------------------------
-    # Internal exports
-    # ----------------------------------------------------------------------------------------------
-    agents._internal = {
-      inherit mkModelCall modelIdFor;
-    };
-  };
+      # --------------------------------------------------------------------------------------------
+      # Internal exports
+      # --------------------------------------------------------------------------------------------
+      agents.modelCall.mkCall = mkModelCall;
+    }
+
+    (lib.mkIf (providerCfg != null) {
+      agents.modelCall = {
+        clientApiKeyFiles = lib.mapAttrs (_: lib.mkOptionDefault) providerCfg.clientApiKeyFiles;
+        extraHeaders = lib.mapAttrs (_: lib.mkOptionDefault) providerCfg.extraHeaders;
+      };
+    })
+  ];
 }

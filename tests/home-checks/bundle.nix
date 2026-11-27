@@ -16,6 +16,10 @@ let
     exit 0
   '';
 
+  stubWorkmux = pkgs.writeShellScriptBin "workmux" ''
+    exit 0
+  '';
+
   sharedOnlyCfg = evalModules [ homeModules.shared ];
   defaultDisabledCfg = evalModules [ homeModules.default ];
 
@@ -58,7 +62,11 @@ let
         ccusage.enable = true;
         ctx7.enable = true;
         t3code.enable = true;
-        workmux.enable = true;
+
+        workmux = {
+          enable = true;
+          package = stubWorkmux;
+        };
       };
     }
   ];
@@ -140,24 +148,31 @@ check "home-default" [
   }
 
   # ------------------------------------------------------------------------------------------------
-  # Workmux + Codex hook integration
+  # Workmux + Claude Code / Codex integration
   # ------------------------------------------------------------------------------------------------
+  {
+    name = "workmux enables Claude Code workmux-status plugin and shares workmuxPackage";
+    ok =
+      combinedCfg.agents.claude-code.plugins.marketplaces ? workmux
+      && combinedCfg.agents.claude-code.plugins.enabled."workmux-status@workmux"
+      && combinedCfg.agents.claude-code.hooks.worktree.workmuxPackage == stubWorkmux;
+  }
   {
     name = "workmux installs Codex status hooks by default when both modules are enabled";
     ok =
       combinedCfg.agents.workmux.installCodexHooks
-      && hasHookCommand "workmux register-agent" combinedCfg.agents.codex._internal.settings.hooks.SessionStart
-      && hasHookCommand "workmux set-window-status done" combinedCfg.agents.codex._internal.settings.hooks.Stop
-      && hasHookCommand "echo custom-stop" combinedCfg.agents.codex._internal.settings.hooks.Stop;
+      && hasHookCommand "workmux register-agent" combinedCfg.agents.codex.finalSettings.hooks.SessionStart
+      && hasHookCommand "workmux set-window-status done" combinedCfg.agents.codex.finalSettings.hooks.Stop
+      && hasHookCommand "echo custom-stop" combinedCfg.agents.codex.finalSettings.hooks.Stop;
   }
   {
     name = "workmux omits Codex status hooks when installCodexHooks is false";
     ok =
       !codexHooksOptOutCfg.agents.workmux.installCodexHooks
       && !(hasHookCommand "workmux register-agent" (
-        codexHooksOptOutCfg.agents.codex._internal.settings.hooks.SessionStart or [ ]
+        codexHooksOptOutCfg.agents.codex.finalSettings.hooks.SessionStart or [ ]
       ))
-      && !(codexHooksOptOutCfg.agents.codex._internal.settings.hooks ? Stop)
+      && !(codexHooksOptOutCfg.agents.codex.finalSettings.hooks ? Stop)
       && lib.all (a: a.assertion) codexHooksOptOutCfg.assertions;
   }
   {
@@ -165,9 +180,9 @@ check "home-default" [
     ok =
       !codexOnlyCfg.agents.workmux.enable
       && !(hasHookCommand "workmux register-agent" (
-        codexOnlyCfg.agents.codex._internal.settings.hooks.SessionStart or [ ]
+        codexOnlyCfg.agents.codex.finalSettings.hooks.SessionStart or [ ]
       ))
-      && !(codexOnlyCfg.agents.codex._internal.settings.hooks ? Stop)
+      && !(codexOnlyCfg.agents.codex.finalSettings.hooks ? Stop)
       && lib.all (a: a.assertion) codexOnlyCfg.assertions;
   }
 ]

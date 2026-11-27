@@ -64,6 +64,21 @@ check "lib-helpers" [
       && agentsLib.models.channelIds "claude-opus-5-5" == [ "claude-opus-5-5" ];
   }
   {
+    name = "modelIdFor prefers configured channels and falls back to catalog key";
+    ok =
+      let
+        catalog = agentsLib.models.extendCatalog {
+          models."gemini-4-hydrogen".channelId = {
+            alpha = "alpha/gemini-4-hydrogen";
+            beta = "beta/gemini-4-hydrogen";
+          };
+        };
+      in
+      agentsLib.models.modelIdFor [ "beta" ] catalog "gemini-4-hydrogen" == "beta/gemini-4-hydrogen"
+      && agentsLib.models.modelIdFor [ ] catalog "gemini-4-hydrogen" == "alpha/gemini-4-hydrogen"
+      && agentsLib.models.modelIdFor [ "beta" ] catalog "claude-opus-5-5" == "claude-opus-5-5";
+  }
+  {
     name = "prompts renderText, renderFile, mkPromptRenderer, and joinSections";
     ok =
       agentsLib.prompts.renderText { "@who@" = "world"; } "hello @who@" == "hello world"

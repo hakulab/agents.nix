@@ -6,6 +6,7 @@
   nixpkgs-unstable,
   devkit,
   agentsLib,
+  nuModules,
   repoRoot,
   sharedModule,
 }:
@@ -26,6 +27,15 @@ let
 
   homeDir = config.home.homeDirectory;
   baseDir = "${homeDir}/.t3";
+
+  providerCaCertFiles = lib.unique (
+    lib.filter (file: file != null) (
+      lib.mapAttrsToList (_: provider: provider.caCertFile) config.agents.providers
+    )
+  );
+
+  defaultCaCertFile =
+    if builtins.length providerCaCertFiles == 1 then builtins.head providerCaCertFiles else null;
 
   # ------------------------------------------------------------------------------------------------
   # Package wrappers
@@ -142,7 +152,7 @@ let
     name = "activate-t3code-config";
     text = builtins.readFile (repoRoot + "/scripts/t3code/activate-config.nu");
     runtimeInputs = [ pkgs.coreutils ];
-    libDirs = [ config.agents._internal.nuModules ];
+    libDirs = [ nuModules ];
     flags.config = json.generate "activate-t3code-config.json" {
       inherit baseDir;
       providerInstances = mergedProviderInstances;
@@ -189,8 +199,9 @@ in
 
     caCertFile = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
-      default = null;
-      description = "Path to an extra CA certificate bundle exported as NODE_EXTRA_CA_CERTS";
+      default = defaultCaCertFile;
+      defaultText = lib.literalMD "unique non-null `agents.providers.<name>.caCertFile`, or `null`";
+      description = "Path to an extra CA certificate bundle exported as NODE_EXTRA_CA_CERTS, defaulting to the unique provider caCertFile when one exists";
     };
 
     telemetryOptOut = lib.mkOption {

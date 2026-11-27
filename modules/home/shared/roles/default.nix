@@ -4,6 +4,7 @@
 
 {
   assetsDir,
+  promptFragments,
 }:
 
 {
@@ -14,7 +15,6 @@
 
 let
   cfg = config.agents;
-  internal = cfg._internal;
 
   # ------------------------------------------------------------------------------------------------
   # Submodule types
@@ -67,8 +67,7 @@ let
   # Role normalization and options helper
   # ------------------------------------------------------------------------------------------------
   defaultDefinitions = import ./definitions.nix {
-    inherit assetsDir;
-    inherit (internal) promptFragments;
+    inherit assetsDir promptFragments;
   };
 
   toLine = text: lib.replaceStrings [ "\n" ] [ " " ] (lib.trim text);
@@ -131,15 +130,17 @@ in
       };
     };
 
-    _internal = {
+    resolved = {
       agentRoles = lib.mkOption {
-        type = lib.types.anything;
-        internal = true;
+        type = lib.types.attrsOf lib.types.anything;
+        readOnly = true;
+        description = "Resolved normalized shared agent role definitions";
       };
 
       agentRoleOptions = lib.mkOption {
         type = lib.types.anything;
         internal = true;
+        readOnly = true;
       };
     };
   };
@@ -156,7 +157,7 @@ in
       ) role
     ) defaultDefinitions;
 
-    _internal = {
+    resolved = {
       inherit agentRoles agentRoleOptions;
     };
   };

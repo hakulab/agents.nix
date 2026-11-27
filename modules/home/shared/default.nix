@@ -6,6 +6,7 @@
   self,
   devkit,
   agentsLib,
+  nuModules,
   repoRoot,
 }:
 
@@ -13,20 +14,25 @@ let
   devkitLib = devkit.lib;
   assetsDir = repoRoot + "/assets";
   scriptsDir = repoRoot + "/scripts";
+  fragmentsDir = assetsDir + "/prompt-fragments";
 
-  mkNuModules =
-    lib:
-    lib.fileset.toSource {
-      root = scriptsDir + "/lib";
-      fileset = lib.fileset.fileFilter (
-        file:
-        !(
-          lib.hasSuffix ".test.nu" file.name
-          || lib.hasSuffix ".stub.nu" file.name
-          || lib.hasSuffix ".testlib.nu" file.name
-        )
-      ) (scriptsDir + "/lib");
+  renderer = agentsLib.prompts.mkPromptRenderer {
+    "@comments@\n" = fragmentsDir + "/comments.md";
+    "@phrasing@\n" = fragmentsDir + "/phrasing.md";
+    "@proseTics@\n" = fragmentsDir + "/prose-tics.md";
+    "@readOnly@\n" = fragmentsDir + "/read-only.md";
+  };
+
+  promptFragments = {
+    inherit (renderer) renderPrompt readPrompt;
+    phrasing = renderer.fragments."@phrasing@\n";
+    roleSections = {
+      preamble = builtins.readFile (fragmentsDir + "/preamble.md");
+      memory = builtins.readFile (fragmentsDir + "/memory.md");
+      coordination = builtins.readFile (fragmentsDir + "/coordination.md");
+      status = builtins.readFile (fragmentsDir + "/status.md");
     };
+  };
 in
 {
   config,
@@ -36,7 +42,6 @@ in
 }:
 
 let
-  cfg = config.agents;
   selfPackages = self.packages.${pkgs.stdenv.hostPlatform.system};
 
   configDirs = {
@@ -58,16 +63,22 @@ in
     (import ./instructions.nix {
       inherit agentsLib assetsDir;
       devkitOutPath = devkit.outPath;
+      inherit promptFragments;
     })
     (import ./roles {
-      inherit assetsDir;
+      inherit assetsDir promptFragments;
     })
     (import ./permissions.nix {
       inherit agentsLib;
     })
 
     (import ./profiles {
-      inherit agentsLib devkitLib scriptsDir;
+      inherit
+        agentsLib
+        devkitLib
+        nuModules
+        scriptsDir
+        ;
     })
     (import ./model-call.nix {
       inherit devkitLib scriptsDir;
@@ -80,10 +91,22 @@ in
       inherit devkitLib scriptsDir;
     })
     (import ./hooks {
-      inherit self devkitLib scriptsDir;
+      inherit
+        self
+        devkitLib
+        agentsLib
+        nuModules
+        promptFragments
+        scriptsDir
+        ;
     })
     (import ./skills {
-      inherit assetsDir devkitLib;
+      inherit
+        agentsLib
+        assetsDir
+        devkitLib
+        promptFragments
+        ;
     })
   ];
 
@@ -107,21 +130,17 @@ in
       };
     };
 
-    resolved = lib.mkOption {
-      type = lib.types.attrsOf lib.types.anything;
-      readOnly = true;
-      description = "Resolved read-only interface consumed by assistant adapters and external modules";
-    };
-
-    _internal = {
+    resolved = {
       configDirs = lib.mkOption {
-        type = lib.types.anything;
-        internal = true;
+        type = lib.types.attrsOf lib.types.str;
+        readOnly = true;
+        description = "Resolved per-assistant configuration directory paths";
       };
 
-      nuModules = lib.mkOption {
-        type = lib.types.anything;
-        internal = true;
+      preferences = lib.mkOption {
+        type = lib.types.attrsOf lib.types.anything;
+        readOnly = true;
+        description = "Resolved shared assistant preferences such as askTimeout and plansDir";
       };
     };
   };
@@ -129,48 +148,11 @@ in
   # ------------------------------------------------------------------------------------------------
   # Config
   # ------------------------------------------------------------------------------------------------
-  config.agents = {
-    _internal = {
-      inherit configDirs;
-      nuModules = mkNuModules lib;
-    };
-
-    resolved = {
-      inherit (cfg) dataDir;
-      inherit (cfg._internal) configDirs;
-      preferences = {
-        askTimeout = 300;
-        plansDir = ".agents/plans";
-      };
-
-      inherit (cfg._internal)
-        instructionDocs
-        instructions
-        instructionsDir
-        promptFragments
-        agentRoles
-        agentRoleOptions
-        permissions
-        ;
-
-      inherit (cfg._internal)
-        modelCatalog
-        workloadPolicy
-        profileResolver
-        resolveProfiles
-        anthropicProfiles
-        mkProfileSwitch
-        mkModelCall
-        ;
-
-      inherit (cfg._internal)
-        mcp
-        notify
-        fileFormatter
-        mkHooks
-        timeouts
-        mkSkillScriptPaths
-        ;
+  config.agents.resolved = {
+    inherit configDirs;
+    preferences = {
+      askTimeout = 300;
+      plansDir = ".agents/plans";
     };
   };
 }

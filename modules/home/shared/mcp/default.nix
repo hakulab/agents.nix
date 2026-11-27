@@ -242,9 +242,10 @@ in
       };
     };
 
-    _internal.mcp = lib.mkOption {
-      type = lib.types.anything;
-      internal = true;
+    resolved.mcp = lib.mkOption {
+      type = lib.types.attrsOf lib.types.anything;
+      readOnly = true;
+      description = "Resolved MCP server definitions, display names, timeouts, and helpers";
     };
   };
 
@@ -266,9 +267,9 @@ in
     }) cfg.servers;
 
     # ----------------------------------------------------------------------------------------------
-    # Internal exports
+    # Resolved exports
     # ----------------------------------------------------------------------------------------------
-    agents._internal.mcp = {
+    agents.resolved.mcp = {
       inherit displayNames;
       inherit (cfg) disabledServers timeouts;
       inherit (agentsLib.mcp) computeEnabledServers mkMcpOptions;

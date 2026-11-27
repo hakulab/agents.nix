@@ -5,6 +5,9 @@
 {
   self,
   devkitLib,
+  agentsLib,
+  nuModules,
+  promptFragments,
   scriptsDir,
 }:
 
@@ -17,15 +20,15 @@
 
 let
   cfg = config.agents;
-  internal = cfg._internal;
+  inherit (cfg) resolved;
   dk = devkitLib.mkLib pkgs;
   selfPackages = self.packages.${pkgs.stdenv.hostPlatform.system};
-  inherit (internal) nuModules;
 
   json = pkgs.formats.json { };
 
   fileFormatter = lib.getExe cfg.hooks.fileFormatterPackage;
   resolvedTimeouts = cfg.modelCall.timeouts // cfg.hooks.timeouts;
+  modelIdFor = agentsLib.models.modelIdFor cfg.modelCall.channels;
 
   # ------------------------------------------------------------------------------------------------
   # Hook factory
@@ -81,7 +84,7 @@ let
           }
         );
 
-      modelCall = internal.mkModelCall {
+      modelCall = cfg.modelCall.mkCall {
         inherit assistant;
       };
 
@@ -145,9 +148,10 @@ let
             mkNuHook
             modelCall
             patchInput
-            internal
             ;
-          modelCallCfg = cfg.modelCall;
+          inherit (resolved) modelCatalog;
+          inherit modelIdFor promptFragments;
+          modelOverride = cfg.hooks.commentGate.model;
           timeouts = resolvedTimeouts;
         };
 
@@ -170,6 +174,14 @@ in
         description = "File formatter package invoked by post-edit formatting hooks";
       };
 
+      commentGate = {
+        model = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          description = "Override model ID used by the comment-gate hook";
+        };
+      };
+
       timeouts = {
         postEdit = lib.mkOption {
           type = lib.types.int;
@@ -182,35 +194,26 @@ in
           default = 10;
           description = "Timeout in seconds for lightweight tool hooks";
         };
+
+        modelMargin = lib.mkOption {
+          type = lib.types.int;
+          default = 10;
+          description = "Extra seconds a hook outlives its model call so timeouts can be reported";
+        };
       };
     };
 
-    _internal = {
-      fileFormatter = lib.mkOption {
-        type = lib.types.anything;
-        internal = true;
-      };
-
-      mkHooks = lib.mkOption {
-        type = lib.types.anything;
-        internal = true;
-      };
-
-      timeouts = lib.mkOption {
-        type = lib.types.anything;
-        internal = true;
-      };
+    resolved.mkHooks = lib.mkOption {
+      type = lib.types.anything;
+      internal = true;
+      readOnly = true;
     };
   };
 
   # ------------------------------------------------------------------------------------------------
   # Config
   # ------------------------------------------------------------------------------------------------
-  config.agents._internal = {
-    inherit
-      fileFormatter
-      mkHooks
-      ;
-    timeouts = resolvedTimeouts;
+  config.agents.resolved = {
+    inherit mkHooks;
   };
 }

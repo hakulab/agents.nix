@@ -20,6 +20,7 @@ let
           "gemini-4-neon".channelId.google = "google/gemini-4-neon";
         };
         workloadPolicy.claude.flagship = "max";
+        familyApis.gemini = "openai-chat-completions";
       };
 
       providers.my-gateway = {
@@ -141,14 +142,15 @@ check "home-shared-providers-profiles" [
   # Profile resolution and client filtering
   # ------------------------------------------------------------------------------------------------
   {
-    name = "resolveProfiles includes official plus client-matched custom profiles";
+    name = "resolveProfiles includes official plus client-matched custom profiles and applies familyApis";
     ok =
       claudeProfiles ? official
       && claudeProfiles ? gw-claude
       && claudeProfiles ? official-token
       && claudeProfiles.gw-claude.workloads.flagship.modelId == "gw/claude-opus-5-5"
       && claudeProfiles.gw-claude.workloads.flagship.effort == "max"
-      && claudeProfiles.gw-claude.workloads.prose.modelId == "google/gemini-4-neon";
+      && claudeProfiles.gw-claude.workloads.prose.modelId == "google/gemini-4-neon"
+      && claudeProfiles.gw-claude.workloads.prose.api == "openai-chat-completions";
   }
   {
     name = "client allowlist excludes claude-only profiles from codex";

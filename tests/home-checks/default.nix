@@ -79,7 +79,7 @@ in
   };
 
   home-shared-mcp = import ./mcp.nix {
-    inherit lib harness;
+    inherit pkgs lib harness;
   };
 
   home-shared-hooks-skills = import ./hooks-skills.nix {

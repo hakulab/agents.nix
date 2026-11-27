@@ -47,7 +47,7 @@ let
   # acpx skips user settings by default, dropping Claude hooks, permissions, and instructions.
   acpxBin = agentsLib.wrapPackage {
     inherit pkgs;
-    pkg = cfg.acpxPackage;
+    pkg = cfg.package;
     bin = "acpx";
     envVars.ACPX_CLAUDE_INCLUDE_USER_SETTINGS = "1";
   };
@@ -112,9 +112,10 @@ in
   options.agents.acp = {
     enable = lib.mkEnableOption "Agent Client Protocol (acpx and agent adapters)";
 
-    acpxPackage = lib.mkOption {
+    package = lib.mkOption {
       type = lib.types.package;
-      default = selfPackages.acpx;
+      default = pkgs.acpx or selfPackages.acpx;
+      defaultText = lib.literalExpression "pkgs.acpx or self.packages.\${system}.acpx";
       description = "Package providing the acpx CLI";
     };
 

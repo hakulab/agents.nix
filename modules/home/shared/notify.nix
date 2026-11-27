@@ -86,16 +86,17 @@ in
       };
     };
 
-    _internal.notify = lib.mkOption {
-      type = lib.types.anything;
-      internal = true;
+    resolved.notify = lib.mkOption {
+      type = lib.types.attrsOf lib.types.anything;
+      readOnly = true;
+      description = "Resolved notification packages and helper script paths";
     };
   };
 
   # ------------------------------------------------------------------------------------------------
   # Config
   # ------------------------------------------------------------------------------------------------
-  config.agents._internal.notify = {
+  config.agents.resolved.notify = {
     inherit
       notifyPackage
       notifyScript
