@@ -3,7 +3,7 @@
 # ==================================================================================================
 
 {
-  description = "Declarative Nix & Home Manager configuration for coding agents";
+  description = "Declarative Nix and Home Manager modules for coding agents, MCP servers, hooks, and skills";
 
   nixConfig = {
     extra-substituters = [ "https://hakula.cachix.org" ];
@@ -33,14 +33,7 @@
       devkit,
       ...
     }:
-    {
-      homeModules = { };
-      nixosModules = { };
-      darwinModules = { };
-      lib = { };
-      overlays.default = _: _: { };
-    }
-    // devkit.lib.eachSystem devkit.lib.systems (
+    devkit.lib.eachSystem devkit.lib.systems (
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
@@ -76,16 +69,6 @@
             preCommit
           ];
         };
-
-        # ------------------------------------------------------------------------------------------
-        # Packages
-        # ------------------------------------------------------------------------------------------
-        packages = { };
-
-        # ------------------------------------------------------------------------------------------
-        # Checks
-        # ------------------------------------------------------------------------------------------
-        checks = { };
 
         # ------------------------------------------------------------------------------------------
         # Formatter

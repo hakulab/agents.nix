@@ -1,6 +1,11 @@
 # AGENTS.md: agents.nix
 
-`agents.nix` provides declarative Nix and Home Manager configuration for coding agents (Claude Code, Codex, OMP, Oxide Code, MCP servers, hooks, skills, and companion tools).
+## Read before you edit
+
+| When the change touches | Read                                                                      |
+| ----------------------- | ------------------------------------------------------------------------- |
+| CI or a workflow        | [devkit's CI guide](https://github.com/hakulab/devkit/blob/v3/docs/ci.md) |
+| A release               | [RELEASING.md](RELEASING.md)                                              |
 
 ## Rules for every change
 

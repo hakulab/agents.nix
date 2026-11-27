@@ -9,11 +9,12 @@ Use the [release skill](https://github.com/hakulab/plugins/blob/main/plugins/hak
 
 ### Stability surface
 
-Within a minor version, stable releases keep these compatible:
+Within a minor version, stable releases keep exported flake outputs and documented module interfaces compatible. Currently exported outputs:
 
-- The flake's `homeModules`, `nixosModules`, `darwinModules`, `lib`, `overlays`, and `packages` outputs
-- Module option names, types, and default behavior under `agents.*`
-- Public read-only outputs under `config.agents.resolved`
+- `devShells.<system>.default`
+- `formatter.<system>`
+
+Expand this list as modules, library helpers, packages, and overlays are added.
 
 ## Preparation and verification
 

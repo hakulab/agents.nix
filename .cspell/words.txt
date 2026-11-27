@@ -7,7 +7,6 @@ hakulab
 nixfmt
 nixos
 nixpkgs
-nushell
 pkgs
 prek
 shellcheck
