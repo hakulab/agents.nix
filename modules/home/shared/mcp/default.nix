@@ -253,17 +253,6 @@ in
   # ------------------------------------------------------------------------------------------------
   config = {
     # ----------------------------------------------------------------------------------------------
-    # Internal exports
-    # ----------------------------------------------------------------------------------------------
-    agents._internal.mcp = {
-      inherit displayNames;
-      inherit (cfg) disabledServers timeouts;
-      inherit (agentsLib.mcp) computeEnabledServers mkMcpOptions;
-      serverNames = builtins.attrNames resolvedServers;
-      servers = resolvedServers;
-    };
-
-    # ----------------------------------------------------------------------------------------------
     # Assertions
     # ----------------------------------------------------------------------------------------------
     assertions = lib.mapAttrsToList (name: server: {
@@ -275,5 +264,16 @@ in
         else
           "agents.mcp.servers.${name}.command must be non-empty for stdio MCP servers";
     }) cfg.servers;
+
+    # ----------------------------------------------------------------------------------------------
+    # Internal exports
+    # ----------------------------------------------------------------------------------------------
+    agents._internal.mcp = {
+      inherit displayNames;
+      inherit (cfg) disabledServers timeouts;
+      inherit (agentsLib.mcp) computeEnabledServers mkMcpOptions;
+      serverNames = builtins.attrNames resolvedServers;
+      servers = resolvedServers;
+    };
   };
 }

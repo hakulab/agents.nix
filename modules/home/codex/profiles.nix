@@ -163,7 +163,6 @@ in
     # ----------------------------------------------------------------------------------------------
     home = {
       packages = [ switch.package ];
-
       file = switch.files;
 
       activation.codexAuthProfile =

@@ -10,6 +10,7 @@
 }:
 
 let
+  devkitLib = devkit.lib;
   assetsDir = repoRoot + "/assets";
   scriptsDir = repoRoot + "/scripts";
 
@@ -66,28 +67,23 @@ in
     })
 
     (import ./profiles {
-      inherit agentsLib scriptsDir;
-      devkitLib = devkit.lib;
+      inherit agentsLib devkitLib scriptsDir;
     })
     (import ./model-call.nix {
-      inherit scriptsDir;
-      devkitLib = devkit.lib;
+      inherit devkitLib scriptsDir;
     })
 
     (import ./mcp {
       inherit self agentsLib;
     })
     (import ./notify.nix {
-      inherit scriptsDir;
-      devkitLib = devkit.lib;
+      inherit devkitLib scriptsDir;
     })
     (import ./hooks {
-      inherit self scriptsDir;
-      devkitLib = devkit.lib;
+      inherit self devkitLib scriptsDir;
     })
     (import ./skills {
-      inherit assetsDir;
-      devkitLib = devkit.lib;
+      inherit assetsDir devkitLib;
     })
   ];
 
@@ -152,8 +148,8 @@ in
         instructions
         instructionsDir
         promptFragments
-        agentRoleOptions
         agentRoles
+        agentRoleOptions
         permissions
         ;
 

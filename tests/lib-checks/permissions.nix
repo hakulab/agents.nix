@@ -10,6 +10,7 @@
 
 let
   inherit (harness) check throws;
+
   defaultPolicy = agentsLib.permissions.defaultPolicy;
 
   customPolicy = agentsLib.permissions.mkPolicy {

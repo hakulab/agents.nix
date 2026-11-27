@@ -157,10 +157,7 @@ in
     ) defaultDefinitions;
 
     _internal = {
-      inherit
-        agentRoleOptions
-        agentRoles
-        ;
+      inherit agentRoles agentRoleOptions;
     };
   };
 }
