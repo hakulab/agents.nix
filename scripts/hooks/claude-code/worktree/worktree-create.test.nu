@@ -14,47 +14,18 @@ const SCRIPT = ($SCRIPT_DIR | path join "worktree-create.nu")
 def setup-repo [root: string, --with-origin]: nothing -> record {
   let app = ($root | path join "app")
   mkdir $app
-  (
-    ^git
-      -C $app
-      init
-        --quiet
-        --initial-branch main
-  )
+  ^git -C $app init --quiet --initial-branch main
   ^git -C $app config user.email "test@example.com"
   ^git -C $app config user.name "Test"
   "base" | save ($app | path join "f.txt")
-  (
-    ^git
-      -C $app
-      add --all
-  )
-  (
-    ^git
-      -C $app
-      commit
-        --quiet
-        --message "base"
-  )
+  ^git -C $app add --all
+  ^git -C $app commit --quiet --message "base"
   if $with_origin {
     let remote = ($root | path join "remote")
     mkdir $remote
-    (
-      ^git
-        -C $remote
-        init
-          --quiet
-          --bare
-          --initial-branch main
-    )
+    ^git -C $remote init --quiet --bare --initial-branch main
     ^git -C $app remote add origin $remote
-    (
-      ^git
-        -C $app
-        push origin main
-          --quiet
-          --set-upstream
-    )
+    ^git -C $app push origin main --quiet --set-upstream
     ^git -C $app remote set-head origin main
   }
   {

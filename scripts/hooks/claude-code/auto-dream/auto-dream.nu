@@ -22,12 +22,7 @@ def project-slug [path: string]: nothing -> string {
 
 # All worktrees of a repository share the main worktree's memory store.
 def main-worktree [git: string, cwd: string]: nothing -> string {
-  let result = (
-    ^$git
-      -C $cwd
-      worktree list --porcelain
-    | complete
-  )
+  let result = (^$git -C $cwd worktree list --porcelain | complete)
   if $result.exit_code != 0 {
     return ""
   }

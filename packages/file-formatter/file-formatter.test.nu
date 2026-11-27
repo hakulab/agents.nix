@@ -40,11 +40,7 @@ source $SCRIPT
 # Creates a repository with gate `config` and a Git hook unless `--no-hook` or `--no-config`.
 def make-repo [dir: string, config: string, --no-hook, --no-config]: nothing -> string {
   mkdir $dir
-  (
-    ^git
-      -C $dir
-      init --quiet
-  )
+  ^git -C $dir init --quiet
   if not $no_config {
     $config | save --force ($dir | path join ".pre-commit-config.yaml")
   }
@@ -222,13 +218,7 @@ def "test a caller direnv diff that hides prek still runs the gate" [] {
       PATH: ($env.PATH | where $it != $prek_dir | str join ":")
       XDG_DATA_HOME: ($env.TMPDIR | path join "data")
     } {
-      (
-        ^direnv exec $caller
-          $nu.current-exe
-            --no-config-file
-            -c "print $env.DIRENV_DIFF"
-        | complete
-      )
+      ^direnv exec $caller $nu.current-exe --no-config-file -c "print $env.DIRENV_DIFF" | complete
     }
   )
   assert equal $generated.exit_code 0 $generated.stderr
