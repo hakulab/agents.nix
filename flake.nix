@@ -31,6 +31,19 @@
       url = "github:nix-community/home-manager/release-26.05";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    llm-agents = {
+      url = "github:numtide/llm-agents.nix";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
+
+    claude-statusline = {
+      url = "github:hakulab/claude-statusline";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        devkit.follows = "devkit";
+      };
+    };
   };
 
   # ------------------------------------------------------------------------------------------------
@@ -43,6 +56,8 @@
       nixpkgs-unstable,
       devkit,
       home-manager,
+      llm-agents,
+      claude-statusline,
     }:
     let
       agentsLib = import ./lib {
@@ -53,19 +68,40 @@
       # requires current stable Chrome, while stable nixpkgs freezes Chromium.
       playwrightDriverFor = system: nixpkgs-unstable.legacyPackages.${system}.playwright-driver;
 
-      sharedHomeModule = import ./modules/home/shared {
-        inherit agentsLib;
-        devkitLib = devkit.lib;
-        devkitOutPath = devkit.outPath;
-        repoRoot = ./.;
-        packagesFor = system: self.packages.${system};
+      mkHomeModule = name: module: {
+        _class = "homeManager";
+        _file = "${self}/flake.nix#homeModules.${name}";
+        key = "${self}/flake.nix#homeModules.${name}";
+        imports = [ module ];
       };
+
+      sharedHomeModule = mkHomeModule "shared" (
+        import ./modules/home/shared {
+          inherit agentsLib;
+          devkitLib = devkit.lib;
+          devkitOutPath = devkit.outPath;
+          repoRoot = ./.;
+          packagesFor = system: self.packages.${system};
+        }
+      );
+
+      claudeCodeHomeModule = mkHomeModule "claude-code" (
+        import ./modules/home/claude-code {
+          inherit agentsLib;
+          claudeStatuslineFor = system: claude-statusline.packages.${system};
+          claudeStatuslineModule = claude-statusline.homeModules.default;
+          llmAgentsFor = system: llm-agents.packages.${system};
+          repoRoot = ./.;
+          inherit sharedHomeModule;
+        }
+      );
     in
     {
       lib = agentsLib;
 
       homeModules = {
         shared = sharedHomeModule;
+        claude-code = claudeCodeHomeModule;
       };
 
       overlays.default =
@@ -121,6 +157,7 @@
           inherit (nixpkgs) lib;
           inherit home-manager;
           sharedModule = sharedHomeModule;
+          claudeCodeModule = claudeCodeHomeModule;
         };
 
         nuTests = dk.nuTests {

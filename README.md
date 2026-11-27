@@ -10,6 +10,7 @@ Declarative Nix and Home Manager modules for coding agents, MCP servers, hooks, 
 
 - `lib`: pure Nix helpers for models, profiles, permissions, MCP servers, prompts, proxies, and package wrappers.
 - `homeModules.shared`: shared Home Manager module defining the core `agents.*` options (`dataDir`, `proxy`, `browser`, `instructions`, `roles`, `permissions`, `models`, `providers`, `profiles`, `modelCall`, `mcp`, `skills`, `hooks`, `notify`) and the read-only `config.agents.resolved` interface.
+- `homeModules.claude-code`: opt-in Home Manager module for Claude Code (`agents.claude-code.*`), importing `homeModules.shared` and configuring settings, permissions, hooks, custom agents, MCP servers, plugins, auth profiles, and `claude-statusline`.
 - `overlays.default`: overlay exposing the companion packages.
 - `packages.<system>`: companion packages (`acpx`, `browser-tools`, `file-formatter`, `mcp-server-github`, `mcp-server-gitlab`).
 - `checks.<system>`: library evaluation checks, Home Manager module evaluation checks, Nushell script tests, TypeScript tests (`ts-tests` via `bun test`), and package builds.
