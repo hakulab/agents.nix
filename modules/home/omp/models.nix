@@ -50,6 +50,8 @@ let
       first = lib.head entries;
       inherit (first) api family;
       apis = lib.unique (map (entry: entry.api) entries);
+      families = lib.unique (map (entry: entry.family) entries);
+      familyLabels = map (value: if value == null then "null" else value) families;
       entryProviders = lib.unique (map (entry: entry.provider) entries);
       provider = providers.${first.provider};
       tokenFile = agentsLib.profiles.apiKeyFileFor provider "omp";
@@ -69,31 +71,28 @@ let
           }
         );
     in
-    lib.throwIf (builtins.length apis > 1)
-      "OMP model source `${sourceName}` mixes APIs: ${lib.concatStringsSep ", " apis}"
-      (
-        lib.throwIf (builtins.length entryProviders > 1)
-          "OMP model source `${sourceName}` mixes providers: ${lib.concatStringsSep ", " entryProviders}"
-          (
-            lib.throwIf (baseUrl == null)
-              "OMP model source `${sourceName}` has no baseUrl or apiUrls.${api} on provider `${first.provider}`"
-              (
-                {
-                  inherit api baseUrl;
-                  headers = provider.extraHeaders or { };
-                  models = lib.unique (map mkModel entries);
-                }
-                // lib.optionalAttrs (tokenFile != null) {
-                  auth = "apiKey";
-                  apiKey = "!${lib.getExe' pkgs.coreutils "cat"} ${lib.escapeShellArg tokenFile}";
-                  authHeader = true;
-                }
-                // lib.optionalAttrs (compat != { }) {
-                  inherit compat;
-                }
-              )
-          )
-      );
+    if builtins.length apis > 1 then
+      throw "OMP model source `${sourceName}` mixes APIs: ${lib.concatStringsSep ", " apis}"
+    else if builtins.length families > 1 then
+      throw "OMP model source `${sourceName}` mixes families: ${lib.concatStringsSep ", " familyLabels}"
+    else if builtins.length entryProviders > 1 then
+      throw "OMP model source `${sourceName}` mixes providers: ${lib.concatStringsSep ", " entryProviders}"
+    else if baseUrl == null then
+      throw "OMP model source `${sourceName}` has no baseUrl or apiUrls.${api} on provider `${first.provider}`"
+    else
+      {
+        inherit api baseUrl;
+        headers = provider.extraHeaders or { };
+        models = lib.unique (map mkModel entries);
+      }
+      // lib.optionalAttrs (tokenFile != null) {
+        auth = "apiKey";
+        apiKey = "!${lib.getExe' pkgs.coreutils "cat"} ${lib.escapeShellArg tokenFile}";
+        authHeader = true;
+      }
+      // lib.optionalAttrs (compat != { }) {
+        inherit compat;
+      };
 in
 {
   providers = lib.mapAttrs mkProvider sourceWorkloads;

@@ -196,7 +196,8 @@ let
   longMcpToolCfg = evalHomeWith [ ompModule ] {
     agents = {
       browser.chromiumPackage = null;
-      permissions.mcpGates.custom_long_server = [
+      mcp.presets.github.enable = true;
+      permissions.mcpGates.github = [
         {
           tool = "this_mcp_tool_name_is_intentionally_longer_than_sixty_four_characters";
           reason = "test";
