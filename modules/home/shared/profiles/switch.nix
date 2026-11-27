@@ -41,7 +41,7 @@ in
 {
   package = dk.writeNuApplication {
     inherit name;
-    text = builtins.readFile (scriptsDir + "/profile-switch/profile-switch.nu");
+    text = builtins.readFile (scriptsDir + "/shared/profile-switch/profile-switch.nu");
     runtimeInputs = [ pkgs.coreutils ];
     libDirs = [ nuModules ];
     flags.config = switchConfig;

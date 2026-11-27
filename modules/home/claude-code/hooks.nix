@@ -12,7 +12,7 @@
 }:
 
 let
-  hooksDir = scriptsDir + "/hooks/claude-code";
+  hooksDir = scriptsDir + "/claude-code/hooks";
 
   sharedHooks = resolved.mkHooks {
     assistant = "claude-code";

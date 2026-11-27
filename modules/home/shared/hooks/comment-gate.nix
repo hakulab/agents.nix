@@ -30,11 +30,11 @@ in
   statusMessage = "Checking comments";
   command = mkNuHook {
     slug = "comment-gate";
-    script = scriptsDir + "/hooks/comment-gate/comment-gate.nu";
+    script = scriptsDir + "/shared/hooks/comment-gate/comment-gate.nu";
     config = {
       inherit modelCall patchInput;
       model = commentGateModel;
-      prompt = promptFragments.readPrompt (scriptsDir + "/hooks/comment-gate/prompt.md");
+      prompt = promptFragments.readPrompt (scriptsDir + "/shared/hooks/comment-gate/prompt.md");
     };
   };
 }

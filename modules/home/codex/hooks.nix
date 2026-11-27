@@ -21,7 +21,7 @@ let
     };
   };
 
-  compactContextDir = scriptsDir + "/hooks/codex/compact-context";
+  compactContextDir = scriptsDir + "/codex/hooks/compact-context";
 
   compactContext = {
     event = "SessionStart";

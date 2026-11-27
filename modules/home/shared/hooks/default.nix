@@ -36,7 +36,7 @@ let
   patchInput = lib.getExe (
     dk.writeNuApplication {
       name = "patch-input";
-      text = builtins.readFile (scriptsDir + "/lib/patch-input.nu");
+      text = builtins.readFile (scriptsDir + "/shared/hooks/patch-input/patch-input.nu");
       runtimeInputs = [ pkgs.coreutils ];
     }
   );

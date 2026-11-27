@@ -9,7 +9,7 @@ use test-runner.testlib.nu [run-script]
 
 const SCRIPT_DIR = path self "."
 const SCRIPT = ($SCRIPT_DIR | path join "auto-format.nu")
-const PATCH_INPUT = ($SCRIPT_DIR | path join "../../lib/patch-input.nu")
+const PATCH_INPUT = ($SCRIPT_DIR | path join "../patch-input/patch-input.nu")
 
 def run-event [
   input: any
