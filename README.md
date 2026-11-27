@@ -4,11 +4,11 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![WakaTime coding time for agents.nix](https://wakatime.com/badge/user/f4a35a1f-0e29-4093-a647-e66aad164737/project/ea3cd142-c1be-4e0d-8445-aaa205befa77.svg)
 
-Declarative Nix and Home Manager modules for coding agents, MCP servers, hooks, and skills across Linux (`x86_64-linux`, `aarch64-linux`) and macOS (`aarch64-darwin`).
+Declarative Nix and Home Manager modules for coding agents, MCP servers, hooks, and skills on Linux (`x86_64-linux`, `aarch64-linux`) and macOS (`aarch64-darwin`).
 
 ## Quickstart
 
-Add `agents-nix` to your flake inputs and import `agents-nix.homeModules.default` in your Home Manager configuration. Every assistant and peripheral tool is disabled by default so you opt in explicitly, or you can import individual modules from `homeModules.*` when you only want a subset.
+Add `agents-nix` to your flake inputs, import `agents-nix.homeModules.default` (or an individual module from `homeModules`), and enable the clients you use. Every assistant and peripheral tool is disabled by default, and every individual module imports `homeModules.shared` with deduplication.
 
 ```nix
 {
@@ -38,10 +38,7 @@ Add `agents-nix` to your flake inputs and import `agents-nix.homeModules.default
     }:
     {
       homeConfigurations.dev = home-manager.lib.homeManagerConfiguration {
-        pkgs = import nixpkgs {
-          system = "x86_64-linux";
-          config.allowUnfree = true;
-        };
+        pkgs = nixpkgs.legacyPackages.x86_64-linux;
         modules = [
           agents-nix.homeModules.default
           {
@@ -51,46 +48,7 @@ Add `agents-nix` to your flake inputs and import `agents-nix.homeModules.default
               stateVersion = "26.05";
             };
 
-            agents = {
-              # Enable only the assistants and tools you use.
-              claude-code.enable = true;
-              codex.enable = true;
-              workmux.enable = true;
-
-              # Custom provider and profile using backend-agnostic *File secret paths.
-              providers.gateway = {
-                baseUrl = "https://gateway.example.com";
-                apiUrls.anthropic-messages = "https://gateway.example.com/anthropic";
-                apiKeyFile = "/run/secrets/gateway-api-key";
-                caCertFile = "/run/secrets/gateway-ca.pem";
-                channels.claude = {
-                  family = "claude";
-                  nativeWebSearch = false;
-                };
-              };
-
-              profiles.gateway-claude = {
-                provider = "gateway";
-                family = "claude";
-                channel = "claude";
-                clients = [ "claude-code" ];
-              };
-
-              # Built-in MCP presets and custom servers.
-              mcp = {
-                presets.github = {
-                  enable = true;
-                  fallbackTokenFile = "/run/secrets/github-pat";
-                };
-
-                servers.docs = {
-                  type = "http";
-                  displayName = "Docs";
-                  url = "https://mcp.example.com/docs";
-                  permissions.allowTools = [ "search_docs" ];
-                };
-              };
-            };
+            agents.claude-code.enable = true;
           }
         ];
       };
@@ -98,31 +56,9 @@ Add `agents-nix` to your flake inputs and import `agents-nix.homeModules.default
 }
 ```
 
-## Flake outputs
+Secrets are accepted only through backend-agnostic `*File` paths read at runtime, keeping credentials out of the Nix store.
 
-- `lib`: pure Nix helpers for models, profiles, permissions, MCP servers, prompts, proxies, and package wrappers.
-- `homeModules.default`: bundle importing all 12 Home Manager modules below with every assistant and tool disabled by default.
-- `homeModules.shared`: shared Home Manager module defining the core `agents.*` options (`dataDir`, `proxy`, `browser`, `instructions`, `roles`, `permissions`, `models`, `providers`, `profiles`, `modelCall`, `mcp`, `skills`, `hooks`, `notify`) and the read-only `config.agents.resolved.*` leaves (`configDirs`, `instructions`, `mcp`, `agentRoles`, `modelCatalog`, `workloadPolicy`, `permissions`, `notify`, `preferences`).
-- `homeModules.claude-code`: opt-in Home Manager module for Claude Code (`agents.claude-code.*`), importing `homeModules.shared` and configuring settings, permissions, hooks, custom agents, MCP servers, plugins, auth profiles (`auth.defaultProfile`, `auth.enabledProfiles`, `auth.profileOverrides`), and `claude-statusline`.
-- `homeModules.codex`: standalone Home Manager module (`agents.codex`) configuring the Codex CLI, permission rules, hooks, custom agents, MCP servers, auth profiles (with `auth.allowedProviders` and `auth.allowedChannels` filters), plugins, and desktop preferences.
-- `homeModules.omp`: standalone Home Manager module (`agents.omp`) configuring Oh My Pi (`omp`), settings, permissions, custom agents, MCP servers, extensions, and auth profiles.
-- `homeModules.oxide-code`: standalone Home Manager module (`agents.oxide-code`) configuring `oxide-code` (`ox`), `programs.oxide-code` integration, `extraSettings`, and Anthropic auth profiles.
-- `homeModules.{acp,activity-report,agent-project-move,ccusage,ctx7,t3code,workmux}`: standalone opt-in Home Manager modules for peripheral tools (`agents.acp`, `agents.activity-report`, `agents.agent-project-move`, `agents.ccusage`, `agents.ctx7`, `agents.t3code`, `agents.workmux`), each importing `homeModules.shared`.
-- `overlays.default`: overlay exposing the companion packages.
-- `packages.<system>`: companion packages (`acpx`, `browser-tools`, `file-formatter`, `mcp-server-github`, `mcp-server-gitlab`).
-- `checks.<system>`: library evaluation checks, Home Manager module evaluation checks, Nushell script tests, TypeScript tests (`ts-tests` via `bun test`), and package builds.
-- `devShells.<system>.default`: development shell with Nushell, `nu-test`, `bun`, and pre-commit hooks.
-- `formatter.<system>`: `nixfmt-tree` formatter.
-
-## Using assets and scripts without Nix
-
-All prompts, instructions, skills, and helper scripts are plain files in this repository and can be browsed or copied directly without Nix:
-
-- `assets/instructions/`: global assistant instructions and linked topic guides (`code-design.md`, `documentation.md`, `editing-and-comments.md`, `verification-and-tests.md`, `writing.md`, and related guides).
-- `assets/prompt-fragments/`: reusable Markdown fragments composed into assistant and hook prompts.
-- `assets/agent-roles/`: subagent role definitions and coordination prompts.
-- `assets/skills/`: standalone skills such as `prose-polish`.
-- `scripts/`: importable Nushell libraries, shared helpers, and client-specific scripts and hook prompts.
+See [`flake.nix`](flake.nix) for exported outputs, [`modules/home/`](modules/home/) for available modules and option definitions, and [`packages/`](packages/) for companion packages. Prompts, instructions, skills, and helper scripts live as plain files under [`assets/`](assets/) and [`scripts/`](scripts/) for browsing or adapting outside Nix, while the Nix modules expand `@placeholder@` tokens and wrap scripts at build time.
 
 ## Cache
 
@@ -141,13 +77,7 @@ For NixOS or nix-darwin, place the same settings under `nix.settings` according 
 
 ## Development
 
-```bash
-nix develop
-run-hooks
-nix flake check --all-systems
-```
-
-See devkit's shared [CI](https://github.com/hakulab/devkit/blob/v3/docs/ci.md) and [release procedures](https://github.com/hakulab/devkit/blob/v3/docs/releasing.md).
+See [`AGENTS.md`](AGENTS.md) for contributor rules and verification commands, and [`RELEASING.md`](RELEASING.md) for the release contract.
 
 ## License
 
