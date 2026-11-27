@@ -1,0 +1,105 @@
+# ==================================================================================================
+# Proxy Helper Library
+# ==================================================================================================
+
+{
+  lib,
+}:
+
+let
+  proxyVars = [
+    "HTTP_PROXY"
+    "http_proxy"
+    "HTTPS_PROXY"
+    "https_proxy"
+  ];
+
+  baseNoProxy = [
+    "localhost"
+    "127.0.0.1"
+    "10.0.0.0/8"
+  ];
+
+  renderNoProxy = proxyCfg: lib.concatStringsSep "," (lib.unique (baseNoProxy ++ proxyCfg.noProxy));
+
+  mkProxyScript =
+    proxyCfg:
+    let
+      esc = lib.escapeShellArg;
+      noProxy = esc (renderNoProxy proxyCfg);
+      secretFile = esc proxyCfg.secretUrlFile;
+
+      readUrl =
+        if proxyCfg.secretUrlFile != null then
+          ''
+            if [ -r ${secretFile} ]; then
+              proxy_url=$(cat ${secretFile})
+            else
+              proxy_url=
+            fi''
+        else
+          "proxy_url=${esc proxyCfg.url}";
+    in
+    ''
+      ${readUrl}
+
+      if [ -n "$proxy_url" ]; then
+        export HTTP_PROXY="$proxy_url"
+        export http_proxy="$proxy_url"
+        export HTTPS_PROXY="$proxy_url"
+        export https_proxy="$proxy_url"
+      fi
+      unset proxy_url
+
+      export NO_PROXY=${noProxy}
+      export no_proxy=${noProxy}
+    '';
+
+  mkProxyWrapArgs =
+    proxyCfg:
+    lib.optionals proxyCfg.enable [
+      "--run"
+      (mkProxyScript proxyCfg)
+    ];
+in
+{
+  inherit
+    mkProxyScript
+    mkProxyWrapArgs
+    proxyVars
+    renderNoProxy
+    ;
+
+  # Shell snippet that clears proxy env vars. Use in scripts that must reach the network bypassing
+  # any inherited HTTP(S) proxy (e.g., MCP servers talking to local or internal endpoints that do
+  # not honor NO_PROXY). Nushell callers take `proxyVars` and `hide-env` instead, since `unset` has
+  # no equivalent.
+  clearProxyEnv = "unset ${lib.concatStringsSep " " proxyVars}";
+
+  # Shell snippet for Node wrappers. Node's built-in fetch ignores HTTP_PROXY unless
+  # NODE_USE_ENV_PROXY is set, and Node ignores CIDR entries in NO_PROXY, so this stays out of the
+  # shared proxy environment.
+  nodeProxyScript = "export NODE_USE_ENV_PROXY=1";
+
+  mkProxyOptions = name: {
+    enable = lib.mkEnableOption "HTTP proxy for ${name}";
+
+    url = lib.mkOption {
+      type = lib.types.str;
+      default = "";
+      description = "HTTP proxy URL for ${name} (ignored when secretUrlFile is set)";
+    };
+
+    secretUrlFile = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "Path to a file containing the proxy URL, overriding url when set";
+    };
+
+    noProxy = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Extra domains to bypass the proxy, merged with loopback and 10.0.0.0/8";
+    };
+  };
+}
