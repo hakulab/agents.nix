@@ -22,26 +22,37 @@ def main [] {
   let input = (^cat | from json)
   cd $input.cwd
 
+  let branch = $"worktree-($input.name)"
   let existing = (^workmux path $input.name | complete)
-  let reuse = (
+  if (
     $existing.exit_code == 0
     and (($existing.stdout | str trim | path basename) == $input.name)
-  )
-  if $reuse {
-    print ($existing.stdout | str trim)
-    return
+  ) {
+    error make {msg: $"Worktree ($input.name) already exists. Choose another name."}
+  }
+  if (^git show-ref --verify --quiet $"refs/heads/($branch)" | complete).exit_code == 0 {
+    error make {msg: $"Branch ($branch) already exists. Choose another worktree name."}
   }
 
   let base = (base-ref $input.cwd)
   # Like Claude's built-in creation, skip repository-defined post-create hooks.
-  print (
-    ^workmux add $"worktree-($input.name)"
+  let receipt = (
+    ^workmux add $branch
       --base $base
       --name $input.name
       --no-hooks
       --headless
       --json
     | from json
-    | get worktree_path
   )
+  # Workmux returns a null base when it checks out a branch created by another process.
+  if $receipt.base_branch == null {
+    error make {
+      msg: $"Workmux checked out an existing branch at ($receipt.worktree_path). Inspect the checkout before removing it manually."
+    }
+  }
+
+  let git_dir = (^git -C $receipt.worktree_path rev-parse --absolute-git-dir | str trim)
+  $branch | save ($git_dir | path join "claude-code-worktree")
+  print $receipt.worktree_path
 }

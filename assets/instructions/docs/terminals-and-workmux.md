@@ -24,7 +24,7 @@ Consolidate existing windows only when the user explicitly asks, after checking 
 
 ## Claude Code Isolated Worktrees
 
-Claude Code's worktree features route through Workmux: `--worktree`, `EnterWorktree`, `isolation: "worktree"`, and background sessions create a Workmux worktree beside the checkout and reuse an existing one with the same name. Each gets the handle `<name>` and the branch `worktree-<name>`, and a subagent's worktree stays in place after it finishes for cleanup through `clean-gone`. The hook skips `.worktreeinclude`, and Workmux's `files` configuration copies or symlinks ignored files.
+Claude Code's worktree features route through Workmux: `--worktree`, `EnterWorktree`, `isolation: "worktree"`, and background sessions create a Workmux worktree with the handle `<name>` and branch `worktree-<name>`. Choose a different name if the handle or branch already exists. Automatic cleanup requires a worktree provisioned by the current hook. A subagent's worktree stays in place after it finishes for cleanup through `clean-gone`. The hook skips `.worktreeinclude`, and Workmux's `files` configuration copies or symlinks ignored files.
 
 Claude Code runs a guard on Bash and `Monitor` commands inside an isolated agent or session (`isolation: "worktree"`, `EnterWorktree`, `claude --worktree`, and agents spawned inside them):
 

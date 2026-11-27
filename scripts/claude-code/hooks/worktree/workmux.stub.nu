@@ -3,9 +3,7 @@
 # ==================================================================================================
 # Workmux Stub
 # ==================================================================================================
-# Records each invocation and answers from `STUB_EXISTING_PATH`, `STUB_ADD_PATH`, and
-# `STUB_REMOVE_PATH`. `path` fails unless `STUB_EXISTING_PATH` is set, `add` prints a receipt for
-# `STUB_ADD_PATH`, and `remove` deletes `STUB_REMOVE_PATH` unless `STUB_REMOVE_LEAVES` is set.
+# Records each invocation and provisions fixtures under the test's scratch repository.
 # ==================================================================================================
 
 def --wrapped main [...args: string] {
@@ -28,9 +26,22 @@ def --wrapped main [...args: string] {
       print $path
     }
     "add" => {
+      let branch = ($args | get 1)
+      let base = ($args | get 3)
+      let path = $env.STUB_ADD_PATH
+      let existing = ($env.STUB_ADD_EXISTING? | default "") == "1"
+
+      if $existing {
+        ^git branch $branch $base
+        ^git worktree add --quiet $path $branch
+      } else {
+        ^git worktree add --quiet -b $branch $path $base
+      }
+
       {
         schema_version: 1
-        worktree_path: $env.STUB_ADD_PATH
+        worktree_path: $path
+        base_branch: (if $existing { null } else { $base })
       }
       | to json --raw
     }
