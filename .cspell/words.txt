@@ -1,7 +1,9 @@
 acpx
+anthropics
 automounts
 cachix
 catppuccin
+claudeai
 colmena
 commentish
 coreutils
@@ -16,8 +18,10 @@ esep
 feff
 fetchurl
 glab
+gopls
 hakula
 hakulab
+ints
 journalctl
 localectl
 networkctl
@@ -25,6 +29,7 @@ nixfmt
 nixos
 nixpkgs
 nslookup
+numtide
 nuon
 openclaw
 osascript
@@ -37,6 +42,7 @@ pkill
 pname
 prek
 qwen
+raine
 readelf
 readlink
 realpath

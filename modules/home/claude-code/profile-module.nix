@@ -1,0 +1,94 @@
+# ==================================================================================================
+# Claude Code Profile Module
+# ==================================================================================================
+
+{
+  lib,
+  officialProfile,
+}:
+
+lib.types.submodule {
+  options = {
+    type = lib.mkOption {
+      type = lib.types.enum [
+        "subscription"
+        "oauth-token"
+        "api-key"
+      ];
+      default = "api-key";
+      description = "Authentication type";
+    };
+
+    sessionEffort = lib.mkOption {
+      type = lib.types.str;
+      default = officialProfile.sessionEffort;
+      description = "Reasoning effort for the main session";
+    };
+
+    modelEfforts = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = { };
+      description = "Reasoning effort per model ID, overriding sessionEffort";
+    };
+
+    compactWindows = lib.mkOption {
+      type = lib.types.attrsOf lib.types.ints.positive;
+      default = officialProfile.compactWindows;
+      description = "Auto-compaction window in tokens for each model ID";
+    };
+
+    agentModels = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = officialProfile.agentModels;
+      description = "Model identifier for each workload tier, used by custom agents";
+    };
+
+    efforts = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = officialProfile.efforts;
+      description = "Reasoning effort for each model tier, used by custom agents";
+    };
+
+    baseUrl = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "API base URL (required for api-key, forbidden for oauth-token and subscription)";
+    };
+
+    tokenFile = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "Runtime file path containing the auth token (forbidden for subscription)";
+    };
+
+    extraHeaders = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = { };
+      description = "Additional HTTP headers for this profile's API requests";
+    };
+
+    extraEnv = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = { };
+      description = "Additional environment variables exported for this profile";
+    };
+
+    extraEnvFiles = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = { };
+      description = "Runtime file paths loaded into environment variables (forbidden for subscription)";
+    };
+
+    modelOverrides = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = { };
+      description = "Anthropic model IDs mapped to provider-specific model IDs";
+    };
+
+    nativeWebSearch = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Expose native WebSearch for this profile";
+    };
+  };
+}

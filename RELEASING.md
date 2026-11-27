@@ -13,6 +13,7 @@ Within a minor version, stable releases keep exported flake outputs and document
 
 - `lib`
 - `homeModules.shared`
+- `homeModules.claude-code`
 - `overlays.default`
 - `packages.<system>`
 - `checks.<system>`

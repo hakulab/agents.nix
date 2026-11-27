@@ -1,0 +1,54 @@
+# ==================================================================================================
+# Claude Code Custom Agents
+# ==================================================================================================
+
+{
+  lib,
+  resolved,
+  agentModels,
+  efforts,
+  enabledAgents,
+}:
+
+let
+  renderField =
+    settings: field: lib.optional (settings ? ${field}) "${field}: ${toString settings.${field}}";
+
+  renderFrontmatter =
+    name: agent:
+    let
+      settings = agent.claude // {
+        model = agentModels.${agent.workload};
+        effort = efforts.${agent.workload};
+      };
+
+      frontmatterLines = [
+        "name: ${name}"
+        "description: ${builtins.toJSON agent.description}"
+      ]
+      ++ lib.concatMap (renderField settings) [
+        "color"
+        "model"
+        "effort"
+        "permissionMode"
+        "maxTurns"
+        "memory"
+        "isolation"
+      ]
+      ++ lib.optional (settings ? background) "background: ${lib.boolToString settings.background}"
+      ++ lib.optionals (settings ? skills) ([ "skills:" ] ++ map (skill: "  - ${skill}") settings.skills)
+      ++ lib.optional (settings ? tools) "tools: ${lib.concatStringsSep ", " settings.tools}";
+    in
+    lib.concatStringsSep "\n" ([ "---" ] ++ frontmatterLines ++ [ "---" ]);
+
+  renderAgent = name: agent: ''
+    ${renderFrontmatter name agent}
+
+    ${agent.prompt}
+  '';
+
+  allAgents = lib.mapAttrs renderAgent resolved.agentRoles;
+in
+{
+  files = lib.filterAttrs (name: _: lib.elem name enabledAgents) allAgents;
+}
