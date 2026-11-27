@@ -6,6 +6,8 @@
   pkgs,
   lib,
   home-manager,
+  homeModules,
+  darwinPkgs,
   sharedModule,
   claudeCodeModule,
   codexModule,
@@ -18,21 +20,27 @@ let
 
   homeDirectory = if pkgs.stdenv.isDarwin then "/Users/tester" else "/home/tester";
 
-  evalModules =
-    modules:
+  evalModulesWith =
+    {
+      evalPkgs ? pkgs,
+      evalHomeDirectory ? if evalPkgs.stdenv.isDarwin then "/Users/tester" else "/home/tester",
+      modules,
+    }:
     (home-manager.lib.homeManagerConfiguration {
-      inherit pkgs;
+      pkgs = evalPkgs;
       modules = [
         {
           home = {
             username = "tester";
-            inherit homeDirectory;
+            homeDirectory = evalHomeDirectory;
             stateVersion = "26.05";
           };
         }
       ]
       ++ modules;
     }).config;
+
+  evalModules = modules: evalModulesWith { inherit modules; };
 
   evalHomeWith = modules: extraModule: evalModules (modules ++ [ extraModule ]);
 
@@ -128,6 +136,18 @@ in
       ompModule
       oxideCodeModule
       ;
+  };
+
+  home-peripheral-tools = import ./tools.nix {
+    inherit
+      pkgs
+      lib
+      check
+      homeModules
+      darwinPkgs
+      homeDirectory
+      ;
+    evalHomeWith = evalModulesWith;
   };
 }
 // claudeCodeChecks

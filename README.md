@@ -14,6 +14,7 @@ Declarative Nix and Home Manager modules for coding agents, MCP servers, hooks, 
 - `homeModules.codex`: standalone Home Manager module (`agents.codex`) configuring the Codex CLI, permission rules, hooks, custom agents, MCP servers, auth profiles, plugins, and desktop preferences.
 - `homeModules.omp`: standalone Home Manager module (`agents.omp`) configuring Oh My Pi (`omp`), settings, permissions, custom agents, MCP servers, extensions, and auth profiles.
 - `homeModules.oxide-code`: standalone Home Manager module (`agents.oxide-code`) configuring `oxide-code` (`ox`), `programs.oxide-code` integration, settings, and Anthropic auth profiles.
+- `homeModules.{acp,activity-report,agent-project-move,ccusage,ctx7,t3code,workmux}`: standalone opt-in Home Manager modules for peripheral tools (`agents.acp`, `agents.activity-report`, `agents.agent-project-move`, `agents.ccusage`, `agents.ctx7`, `agents.t3code`, `agents.workmux`), each importing `homeModules.shared`.
 - `overlays.default`: overlay exposing the companion packages.
 - `packages.<system>`: companion packages (`acpx`, `browser-tools`, `file-formatter`, `mcp-server-github`, `mcp-server-gitlab`).
 - `checks.<system>`: library evaluation checks, Home Manager module evaluation checks, Nushell script tests, TypeScript tests (`ts-tests` via `bun test`), and package builds.

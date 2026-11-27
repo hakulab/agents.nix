@@ -37,6 +37,22 @@
       inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
 
+    activity-report = {
+      url = "github:hakulab/activity-report";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        devkit.follows = "devkit";
+      };
+    };
+
+    agent-project-move = {
+      url = "github:hakulab/agent-project-move";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        devkit.follows = "devkit";
+      };
+    };
+
     claude-statusline = {
       url = "github:hakulab/claude-statusline";
       inputs = {
@@ -66,6 +82,8 @@
       devkit,
       home-manager,
       llm-agents,
+      activity-report,
+      agent-project-move,
       claude-statusline,
       oxide-code,
     }:
@@ -74,9 +92,13 @@
         inherit (nixpkgs) lib;
       };
 
+      packagesFor = system: self.packages.${system};
+      unstablePackagesFor = system: nixpkgs-unstable.legacyPackages.${system};
+      llmAgentsPackagesFor = system: llm-agents.packages.${system};
+
       # Pull Playwright from nixpkgs-unstable because Chrome DevTools MCP tracks latest npm and
       # requires current stable Chrome, while stable nixpkgs freezes Chromium.
-      playwrightDriverFor = system: nixpkgs-unstable.legacyPackages.${system}.playwright-driver;
+      playwrightDriverFor = system: (unstablePackagesFor system).playwright-driver;
 
       mkHomeModule = name: module: {
         _class = "homeManager";
@@ -91,7 +113,41 @@
           devkitLib = devkit.lib;
           devkitOutPath = devkit.outPath;
           repoRoot = ./.;
-          packagesFor = system: self.packages.${system};
+          inherit packagesFor;
+        }
+      );
+
+      acpHomeModule = mkHomeModule "acp" (
+        import ./modules/home/acp {
+          inherit agentsLib;
+          sharedModule = sharedHomeModule;
+          inherit
+            packagesFor
+            llmAgentsPackagesFor
+            ;
+        }
+      );
+
+      activityReportHomeModule = mkHomeModule "activity-report" (
+        import ./modules/home/activity-report {
+          sharedModule = sharedHomeModule;
+          activityReportModule = activity-report.homeModules.default;
+          activityReportPackagesFor = system: activity-report.packages.${system};
+        }
+      );
+
+      agentProjectMoveHomeModule = mkHomeModule "agent-project-move" (
+        import ./modules/home/agent-project-move {
+          sharedModule = sharedHomeModule;
+          agentProjectMoveModule = agent-project-move.homeModules.default;
+          agentProjectMovePackagesFor = system: agent-project-move.packages.${system};
+        }
+      );
+
+      ccusageHomeModule = mkHomeModule "ccusage" (
+        import ./modules/home/ccusage {
+          sharedModule = sharedHomeModule;
+          inherit llmAgentsPackagesFor;
         }
       );
 
@@ -116,6 +172,14 @@
         }
       );
 
+      ctx7HomeModule = mkHomeModule "ctx7" (
+        import ./modules/home/ctx7 {
+          inherit agentsLib;
+          sharedModule = sharedHomeModule;
+          inherit unstablePackagesFor;
+        }
+      );
+
       ompHomeModule = mkHomeModule "omp" (
         import ./modules/home/omp {
           inherit agentsLib sharedHomeModule;
@@ -132,17 +196,43 @@
           repoRoot = ./.;
         }
       );
+
+      t3codeHomeModule = mkHomeModule "t3code" (
+        import ./modules/home/t3code {
+          inherit agentsLib;
+          devkitLib = devkit.lib;
+          repoRoot = ./.;
+          sharedModule = sharedHomeModule;
+          inherit unstablePackagesFor;
+        }
+      );
+
+      workmuxHomeModule = mkHomeModule "workmux" (
+        import ./modules/home/workmux {
+          sharedModule = sharedHomeModule;
+          inherit llmAgentsPackagesFor;
+        }
+      );
+
+      homeModules = {
+        acp = acpHomeModule;
+        activity-report = activityReportHomeModule;
+        agent-project-move = agentProjectMoveHomeModule;
+        ccusage = ccusageHomeModule;
+        claude-code = claudeCodeHomeModule;
+        codex = codexHomeModule;
+        ctx7 = ctx7HomeModule;
+        omp = ompHomeModule;
+        oxide-code = oxideCodeHomeModule;
+        shared = sharedHomeModule;
+        t3code = t3codeHomeModule;
+        workmux = workmuxHomeModule;
+      };
     in
     {
       lib = agentsLib;
 
-      homeModules = {
-        claude-code = claudeCodeHomeModule;
-        codex = codexHomeModule;
-        omp = ompHomeModule;
-        oxide-code = oxideCodeHomeModule;
-        shared = sharedHomeModule;
-      };
+      inherit homeModules;
 
       overlays.default =
         final: _:
@@ -195,7 +285,8 @@
         homeChecks = import ./tests/home-checks {
           inherit pkgs;
           inherit (nixpkgs) lib;
-          inherit home-manager;
+          inherit home-manager homeModules;
+          darwinPkgs = nixpkgs.legacyPackages.aarch64-darwin;
           sharedModule = sharedHomeModule;
           claudeCodeModule = claudeCodeHomeModule;
           codexModule = codexHomeModule;
