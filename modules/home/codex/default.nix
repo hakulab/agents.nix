@@ -178,7 +178,7 @@ in
         features.chronicle = true;
       };
 
-      hooks = import ./hooks.nix {
+      hooks = import ./hooks {
         inherit lib resolved scriptsDir;
         hooksCfg = cfg.hooks;
       };
