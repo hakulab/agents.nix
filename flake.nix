@@ -179,6 +179,7 @@
         homeChecks = import ./tests/home-checks {
           inherit pkgs;
           inherit (nixpkgs) lib;
+          inherit (dk) nushell;
           inherit home-manager homeModules;
           darwinPkgs = nixpkgs.legacyPackages.aarch64-darwin;
         };
