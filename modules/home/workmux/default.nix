@@ -22,8 +22,38 @@ let
 
   configFile = yaml.generate "workmux-config.yaml" cfg.settings;
 
-  workmuxCodexHooks =
-    (lib.importJSON "${cfg.package.src}/resources/codex/hooks/workmux-status.json").hooks;
+  mkCommandHook = command: [
+    {
+      hooks = [
+        {
+          type = "command";
+          inherit command;
+        }
+      ];
+    }
+  ];
+
+  # Mirror upstream resources/codex/hooks/workmux-status.json to avoid IFD.
+  workmuxCodexHooks = {
+    SessionStart = [
+      {
+        matcher = "startup|resume|clear";
+        hooks = [
+          {
+            type = "command";
+            command = "workmux register-agent";
+          }
+        ];
+      }
+    ];
+
+    UserPromptSubmit = mkCommandHook "workmux set-window-status working";
+    PermissionRequest = mkCommandHook "workmux set-window-status waiting";
+    PostToolUse = mkCommandHook "workmux set-window-status working";
+    SubagentStart = mkCommandHook "workmux set-window-status working";
+    SubagentStop = mkCommandHook "workmux set-window-status working";
+    Stop = mkCommandHook "workmux set-window-status done";
+  };
 
   workmuxSkills = [
     "coordinator"
@@ -125,7 +155,7 @@ in
         xdg.configFile."workmux/config.yaml".source = configFile;
       }
 
-      (lib.optionalAttrs (options.agents ? codex) {
+      (lib.optionalAttrs (lib.hasAttrByPath [ "agents" "codex" "hooks" "extraEvents" ] options) {
         agents.codex.hooks.extraEvents = lib.mkIf cfg.installCodexHooks workmuxCodexHooks;
       })
 

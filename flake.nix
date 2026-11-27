@@ -222,20 +222,7 @@
 
       homeModules = individualHomeModules // {
         default = mkHomeModule "default" {
-          imports = [
-            individualHomeModules.acp
-            individualHomeModules.activity-report
-            individualHomeModules.agent-project-move
-            individualHomeModules.ccusage
-            individualHomeModules.claude-code
-            individualHomeModules.codex
-            individualHomeModules.ctx7
-            individualHomeModules.omp
-            individualHomeModules.oxide-code
-            individualHomeModules.shared
-            individualHomeModules.t3code
-            individualHomeModules.workmux
-          ];
+          imports = builtins.attrValues individualHomeModules;
         };
       };
     in

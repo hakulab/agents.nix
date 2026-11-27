@@ -36,10 +36,19 @@ Add `agents-nix` to your flake inputs and import `agents-nix.homeModules.default
     }:
     {
       homeConfigurations.dev = home-manager.lib.homeManagerConfiguration {
-        pkgs = nixpkgs.legacyPackages.x86_64-linux;
+        pkgs = import nixpkgs {
+          system = "x86_64-linux";
+          config.allowUnfree = true;
+        };
         modules = [
           agents-nix.homeModules.default
           {
+            home = {
+              username = "dev";
+              homeDirectory = "/home/dev";
+              stateVersion = "26.05";
+            };
+
             agents = {
               # Enable only the assistants and tools you use.
               claude-code.enable = true;
@@ -111,7 +120,7 @@ All prompts, instructions, skills, and helper scripts are plain files in this re
 - `assets/prompt-fragments/`: reusable Markdown fragments composed into assistant and hook prompts.
 - `assets/agent-roles/`: subagent role definitions and coordination prompts.
 - `assets/skills/`: standalone skills such as `prose-polish`.
-- `scripts/`: Nushell and POSIX shell helpers for hooks (`auto-format`, `comment-gate`, `completeness`), cross-platform desktop notifications (`notify/`), profile switching (`profile-switch/`), and Oh My Pi extensions (`omp/`).
+- `scripts/`: Nushell, POSIX shell, and TypeScript helpers and prompts for hooks (`hooks/`), cross-platform desktop notifications (`notify/`), profile switching (`profile-switch/`), and Oh My Pi extensions (`omp/`).
 
 ## Cache
 

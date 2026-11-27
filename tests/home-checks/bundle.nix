@@ -33,10 +33,12 @@ let
         activity-report.enable = true;
         agent-project-move.enable = true;
         ccusage.enable = true;
+
         claude-code = {
           enable = true;
           package = stubClaude;
         };
+
         codex = {
           enable = true;
           hooks.extraEvents.Stop = [
@@ -50,6 +52,7 @@ let
             }
           ];
         };
+
         ctx7.enable = true;
         omp.enable = true;
         oxide-code.enable = true;
@@ -69,6 +72,13 @@ let
           installCodexHooks = false;
         };
       };
+    }
+  ];
+
+  codexOnlyCfg = evalModules [
+    homeModules.default
+    {
+      agents.codex.enable = true;
     }
   ];
 
@@ -146,6 +156,17 @@ check "home-default" [
       && !(hasHookCommand "workmux register-agent" (
         codexHooksOptOutCfg.agents.codex._internal.settings.hooks.SessionStart or [ ]
       ))
-      && !(codexHooksOptOutCfg.agents.codex._internal.settings.hooks ? Stop);
+      && !(codexHooksOptOutCfg.agents.codex._internal.settings.hooks ? Stop)
+      && lib.all (a: a.assertion) codexHooksOptOutCfg.assertions;
+  }
+  {
+    name = "codex without workmux enabled does not receive Workmux status hooks";
+    ok =
+      !codexOnlyCfg.agents.workmux.enable
+      && !(hasHookCommand "workmux register-agent" (
+        codexOnlyCfg.agents.codex._internal.settings.hooks.SessionStart or [ ]
+      ))
+      && !(codexOnlyCfg.agents.codex._internal.settings.hooks ? Stop)
+      && lib.all (a: a.assertion) codexOnlyCfg.assertions;
   }
 ]
