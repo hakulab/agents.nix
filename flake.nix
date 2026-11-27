@@ -155,7 +155,7 @@
         }
       );
 
-      homeModules = {
+      individualHomeModules = {
         acp = mkHomeModule "acp" (
           import ./modules/home/acp {
             inherit agentsLib;
@@ -218,6 +218,12 @@
             inherit llmAgentsPackagesFor;
           }
         );
+      };
+
+      homeModules = individualHomeModules // {
+        default = mkHomeModule "default" {
+          imports = builtins.attrValues individualHomeModules;
+        };
       };
     in
     {

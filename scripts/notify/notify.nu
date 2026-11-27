@@ -33,7 +33,7 @@ def detect-platform []: nothing -> string {
       } catch {
         ""
       }
-      if ($proc_version | str downcase | str contains "microsoft") {
+      if ($proc_version | str lowercase | str contains "microsoft") {
         "wsl"
       } else {
         "linux"

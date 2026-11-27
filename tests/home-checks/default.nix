@@ -60,6 +60,16 @@ let
   };
 in
 {
+  home-default = import ./bundle.nix {
+    inherit
+      pkgs
+      lib
+      check
+      evalModules
+      homeModules
+      ;
+  };
+
   home-codex = import ./codex.nix {
     inherit
       pkgs

@@ -9,6 +9,7 @@
 
 {
   config,
+  options,
   pkgs,
   lib,
   ...
@@ -20,6 +21,39 @@ let
   yaml = pkgs.formats.yaml { };
 
   configFile = yaml.generate "workmux-config.yaml" cfg.settings;
+
+  mkCommandHook = command: [
+    {
+      hooks = [
+        {
+          type = "command";
+          inherit command;
+        }
+      ];
+    }
+  ];
+
+  # Mirror upstream resources/codex/hooks/workmux-status.json to avoid IFD.
+  workmuxCodexHooks = {
+    SessionStart = [
+      {
+        matcher = "startup|resume|clear";
+        hooks = [
+          {
+            type = "command";
+            command = "workmux register-agent";
+          }
+        ];
+      }
+    ];
+
+    UserPromptSubmit = mkCommandHook "workmux set-window-status working";
+    PermissionRequest = mkCommandHook "workmux set-window-status waiting";
+    PostToolUse = mkCommandHook "workmux set-window-status working";
+    SubagentStart = mkCommandHook "workmux set-window-status working";
+    SubagentStop = mkCommandHook "workmux set-window-status working";
+    Stop = mkCommandHook "workmux set-window-status done";
+  };
 
   workmuxSkills = [
     "coordinator"
@@ -84,6 +118,12 @@ in
       description = "Install bundled Workmux skills under ~/.agents/skills";
     };
 
+    installCodexHooks = lib.mkOption {
+      type = lib.types.bool;
+      default = config.agents.codex.enable or false;
+      description = "Install Workmux status hooks into Codex";
+    };
+
     installOmpExtension = lib.mkOption {
       type = lib.types.bool;
       default = config.agents.omp.enable or false;
@@ -114,6 +154,10 @@ in
 
         xdg.configFile."workmux/config.yaml".source = configFile;
       }
+
+      (lib.optionalAttrs (lib.hasAttrByPath [ "agents" "codex" "hooks" "extraEvents" ] options) {
+        agents.codex.hooks.extraEvents = lib.mkIf cfg.installCodexHooks workmuxCodexHooks;
+      })
 
       (lib.mkIf cfg.tmuxIntegration {
         programs.tmux.extraConfig = lib.mkBefore ''
