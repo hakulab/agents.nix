@@ -75,19 +75,19 @@ let
           };
 
           models.catalog = {
-            "claude-opus-5-5".channelId = {
+            claude-opus-5-5.channelId = {
               anthropic = "gw/claude-opus-5-5";
               alt = "alt/claude-opus-5-5";
             };
-            "claude-sonnet-5-5".channelId = {
+            claude-sonnet-5-5.channelId = {
               anthropic = "gw/claude-sonnet-5-5";
               alt = "alt/claude-sonnet-5-5";
             };
-            "claude-haiku-5-5".channelId = {
+            claude-haiku-5-5.channelId = {
               anthropic = "gw/claude-haiku-5-5";
               alt = "alt/claude-haiku-5-5";
             };
-            "gemini-4-neon".channelId.google = "google/gemini-4-neon";
+            gemini-4-neon.channelId.google = "google/gemini-4-neon";
           };
 
           providers.example-gateway = {
@@ -96,7 +96,7 @@ let
             apiKeyFile = "/run/secrets/gw-key";
             clientApiKeyFiles.claude-code = "/run/secrets/gw-claude-key";
             caCertFile = "/run/secrets/gw-ca.pem";
-            extraHeaders."x-tenant" = "demo";
+            extraHeaders.x-tenant = "demo";
             extraEnv.CUSTOM_PROVIDER_FLAG = "1";
             extraEnvFiles.EXTRA_PROVIDER_SECRET = "/run/secrets/extra-secret";
             channels = {
@@ -173,11 +173,11 @@ let
 
             auth.profileOverrides.gw-claude = {
               extraEnv.OVERRIDE_FLAG = "yes";
-              extraHeaders."x-override" = "1";
+              extraHeaders.x-override = "1";
               sessionEffort = "high";
-              modelEfforts."claude-opus-5-5" = "max";
-              compactWindows."claude-opus-5-5" = 250000;
-              modelOverrides."claude-haiku-5-5" = "custom/claude-haiku-5-5";
+              modelEfforts.claude-opus-5-5 = "max";
+              compactWindows.claude-opus-5-5 = 250000;
+              modelOverrides.claude-haiku-5-5 = "custom/claude-haiku-5-5";
             };
 
             hooks.worktree.workmuxPackage = stubWorkmux;
@@ -190,7 +190,7 @@ let
 
             statusline = {
               package = stubStatusline;
-              models."custom-model" = "Custom Model";
+              models.custom-model = "Custom Model";
               costSources = [
                 {
                   id = "demo-cost";
@@ -199,7 +199,7 @@ let
               ];
               extraSettings = {
                 refresh_interval = 30;
-                models."extra-model" = "Extra Model";
+                models.extra-model = "Extra Model";
               };
             };
 
@@ -481,10 +481,10 @@ let
           s = fullCfg.programs.claude-statusline.settings;
         in
         fullCfg.programs.claude-statusline.enable
-        && s.models."claude-opus-5-5" == "Claude Opus 5.5"
+        && s.models.claude-opus-5-5 == "Claude Opus 5.5"
         && s.models."gw/claude-opus-5-5" == "Claude Opus 5.5"
-        && s.models."custom-model" == "Custom Model"
-        && s.models."extra-model" == "Extra Model"
+        && s.models.custom-model == "Custom Model"
+        && s.models.extra-model == "Extra Model"
         && builtins.length s.cost_sources == 1
         && (builtins.head s.cost_sources).id == "demo-cost"
         && s.refresh_interval == 30;
