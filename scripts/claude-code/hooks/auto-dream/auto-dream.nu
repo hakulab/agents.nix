@@ -20,14 +20,17 @@ def project-slug [path: string]: nothing -> string {
   $path | str replace --all --regex "[^a-zA-Z0-9]" "-"
 }
 
-# All worktrees of a repository share the main worktree's memory store.
-def main-worktree [git: string, cwd: string]: nothing -> string {
-  let result = (^$git -C $cwd worktree list --porcelain | complete)
+# Git lists the main worktree first. All linked worktrees share its memory store.
+def worktree-paths [git: string, cwd: string]: nothing -> list<string> {
+  let result = (^$git -C $cwd worktree list --porcelain -z | complete)
   if $result.exit_code != 0 {
-    return ""
+    return []
   }
 
-  $result.stdout | lines | parse "worktree {path}" | get -o 0.path | default ""
+  $result.stdout
+  | split row (char nul)
+  | where {|field| $field | str starts-with "worktree " }
+  | each {|field| $field | str substring 9.. }
 }
 
 def modified [path: string]: nothing -> datetime {
@@ -49,24 +52,50 @@ def memories [store: string]: nothing -> list<string> {
   | where ($it | path basename) != "MEMORY.md"
 }
 
-# Worktree and subdirectory sessions keep transcripts in directories whose names extend the slug.
-def sessions-since [slug: string, since: datetime, current: string]: nothing -> int {
+# The first recorded working directory identifies where the session started.
+def transcript-cwd [path: string]: nothing -> string {
+  open --raw $path
+  | lines
+  | each {|line| try { ($line | from json).cwd? } }
+  | where {|cwd| ($cwd | describe) == "string" and ($cwd | str starts-with "/") }
+  | first
+  | default ""
+}
+
+def sessions-since [worktrees: list<string>, since: datetime, current: string]: nothing -> int {
+  let slugs = ($worktrees | each {|root| project-slug $root })
+  let roots = ($worktrees | each {|root| $root | path expand | path split })
+
+  # Slugs narrow the search. Distinct project paths can share a slug or its prefix.
   ls $PROJECTS_DIR
-  | where type == "dir" and ($it.name | path basename | str starts-with $slug)
+  | where type == "dir"
+  | where {|dir|
+    let name = ($dir.name | path basename)
+    $slugs | any {|slug| $name | str starts-with $slug }
+  }
   | each {|dir| ls $dir.name }
   | flatten
   | where type == "file" and ($it.name | str ends-with ".jsonl") and $it.modified > $since
   | where ($it.name | path parse | get stem) != $current
+  | where {|entry|
+    let cwd = (try { transcript-cwd $entry.name } catch { "" })
+    if ($cwd | is-empty) {
+      return false
+    }
+
+    let parts = ($cwd | path expand | path split)
+    $roots | any {|root| ($parts | first ($root | length)) == $root }
+  }
   | length
 }
 
 def nudge [config: record, input: record]: nothing -> any {
-  let main = (main-worktree $config.git $input.cwd)
-  if ($main | is-empty) {
+  let worktrees = (worktree-paths $config.git $input.cwd)
+  if ($worktrees | is-empty) {
     return null
   }
 
-  let slug = (project-slug $main)
+  let slug = (project-slug ($worktrees | first))
   let store = ($PROJECTS_DIR | path join $slug "memory")
   if (memories $store | is-empty) {
     return null
@@ -78,7 +107,7 @@ def nudge [config: record, input: record]: nothing -> any {
     return null
   }
 
-  let sessions = (sessions-since $slug $since $input.session_id)
+  let sessions = (sessions-since $worktrees $since $input.session_id)
   if $sessions < $MIN_SESSIONS {
     return null
   }
