@@ -20,6 +20,7 @@ let
   cfg = config.agents.omp;
   resolved = config.agents.resolved;
   inherit (resolved) agentRoleOptions instructions;
+  enabledMcpServers = resolved.mcp.computeEnabledServers cfg.mcp;
 
   extensions = import ./extensions.nix {
     inherit pkgs;
@@ -129,7 +130,7 @@ in
 
       mcp = import ./mcp.nix {
         inherit lib resolved;
-        enabledServers = resolved.mcp.computeEnabledServers cfg.mcp;
+        enabledServers = enabledMcpServers;
       };
 
       baseSettings = import ./settings.nix {
@@ -143,6 +144,7 @@ in
       permissionConfigFile = yaml.generate "omp-permissions.yml" (
         import ./permissions.nix {
           inherit lib resolved;
+          enabledServers = enabledMcpServers;
         }
       );
 

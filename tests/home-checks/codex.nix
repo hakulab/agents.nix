@@ -608,8 +608,8 @@ check "home-codex" [
     ok = throws missingProviderBaseUrlCfg.assertions;
   }
   {
-    name = "enabledServers referencing an unavailable MCP server fails module assertions";
-    ok = throws missingMcpServerCfg.assertions;
+    name = "enabledServers referencing an unavailable MCP server fails settings evaluation";
+    ok = throws missingMcpServerCfg.agents.codex.finalSettings.mcp_servers;
   }
   {
     name = "multiple distinct provider caCertFile values fail module assertions";

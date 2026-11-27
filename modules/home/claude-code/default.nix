@@ -234,6 +234,7 @@ in
       permissionSettings = import ./permissions.nix {
         inherit lib resolved;
         instructionsDir = "${config.agents.dataDir}/instructions";
+        enabledServers = enabledMcpServers;
       };
 
       plugins = import ./plugins.nix {
@@ -302,23 +303,12 @@ in
         cfg.extraInstructions
       ];
 
-      unknownMcpServers = lib.filter (name: !(resolved.mcp.servers ? ${name})) enabledMcpServers;
       workmuxEnabled = config.agents.workmux.enable or false;
     in
     lib.mkMerge [
       profiles.config
 
       {
-        # ------------------------------------------------------------------------------------------
-        # Assertions
-        # ------------------------------------------------------------------------------------------
-        assertions = [
-          {
-            assertion = unknownMcpServers == [ ];
-            message = "agents.claude-code.mcp.enabledServers references unknown or disabled servers: ${lib.concatStringsSep ", " unknownMcpServers}";
-          }
-        ];
-
         # ------------------------------------------------------------------------------------------
         # Shared integration
         # ------------------------------------------------------------------------------------------

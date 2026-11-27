@@ -10,13 +10,11 @@
 }:
 
 let
-  availableServers = lib.filter (name: resolved.mcp.servers ? ${name}) enabledServers;
-
   mkEntry =
     name:
     let
       server = resolved.mcp.servers.${name};
-      displayName = resolved.mcp.displayNames.${name} or name;
+      displayName = resolved.mcp.displayNames.${name};
     in
     lib.nameValuePair displayName (
       {
@@ -30,6 +28,5 @@ let
     );
 in
 {
-  serversConfig = builtins.listToAttrs (map mkEntry availableServers);
-  missingServers = lib.filter (name: !(resolved.mcp.servers ? ${name})) enabledServers;
+  serversConfig = builtins.listToAttrs (map mkEntry enabledServers);
 }

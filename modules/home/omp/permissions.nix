@@ -5,10 +5,12 @@
 {
   lib,
   resolved,
+  enabledServers,
 }:
 
 let
   policy = resolved.permissions;
+  mcpGates = lib.filter (gate: lib.elem gate.server enabledServers) policy.mcpGates;
 
   sanitize =
     value:
@@ -48,7 +50,7 @@ in
       # Eval can execute shells without passing through Bash's command rules.
       eval = "prompt";
     }
-    // lib.listToAttrs (map (gate: lib.nameValuePair (toToolName gate) "prompt") policy.mcpGates);
+    // lib.listToAttrs (map (gate: lib.nameValuePair (toToolName gate) "prompt") mcpGates);
   };
 
   bash.patterns = toPromptRules policy.gateCommands;

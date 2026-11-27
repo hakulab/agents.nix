@@ -205,22 +205,33 @@ let
     };
   };
 
-  longMcpToolCfg = evalHomeWith [ homeModules.omp ] {
-    agents = {
-      browser.chromiumPackage = null;
-      mcp = {
-        presets.github.enable = true;
-        servers.github.permissions.gateTools = [
-          {
-            tool = "this_mcp_tool_name_is_intentionally_longer_than_sixty_four_characters";
-            reason = "test";
-          }
-        ];
+  longMcpToolCfg =
+    mcp:
+    evalHomeWith [ homeModules.omp ] {
+      agents = {
+        browser.chromiumPackage = null;
+        mcp = {
+          presets.github.enable = true;
+          servers.github.permissions.gateTools = [
+            {
+              tool = "this_mcp_tool_name_is_intentionally_longer_than_sixty_four_characters";
+              reason = "test";
+            }
+          ];
+        };
+        omp = {
+          enable = true;
+          package = stubOmp;
+          inherit mcp;
+        };
       };
-      omp = {
-        enable = true;
-        package = stubOmp;
-      };
+    };
+
+  missingMcpServerCfg = evalHomeWith [ homeModules.omp ] {
+    agents.omp = {
+      enable = true;
+      package = stubOmp;
+      mcp.enabledServers = [ "unknown" ];
     };
   };
 
@@ -316,7 +327,22 @@ check "home-omp" [
   }
   {
     name = "permissions guard throws on MCP tool names exceeding 64 characters";
-    ok = throws (findPackageNamed "omp" longMcpToolCfg.home.packages).buildCommand;
+    ok = throws (findPackageNamed "omp" (longMcpToolCfg { }).home.packages).buildCommand;
+  }
+  {
+    name = "permissions ignore MCP tools on servers disabled for OMP";
+    ok =
+      !(throws
+        (findPackageNamed "omp"
+          (longMcpToolCfg {
+            disabledServers = [ "github" ];
+          }).home.packages
+        ).buildCommand
+      );
+  }
+  {
+    name = "unknown MCP server in enabledServers fails settings evaluation";
+    ok = throws missingMcpServerCfg.home.file.".omp/agent/mcp.json".source.value;
   }
 
   # ------------------------------------------------------------------------------------------------

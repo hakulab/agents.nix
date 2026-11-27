@@ -193,7 +193,7 @@ check "home-claude-code" [
     ok = hasFailingAssertion invalidEnvNameProfileCfg;
   }
   {
-    name = "unknown MCP server in enabledServers fails assertion";
-    ok = hasFailingAssertion unknownMcpCfg;
+    name = "unknown MCP server in enabledServers fails settings evaluation";
+    ok = throws unknownMcpCfg.home.file.".claude/settings.json".source;
   }
 ]
