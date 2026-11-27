@@ -58,7 +58,7 @@ Add `agents-nix` to your flake inputs, import `agents-nix.homeModules.default` (
 
 Secrets are accepted only through backend-agnostic `*File` paths read at runtime, keeping credentials out of the Nix store.
 
-See [`flake.nix`](flake.nix) for exported outputs, [`modules/home/`](modules/home/) for available modules and option definitions, and [`packages/`](packages/) for companion packages. Prompts, instructions, skills, and helper scripts under [`assets/`](assets/) and [`scripts/`](scripts/) are plain files that work without Nix.
+See [`flake.nix`](flake.nix) for exported outputs, [`modules/home/`](modules/home/) for available modules and option definitions, and [`packages/`](packages/) for companion packages. Prompts, instructions, skills, and helper scripts live as plain files under [`assets/`](assets/) and [`scripts/`](scripts/) for browsing or adapting outside Nix, while the Nix modules expand `@placeholder@` tokens and wrap scripts at build time.
 
 ## Cache
 
@@ -77,7 +77,7 @@ For NixOS or nix-darwin, place the same settings under `nix.settings` according 
 
 ## Development
 
-See [AGENTS.md](AGENTS.md) for contributor rules and verification commands, and [RELEASING.md](RELEASING.md) for the release contract.
+See [`AGENTS.md`](AGENTS.md) for contributor rules and verification commands, and [`RELEASING.md`](RELEASING.md) for the release contract.
 
 ## License
 
