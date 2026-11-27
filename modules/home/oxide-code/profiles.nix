@@ -74,12 +74,12 @@ let
   # Profile switcher
   # ------------------------------------------------------------------------------------------------
   switch = shared.mkProfileSwitch {
-    inherit stateDir;
-    inherit (cfg) defaultProfile;
     name = "ox-switch";
     assistant = "oxide-code";
+    inherit stateDir;
     extension = "env.sh";
     profiles = lib.mapAttrs mkProfileScript profiles;
+    inherit (cfg) defaultProfile;
   };
 in
 {

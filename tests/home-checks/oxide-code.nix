@@ -18,8 +18,18 @@ let
     exit 0
   '';
 
+  stubOmp = pkgs.writeShellScriptBin "omp" ''
+    exit 0
+  '';
+
   hasPackageNamed =
     name: packages: lib.any (pkg: (pkg.meta.mainProgram or pkg.name) == name) packages;
+
+  findWrappedPackage =
+    name: packages:
+    lib.findFirst (
+      pkg: (pkg.meta.mainProgram or pkg.name) == name && (pkg.meta.priority or 0) == 0
+    ) null packages;
 
   disabledCfg = evalHomeWith [ oxideCodeModule ] { };
 
@@ -75,7 +85,7 @@ let
 
       omp = {
         enable = true;
-        package = stubOx;
+        package = stubOmp;
       };
 
       oxide-code = {
@@ -117,6 +127,9 @@ let
 
   stateDir = "${combinedCfg.xdg.stateHome}/oxide-code";
   filteredStateDir = "${filteredProfilesCfg.xdg.stateHome}/oxide-code";
+
+  basicOxBin = findWrappedPackage "ox" basicCfg.home.packages;
+  gwClaudeEnv = combinedCfg.home.file."${stateDir}/profiles/gw-claude.env.sh".source.text;
 in
 check "home-oxide-code" [
   # ------------------------------------------------------------------------------------------------
@@ -147,7 +160,8 @@ check "home-oxide-code" [
     ok =
       basicCfg.programs.oxide-code.enable
       && (basicCfg.programs.oxide-code.package.meta.priority or 0) > 0
-      && hasPackageNamed "ox" basicCfg.home.packages
+      && basicOxBin != null
+      && lib.hasInfix "profile-loader.sh" basicOxBin.buildCommand
       && hasPackageNamed "ox-switch" basicCfg.home.packages
       && basicCfg.programs.oxide-code.settings.permission.mode == "yolo"
       && basicCfg.programs.oxide-code.settings.tui.show_thinking;
@@ -170,6 +184,15 @@ check "home-oxide-code" [
       && combinedCfg.home.file ? "${stateDir}/profiles/gw-claude.env.sh"
       && !(combinedCfg.home.file ? "${stateDir}/profiles/gw-gpt.env.sh")
       && combinedCfg.home.activation ? oxideCodeProfile;
+  }
+  {
+    name = "generated profile script exports gateway URL, headers, CA cert, and per-client token";
+    ok =
+      lib.hasInfix "ANTHROPIC_AUTH_TOKEN" gwClaudeEnv
+      && lib.hasInfix "/run/secrets/gw-ox" gwClaudeEnv
+      && lib.hasInfix "ANTHROPIC_BASE_URL=${lib.escapeShellArg "https://gw.example.test/anthropic"}" gwClaudeEnv
+      && lib.hasInfix "ANTHROPIC_CUSTOM_HEADERS=${lib.escapeShellArg "x-tenant: demo"}" gwClaudeEnv
+      && lib.hasInfix "OX_EXTRA_CA_CERTS=${lib.escapeShellArg "/run/secrets/gw-ca.pem"}" gwClaudeEnv;
   }
   {
     name = "auth.profiles allowlist filters installed profile scripts";

@@ -181,15 +181,10 @@ in
         // cfg.extraEnvFiles;
 
       ompBin = agentsLib.wrapPackage {
-        inherit
-          pkgs
-          wrapArgs
-          envVars
-          envFiles
-          ;
+        inherit pkgs;
         pkg = cfg.package;
-        name = "omp-${cfg.package.version or "wrapped"}";
         bin = "omp";
+        inherit wrapArgs envVars envFiles;
       };
     in
     lib.mkMerge [

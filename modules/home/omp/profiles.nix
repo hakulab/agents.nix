@@ -98,12 +98,12 @@ let
   # Profile switcher
   # ------------------------------------------------------------------------------------------------
   switch = shared.mkProfileSwitch {
-    inherit stateDir;
-    inherit (cfg) defaultProfile;
     name = "omp-switch";
     assistant = "OMP";
+    inherit stateDir;
     extension = "config.yml";
     profiles = lib.mapAttrs (name: yaml.generate "omp-profile-${name}.yml") profiles;
+    inherit (cfg) defaultProfile;
     configFile = "${configDir}/config.yml";
     resetKeys = [
       "modelRoles"
@@ -147,7 +147,7 @@ in
         # home-manager store symlink keeps the store's epoch mtime forever, so catalog updates never
         # reach long-running sessions. Install a regular file so activation bumps the mtime.
         ompModelsYaml = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
-          run install -m0600 ${modelsYaml} ${configDir}/models.yml
+          run install -m0600 ${modelsYaml} ${lib.escapeShellArg "${configDir}/models.yml"}
         '';
 
         # Keep config.yml writable for profile switching and OMP settings updates.

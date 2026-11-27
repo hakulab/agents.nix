@@ -20,6 +20,7 @@ in
 
   statusLine = {
     preset = "custom";
+
     leftSegments = [
       "model"
       "mode"
@@ -38,8 +39,10 @@ in
     compactThinkingLevel = false;
     sessionAccent = false;
     transparent = true;
+
     segmentOptions = {
       model.showThinkingLevel = true;
+
       path = {
         abbreviate = true;
         maxLength = 28;

@@ -93,9 +93,10 @@ in
       wrapArgs = profiles.wrapArgs ++ agentsLib.proxy.mkProxyWrapArgs config.agents.proxy;
 
       oxBin = agentsLib.wrapPackage {
-        inherit pkgs wrapArgs;
+        inherit pkgs;
         pkg = cfg.package;
         bin = "ox";
+        inherit wrapArgs;
       };
     in
     lib.mkMerge [

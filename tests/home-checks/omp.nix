@@ -17,6 +17,10 @@ let
     exit 0
   '';
 
+  stubChromium = pkgs.writeShellScriptBin "chromium" ''
+    exit 0
+  '';
+
   stubTelegram = pkgs.runCommand "stub-omp-telegram" { } ''
     mkdir -p "$out"
     touch "$out/index.ts"
@@ -24,6 +28,9 @@ let
 
   hasPackageNamed =
     name: packages: lib.any (pkg: (pkg.meta.mainProgram or pkg.name) == name) packages;
+
+  findPackageNamed =
+    name: packages: lib.findFirst (pkg: (pkg.meta.mainProgram or pkg.name) == name) null packages;
 
   disabledCfg = evalHomeWith [ ompModule ] { };
 
@@ -43,7 +50,7 @@ let
 
   combinedCfg = evalHomeWith [ sharedModule ompModule ] {
     agents = {
-      browser.chromiumPackage = null;
+      browser.chromiumPackage = stubChromium;
 
       models.catalog = {
         "claude-opus-5-5".channelId.anthropic = "gw/claude-opus-5-5";
@@ -186,8 +193,49 @@ let
     };
   };
 
+  longMcpToolCfg = evalHomeWith [ ompModule ] {
+    agents = {
+      browser.chromiumPackage = null;
+      permissions.mcpGates.custom_long_server = [
+        {
+          tool = "this_mcp_tool_name_is_intentionally_longer_than_sixty_four_characters";
+          reason = "test";
+        }
+      ];
+      omp = {
+        enable = true;
+        package = stubOmp;
+      };
+    };
+  };
+
+  missingBaseUrlCfg = evalHomeWith [ ompModule ] {
+    agents = {
+      browser.chromiumPackage = null;
+
+      providers.no-url = { };
+
+      profiles.gw-gpt = {
+        provider = "no-url";
+        family = "gpt";
+      };
+
+      omp = {
+        enable = true;
+        package = stubOmp;
+      };
+    };
+  };
+
   stateDir = "${combinedCfg.xdg.stateHome}/omp";
   filteredStateDir = "${filteredProfilesCfg.xdg.stateHome}/omp";
+
+  combinedOmpBin = findPackageNamed "omp" combinedCfg.home.packages;
+  combinedMcp = builtins.fromJSON combinedCfg.home.file.".omp/agent/mcp.json".source.value;
+  workClaudeProfile =
+    builtins.fromJSON
+      combinedCfg.home.file."${stateDir}/profiles/work-claude.config.yml".source.value;
+  ompModelsActivation = combinedCfg.home.activation.ompModelsYaml.data;
 in
 check "home-omp" [
   # ------------------------------------------------------------------------------------------------
@@ -238,25 +286,64 @@ check "home-omp" [
   }
 
   # ------------------------------------------------------------------------------------------------
-  # MCP integration
+  # MCP integration and permissions
   # ------------------------------------------------------------------------------------------------
   {
-    name = "global agents.mcp.disabledServers propagates to omp by default";
-    ok = combinedCfg.agents.omp.mcp.disabledServers == [ "exa" ];
+    name = "global agents.mcp.disabledServers propagates to omp and filters generated mcp.json";
+    ok =
+      combinedCfg.agents.omp.mcp.disabledServers == [ "exa" ]
+      && combinedMcp.mcpServers ? DeepWiki
+      && combinedMcp.mcpServers.DeepWiki.type == "http"
+      && combinedMcp.mcpServers.DeepWiki.url == "https://mcp.deepwiki.com/mcp"
+      && combinedMcp.mcpServers.DeepWiki.timeout == 120000
+      && !(combinedMcp.mcpServers ? Exa);
+  }
+  {
+    name = "permissions guard throws on MCP tool names exceeding 64 characters";
+    ok = throws (findPackageNamed "omp" longMcpToolCfg.home.packages).buildCommand;
   }
 
   # ------------------------------------------------------------------------------------------------
-  # Auth profiles, activations, and assertions
+  # Auth profiles, wrapper, activations, and assertions
   # ------------------------------------------------------------------------------------------------
   {
-    name = "enabled omp installs omp binary, omp-switch, profile files, and activation hooks";
+    name = "enabled omp installs wrapped omp binary, omp-switch, profile files, and activation hooks";
     ok =
-      hasPackageNamed "omp" combinedCfg.home.packages
+      combinedOmpBin != null
       && hasPackageNamed "omp-switch" combinedCfg.home.packages
       && combinedCfg.home.file ? "${stateDir}/profiles/official.config.yml"
       && combinedCfg.home.file ? "${stateDir}/profiles/work-claude.config.yml"
       && combinedCfg.home.activation ? ompModelsYaml
       && combinedCfg.home.activation ? ompAuthProfile;
+  }
+  {
+    name = "generated profile YAML resolves model roles, aliases, and compaction thresholds";
+    ok =
+      workClaudeProfile.modelRoles.flagship == "my-gateway-anthropic/gw/claude-opus-5-5:high"
+      && workClaudeProfile.modelRoles.prose == "my-gateway-google/google/gemini-4-neon:high"
+      && workClaudeProfile.modelRoles.plan == "@flagship"
+      && workClaudeProfile.compaction.enabled
+      && workClaudeProfile.compaction.modelThresholds."my-gateway-anthropic/gw/claude-opus-5-5" == 400000;
+  }
+  {
+    name = "omp wrapper injects CA cert, browser path, secret env files, and config flags";
+    ok =
+      lib.hasInfix "NODE_EXTRA_CA_CERTS" combinedOmpBin.buildCommand
+      && lib.hasInfix "/run/secrets/gw-ca.pem" combinedOmpBin.buildCommand
+      && lib.hasInfix "PUPPETEER_EXECUTABLE_PATH" combinedOmpBin.buildCommand
+      && lib.hasInfix (builtins.unsafeDiscardStringContext (lib.getExe stubChromium)) combinedOmpBin.buildCommand
+      && lib.hasInfix "TELEGRAM_BOT_TOKEN" combinedOmpBin.buildCommand
+      && lib.hasInfix "/run/secrets/telegram-bot" combinedOmpBin.buildCommand
+      && lib.hasInfix "EXA_API_KEY" combinedOmpBin.buildCommand
+      && lib.hasInfix "/run/secrets/exa-key" combinedOmpBin.buildCommand
+      && lib.hasInfix "omp-settings.yml" combinedOmpBin.buildCommand
+      && lib.hasInfix "omp-permissions.yml" combinedOmpBin.buildCommand;
+  }
+  {
+    name = "ompModelsYaml activation installs generated models.yml with shell-escaped target path";
+    ok =
+      lib.hasInfix "install -m0600" ompModelsActivation
+      && lib.hasInfix (lib.escapeShellArg "${combinedCfg.home.homeDirectory}/.omp/agent/models.yml") ompModelsActivation;
   }
   {
     name = "auth.profiles allowlist filters installed profile files";
@@ -271,6 +358,10 @@ check "home-omp" [
   {
     name = "multiple distinct provider caCertFile paths fail module assertion";
     ok = throws conflictingCaCfg.assertions;
+  }
+  {
+    name = "provider without baseUrl or matching apiUrls throws when generating models.yml";
+    ok = throws missingBaseUrlCfg.home.activation.ompModelsYaml.data;
   }
   {
     name = "secret *File options reject Nix path literals";
