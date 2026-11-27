@@ -8,6 +8,9 @@
 }:
 
 let
+  # ------------------------------------------------------------------------------------------------
+  # Provider and channel helpers
+  # ------------------------------------------------------------------------------------------------
   apiKeyFileFor =
     provider: client:
     if provider == null then
@@ -17,13 +20,16 @@ let
 
   modelChannels = model: builtins.attrNames (model.channelId or { });
 
-  defaultModelChannel =
-    model:
+  selectModelChannel =
+    providerChannels: channelAllowed: model:
     let
-      channels = modelChannels model;
+      channels = lib.filter (ch: providerChannels ? ${ch} && channelAllowed ch) (modelChannels model);
     in
     if channels == [ ] then null else lib.head channels;
 
+  # ------------------------------------------------------------------------------------------------
+  # Profile resolver
+  # ------------------------------------------------------------------------------------------------
   mkResolver =
     {
       modelCatalog ? models.defaultCatalog,
@@ -34,9 +40,22 @@ let
     }:
     let
       # --------------------------------------------------------------------------------------------
-      # Profile resolution
+      # Workload resolution
       # --------------------------------------------------------------------------------------------
-      profileTierModels = profile: modelCatalog.defaults.${profile.defaultsKey or profile.family};
+      lookupProvider =
+        name: providerName:
+        if providerName == null then
+          { }
+        else
+          providers.${providerName}
+            or (throw "profile `${name}` references undeclared provider `${providerName}`");
+
+      profileTierModels =
+        profile:
+        let
+          defaultsKey = if (profile.defaultsKey or null) != null then profile.defaultsKey else profile.family;
+        in
+        modelCatalog.defaults.${defaultsKey};
 
       mkWorkload =
         {
@@ -49,6 +68,14 @@ let
         }:
         let
           model = modelCatalog.models.${modelKey};
+          familyApi = if family != null then familyApis.${family} or null else null;
+          api = if familyApi != null && lib.elem familyApi model.apis then familyApi else lib.head model.apis;
+
+          effort =
+            if family != null && workloadPolicy ? ${family} then
+              workloadPolicy.${family}.${effortTier}
+            else
+              model.thinking.defaultLevel or null;
         in
         {
           inherit
@@ -58,11 +85,14 @@ let
             modelKey
             modelId
             model
+            api
+            effort
             ;
-          api = familyApis.${family} or (lib.head model.apis);
-          effort = workloadPolicy.${family}.${effortTier};
         };
 
+      # --------------------------------------------------------------------------------------------
+      # Single profile resolution
+      # --------------------------------------------------------------------------------------------
       resolveProfile =
         {
           allowedChannels ? null,
@@ -71,7 +101,7 @@ let
         }:
         let
           providerName = profile.provider or null;
-          provider = if providerName != null then providers.${providerName} or { } else { };
+          provider = lookupProvider name providerName;
           providerChannels = provider.channels or { };
           tierModels = profileTierModels profile;
 
@@ -85,23 +115,29 @@ let
             }:
             let
               model = modelCatalog.models.${modelKey};
+
               channel =
                 if useProfileChannel && (profile.channel or null) != null then
                   profile.channel
                 else if providerName != null && providerChannels != { } then
-                  defaultModelChannel model
+                  selectModelChannel providerChannels channelAllowed model
                 else
                   null;
-              family =
+
+              channelFamily =
                 if channel != null && providerChannels ? ${channel} then
-                  providerChannels.${channel}.family or profile.family
+                  providerChannels.${channel}.family or null
                 else
-                  profile.family;
+                  null;
+
+              family = if channelFamily != null then channelFamily else profile.family or null;
+
               modelId =
                 if channel != null && (model.channelId or { }) ? ${channel} then
                   model.channelId.${channel}
                 else
                   modelKey;
+
               source = if providerName != null && channel != null then "${providerName}-${channel}" else name;
             in
             mkWorkload {
@@ -133,20 +169,25 @@ let
             }
           ) tierModels;
 
-          proseModelKey = profile.proseModel or modelCatalog.defaults.prose or null;
+          hasExplicitProseModel = (profile.proseModel or null) != null;
+          proseModelKey =
+            if hasExplicitProseModel then profile.proseModel else modelCatalog.defaults.prose or null;
           proseModel = if proseModelKey != null then modelCatalog.models.${proseModelKey} or null else null;
-          proseChannel = if proseModel != null then defaultModelChannel proseModel else null;
+
+          proseChannel =
+            if proseModel != null && providerName != null && providerChannels != { } then
+              selectModelChannel providerChannels channelAllowed proseModel
+            else
+              null;
 
           useProseModel =
-            if (profile.proseModel or null) != null then
-              true
-            else
-              providerName != null
-              && providerChannels != { }
-              && proseModel != null
-              && proseChannel != null
-              && channelAllowed proseChannel
-              && providerChannels ? ${proseChannel};
+            proseModel != null
+            && (
+              if providerName != null && providerChannels != { } then
+                proseChannel != null
+              else
+                hasExplicitProseModel
+            );
 
           proseWorkload =
             if useProseModel then
@@ -161,14 +202,20 @@ let
           roles = lib.mapAttrs (_: resolveWorkload) roleTiers;
 
           defaultChannel = roles.default.channel;
+
           defaultNativeWebSearch =
             if defaultChannel != null && providerChannels ? ${defaultChannel} then
               providerChannels.${defaultChannel}.nativeWebSearch or false
             else
               providerName == null;
-          nativeWebSearch = profile.nativeWebSearch or defaultNativeWebSearch;
+
+          nativeWebSearch =
+            if (profile.nativeWebSearch or null) != null then
+              profile.nativeWebSearch
+            else
+              defaultNativeWebSearch;
         in
-        {
+        builtins.seq provider {
           provider = providerName;
           inherit nativeWebSearch roles;
           oauthTokenFile = profile.oauthTokenFile or null;
@@ -177,6 +224,9 @@ let
           };
         };
 
+      # --------------------------------------------------------------------------------------------
+      # Profile filtering and resolution
+      # --------------------------------------------------------------------------------------------
       resolveProfiles =
         {
           profiles ? { },
@@ -197,20 +247,22 @@ let
           };
 
           allProfiles = defaultOfficial // profiles;
-
           channelAllowed = channel: allowedChannels == null || lib.elem channel allowedChannels;
 
           profileSupported =
-            _: profile:
+            name: profile:
             let
               providerName = profile.provider or null;
-              provider = if providerName != null then providers.${providerName} or { } else { };
+              provider = lookupProvider name providerName;
               providerChannels = provider.channels or { };
+              tierModels = profileTierModels profile;
+
               clientAllowed =
                 client == null || (profile.clients or null) == null || lib.elem client profile.clients;
+
               providerAllowed =
                 providerName == null || allowedProviders == null || lib.elem providerName allowedProviders;
-              tierModels = profileTierModels profile;
+
               tierChannelsAllowed =
                 if providerName == null || providerChannels == { } then
                   true
@@ -220,12 +272,12 @@ let
                   lib.all (
                     modelKey:
                     let
-                      channel = defaultModelChannel modelCatalog.models.${modelKey};
+                      model = modelCatalog.models.${modelKey};
                     in
-                    channel == null || channelAllowed channel
+                    modelChannels model == [ ] || selectModelChannel providerChannels channelAllowed model != null
                   ) (builtins.attrValues tierModels);
             in
-            clientAllowed && providerAllowed && tierChannelsAllowed;
+            builtins.seq provider (clientAllowed && providerAllowed && tierChannelsAllowed);
 
           enabledProfiles = lib.filterAttrs profileSupported allProfiles;
         in
@@ -237,12 +289,12 @@ let
         ) enabledProfiles;
     in
     {
-      inherit
-        resolveProfile
-        resolveProfiles
-        ;
+      inherit resolveProfile resolveProfiles;
     };
 
+  # ------------------------------------------------------------------------------------------------
+  # Module options
+  # ------------------------------------------------------------------------------------------------
   mkOptions =
     {
       defaultProfile ? "official",
@@ -256,10 +308,6 @@ let
     };
 in
 {
-  inherit
-    apiKeyFileFor
-    mkOptions
-    mkResolver
-    ;
+  inherit apiKeyFileFor mkOptions mkResolver;
   inherit (models) modelAliases roleTiers workloadPolicy;
 }

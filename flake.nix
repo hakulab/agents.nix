@@ -42,6 +42,10 @@
       agentsLib = import ./lib {
         inherit (nixpkgs) lib;
       };
+
+      # Pull Playwright from nixpkgs-unstable because Chrome DevTools MCP tracks latest npm and
+      # requires current stable Chrome, while stable nixpkgs freezes Chromium.
+      playwrightDriverFor = system: nixpkgs-unstable.legacyPackages.${system}.playwright-driver;
     in
     {
       lib = agentsLib;
@@ -51,8 +55,7 @@
         import ./packages {
           pkgs = final;
           dk = devkit.lib.mkLib final;
-          playwrightDriver =
-            nixpkgs-unstable.legacyPackages.${final.stdenv.hostPlatform.system}.playwright-driver;
+          playwrightDriver = playwrightDriverFor final.stdenv.hostPlatform.system;
         };
     }
     // devkit.lib.eachSystem devkit.lib.systems (
@@ -60,6 +63,7 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         dk = devkit.lib.mkLib pkgs;
+        nuLibDirs = [ ./tests/lib ];
 
         preCommit = dk.preCommit {
           src = ./.;
@@ -71,7 +75,7 @@
             };
             nu-check = {
               enable = true;
-              settings.libDirs = [ ./tests/lib ];
+              settings.libDirs = nuLibDirs;
             };
             prettier.enable = true;
             shellcheck.enable = true;
@@ -82,23 +86,24 @@
 
         packages = import ./packages {
           inherit pkgs dk;
-          playwrightDriver = nixpkgs-unstable.legacyPackages.${system}.playwright-driver;
+          playwrightDriver = playwrightDriverFor system;
         };
 
-        libChecks = import ./tests/lib-checks.nix {
-          inherit pkgs agentsLib;
+        libChecks = import ./tests/lib-checks {
+          inherit pkgs;
           inherit (nixpkgs) lib;
+          inherit agentsLib;
         };
 
         nuTests = dk.nuTests {
           src = ./.;
-          libDirs = [ ./tests/lib ];
           runtimeInputs = [
             pkgs.direnv
             pkgs.git
             pkgs.nixfmt
             pkgs.prek
           ];
+          libDirs = nuLibDirs;
         };
       in
       {
@@ -114,6 +119,9 @@
           inputsFrom = [
             preCommit
           ];
+          shellHook = ''
+            export NU_LIB_DIRS="$(git rev-parse --show-toplevel)/tests/lib"
+          '';
         };
 
         # ------------------------------------------------------------------------------------------

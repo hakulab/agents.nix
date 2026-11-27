@@ -46,8 +46,8 @@ let
     }:
     {
       enabledServers = mkEnabledServersOption {
-        inherit names default;
         description = "${description} to enable";
+        inherit names default;
       };
 
       disabledServers = mkDisabledServersOption {

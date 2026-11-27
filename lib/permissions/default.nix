@@ -24,7 +24,7 @@ let
   mkPolicy =
     {
       ownRepositories ? [ ],
-      serverDisplayNames ? mcp.presetDisplayNames,
+      extraServerDisplayNames ? { },
       extraAllowCommands ? { },
       extraGateCommands ? [ ],
       extraMcpAllows ? { },
@@ -33,6 +33,8 @@ let
       extraGatePolicies ? [ ],
     }:
     let
+      serverDisplayNames = mcp.presetDisplayNames // extraServerDisplayNames;
+
       baseAllows = import ./allows.nix {
         inherit lib ownRepositories;
       };
@@ -75,7 +77,7 @@ let
         );
 
       policy = {
-        inherit allows gates;
+        inherit ownRepositories allows gates;
         allowCommands = allows.commands.readOnly ++ allows.commands.mutating;
         gateCommands = map (gate: gate.command) gates.commands;
         mcpAllows = toMcpEntries (
@@ -95,9 +97,6 @@ let
     };
 in
 {
-  inherit
-    mkPolicy
-    validate
-    ;
+  inherit mkPolicy validate;
   defaultPolicy = mkPolicy { };
 }

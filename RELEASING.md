@@ -11,10 +11,14 @@ Use the [release skill](https://github.com/hakulab/plugins/blob/main/plugins/hak
 
 Within a minor version, stable releases keep exported flake outputs and documented module interfaces compatible. Currently exported outputs:
 
+- `lib`
+- `overlays.default`
+- `packages.<system>`
+- `checks.<system>`
 - `devShells.<system>.default`
 - `formatter.<system>`
 
-Expand this list as modules, library helpers, packages, and overlays are added.
+Expand this list as Home Manager, NixOS, and nix-darwin modules are added.
 
 ## Preparation and verification
 

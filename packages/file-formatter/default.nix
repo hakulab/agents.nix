@@ -22,6 +22,5 @@ dk.writeNuApplication {
     description = "Run repository pre-commit hooks on edited files";
     license = lib.licenses.mit;
     platforms = lib.platforms.unix;
-    mainProgram = "file-formatter";
   };
 }

@@ -11,9 +11,7 @@
 let
   inherit (driver) browsers;
 
-  chromium = pkgs.callPackage ./chromium.nix {
-    inherit driver;
-  };
+  chromium = pkgs.callPackage ./chromium.nix { inherit driver; };
 in
 pkgs.runCommand "browser-tools"
   {
@@ -21,11 +19,10 @@ pkgs.runCommand "browser-tools"
       pkgs.makeBinaryWrapper
     ];
 
-    passthru = {
-      inherit driver browsers chromium;
-    };
+    passthru = { inherit driver browsers chromium; };
     meta = {
       description = "Playwright CLI and its matching browsers";
+      license = lib.licenses.asl20;
       platforms = lib.platforms.unix;
       mainProgram = "playwright";
     };

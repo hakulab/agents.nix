@@ -28,6 +28,7 @@ let
       esc = lib.escapeShellArg;
       noProxy = esc (renderNoProxy proxyCfg);
       secretFile = esc proxyCfg.secretUrlFile;
+
       readUrl =
         if proxyCfg.secretUrlFile != null then
           ''
@@ -85,12 +86,12 @@ in
 
     url = lib.mkOption {
       type = lib.types.str;
-      default = "http://127.0.0.1:7897";
+      default = "";
       description = "HTTP proxy URL for ${name} (ignored when secretUrlFile is set)";
     };
 
     secretUrlFile = lib.mkOption {
-      type = lib.types.nullOr (lib.types.either lib.types.path lib.types.str);
+      type = lib.types.nullOr lib.types.str;
       default = null;
       description = "Path to a file containing the proxy URL, overriding url when set";
     };

@@ -10,7 +10,7 @@
   pkgs,
   pkg,
   name ? pkg.name,
-  bin ? pkg.pname or pkg.name,
+  bin ? pkg.meta.mainProgram or pkg.pname or pkg.name,
   wrapArgs ? [ ],
   envVars ? { },
   envFiles ? { },

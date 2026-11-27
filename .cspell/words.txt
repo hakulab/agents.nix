@@ -45,6 +45,7 @@ testlib
 timedatectl
 timesync
 toplevel
+wakatime
 whereis
 whois
 workmux
