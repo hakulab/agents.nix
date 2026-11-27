@@ -236,7 +236,7 @@ let
           profiles.custom = {
             type = "subscription";
             sessionEffort = null;
-            efforts = lib.mkForce { };
+            efforts = { };
           };
         };
       };
@@ -439,6 +439,9 @@ let
         && s.refresh_interval == 30;
     }
 
+    # ----------------------------------------------------------------------------------------------
+    # Plugins, MCP, and profile edge cases
+    # ----------------------------------------------------------------------------------------------
     {
       name = "custom plugin entries merge with built-in plugin and marketplace defaults";
       ok =
