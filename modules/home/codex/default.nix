@@ -6,6 +6,7 @@
   devkit,
   llm-agents,
   agentsLib,
+  nuModules,
   repoRoot,
   sharedModule,
 }:
@@ -25,7 +26,6 @@ let
   resolved = config.agents.resolved;
   configDir = resolved.configDirs.codex;
   dk = devkit.lib.mkLib pkgs;
-  inherit (config.agents._internal) nuModules;
   json = pkgs.formats.json { };
 
   defaultPlugins = import ./plugins.nix {
@@ -50,23 +50,19 @@ in
       description = "Codex CLI package to wrap and install";
     };
 
-    auth =
-      agentsLib.profiles.mkOptions {
-        defaultProfile = "official";
-      }
-      // {
-        allowedProviders = lib.mkOption {
-          type = lib.types.nullOr (lib.types.listOf lib.types.str);
-          default = null;
-          description = "Optional allowlist of provider names exposed to Codex profiles";
-        };
-
-        allowedChannels = lib.mkOption {
-          type = lib.types.nullOr (lib.types.listOf lib.types.str);
-          default = null;
-          description = "Optional allowlist of provider channels exposed to Codex profiles";
-        };
+    auth = agentsLib.profiles.mkOptions { } // {
+      allowedProviders = lib.mkOption {
+        type = lib.types.nullOr (lib.types.listOf lib.types.str);
+        default = null;
+        description = "Optional allowlist of provider names exposed to Codex profiles";
       };
+
+      allowedChannels = lib.mkOption {
+        type = lib.types.nullOr (lib.types.listOf lib.types.str);
+        default = null;
+        description = "Optional allowlist of provider channels exposed to Codex profiles";
+      };
+    };
 
     agents = {
       enabledAgents = resolved.agentRoleOptions.mkEnabledAgentsOption {
@@ -118,12 +114,6 @@ in
       description = "Codex plugin enablement table merged into config.toml";
     };
 
-    rulesFileName = lib.mkOption {
-      type = lib.types.str;
-      default = "agents-nix.rules";
-      description = "Filename under the Codex rules directory for managed permission rules";
-    };
-
     desktop = {
       enable = lib.mkOption {
         type = lib.types.bool;
@@ -155,17 +145,17 @@ in
       description = "Extra settings recursively merged into Codex config.toml";
     };
 
-    _internal = lib.mkOption {
+    finalSettings = lib.mkOption {
       type = lib.types.attrsOf lib.types.anything;
-      default = { };
       internal = true;
+      readOnly = true;
     };
   };
 
   # ------------------------------------------------------------------------------------------------
   # Config
   # ------------------------------------------------------------------------------------------------
-  config = lib.mkIf cfg.enable (
+  config =
     let
       # --------------------------------------------------------------------------------------------
       # Submodule assembly
@@ -269,75 +259,72 @@ in
       };
     in
     lib.mkMerge [
-      profiles.config
-
       {
-        # ------------------------------------------------------------------------------------------
-        # Assertions
-        # ------------------------------------------------------------------------------------------
-        assertions = [
-          {
-            assertion = mcp.missingServers == [ ];
-            message = "Codex: agents.codex.mcp.enabledServers references unavailable MCP server(s): ${lib.concatStringsSep ", " mcp.missingServers}";
-          }
-        ];
-
-        # ------------------------------------------------------------------------------------------
-        # Shared integration
-        # ------------------------------------------------------------------------------------------
-        agents = {
-          codex = {
-            mcp.disabledServers = lib.mkDefault config.agents.mcp.disabledServers;
-            plugins = lib.mapAttrs (_: plugin: { enabled = lib.mkDefault plugin.enabled; }) defaultPlugins;
-
-            _internal = {
-              settings = codexSettings;
-              inherit (profiles)
-                envFiles
-                envVars
-                profiles
-                stateDir
-                ;
-            };
-          };
-
-          skills.targets.codex = lib.mkDefault true;
-        };
-
-        # ------------------------------------------------------------------------------------------
-        # Program configuration
-        # ------------------------------------------------------------------------------------------
-        programs.codex = {
-          enable = true;
-          package = codexBin;
-          context = resolved.instructions;
-        };
-
-        # ------------------------------------------------------------------------------------------
-        # Configuration files and activation
-        # ------------------------------------------------------------------------------------------
-        home = {
-          file = {
-            codexRules = {
-              # Separate from default.rules, which Codex rewrites on TUI allowlisting.
-              target = "${configDir}/rules/${cfg.rulesFileName}";
-              text = permissions.rules;
-            };
-          };
-
-          activation = {
-            codexMutableConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-              run ${lib.getExe activateConfig}
-            '';
-
-            codexDaemon = lib.hm.dag.entryAfter [ "codexAuthProfile" ] ''
-              run ${lib.getExe stopStaleDaemon}
-            '';
-          };
-        };
-
-        xdg.dataFile = hooks.dataFiles;
+        agents.codex.finalSettings = if cfg.enable then codexSettings else { };
       }
-    ]
-  );
+
+      (lib.mkIf cfg.enable (
+        lib.mkMerge [
+          profiles.config
+
+          {
+            # --------------------------------------------------------------------------------------
+            # Assertions
+            # --------------------------------------------------------------------------------------
+            assertions = [
+              {
+                assertion = mcp.missingServers == [ ];
+                message = "Codex: agents.codex.mcp.enabledServers references unavailable MCP server(s): ${lib.concatStringsSep ", " mcp.missingServers}";
+              }
+            ];
+
+            # --------------------------------------------------------------------------------------
+            # Shared integration
+            # --------------------------------------------------------------------------------------
+            agents = {
+              codex = {
+                mcp.disabledServers = resolved.mcp.disabledServers;
+                plugins = lib.mapAttrs (_: plugin: { enabled = lib.mkDefault plugin.enabled; }) defaultPlugins;
+              };
+
+              skills.targets.codex = lib.mkDefault true;
+            };
+
+            # --------------------------------------------------------------------------------------
+            # Program configuration
+            # --------------------------------------------------------------------------------------
+            programs.codex = {
+              enable = true;
+              package = codexBin;
+              context = resolved.instructions;
+            };
+
+            # --------------------------------------------------------------------------------------
+            # Configuration files and activation
+            # --------------------------------------------------------------------------------------
+            home = {
+              file = {
+                codexRules = {
+                  # Separate from default.rules, which Codex rewrites on TUI allowlisting.
+                  target = "${configDir}/rules/agents-nix.rules";
+                  text = permissions.rules;
+                };
+              };
+
+              activation = {
+                codexMutableConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+                  run ${lib.getExe activateConfig}
+                '';
+
+                codexDaemon = lib.hm.dag.entryAfter [ "codexAuthProfile" ] ''
+                  run ${lib.getExe stopStaleDaemon}
+                '';
+              };
+            };
+
+            xdg.dataFile = hooks.dataFiles;
+          }
+        ]
+      ))
+    ];
 }

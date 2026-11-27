@@ -32,20 +32,6 @@ let
     };
   };
 
-  mcpGateSubmodule = lib.types.submodule {
-    options = {
-      tool = lib.mkOption {
-        type = lib.types.str;
-        description = "MCP tool name requiring confirmation";
-      };
-
-      reason = lib.mkOption {
-        type = lib.types.str;
-        description = "Why this MCP tool requires confirmation";
-      };
-    };
-  };
-
   policyGateSubmodule = lib.types.submodule {
     options = {
       name = lib.mkOption {
@@ -63,8 +49,6 @@ let
   # ------------------------------------------------------------------------------------------------
   # Policy assembly
   # ------------------------------------------------------------------------------------------------
-  mergeMcpAttrs = lib.zipAttrsWith (_: lib.concatLists);
-
   allServerDisplayNames = lib.mapAttrs (_: server: server.displayName) cfg.mcp.servers;
   enabledMcpServers = lib.filterAttrs (_: server: server.enable) cfg.mcp.servers;
 
@@ -81,14 +65,8 @@ let
     extraServerDisplayNames = allServerDisplayNames;
     extraAllowCommands = cfg.permissions.allowCommands;
     extraGateCommands = cfg.permissions.gateCommands;
-    extraMcpAllows = mergeMcpAttrs [
-      cfg.permissions.mcpAllows
-      serverMcpAllows
-    ];
-    extraMcpGates = mergeMcpAttrs [
-      cfg.permissions.mcpGates
-      serverMcpGates
-    ];
+    extraMcpAllows = serverMcpAllows;
+    extraMcpGates = serverMcpGates;
     extraAllowPolicies = cfg.permissions.allowPolicies;
     extraGatePolicies = cfg.permissions.gatePolicies;
   };
@@ -125,18 +103,6 @@ in
         description = "Extra command gate entries merged into the permissions policy";
       };
 
-      mcpAllows = lib.mkOption {
-        type = lib.types.attrsOf (lib.types.listOf lib.types.str);
-        default = { };
-        description = "Extra allowed MCP tools keyed by server name";
-      };
-
-      mcpGates = lib.mkOption {
-        type = lib.types.attrsOf (lib.types.listOf mcpGateSubmodule);
-        default = { };
-        description = "Extra gated MCP tools keyed by server name";
-      };
-
       allowPolicies = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ ];
@@ -150,14 +116,15 @@ in
       };
     };
 
-    _internal.permissions = lib.mkOption {
-      type = lib.types.anything;
-      internal = true;
+    resolved.permissions = lib.mkOption {
+      type = lib.types.attrsOf lib.types.anything;
+      readOnly = true;
+      description = "Resolved permission policy consumed by assistant adapters";
     };
   };
 
   # ------------------------------------------------------------------------------------------------
   # Config
   # ------------------------------------------------------------------------------------------------
-  config.agents._internal.permissions = resolvedPermissions;
+  config.agents.resolved.permissions = resolvedPermissions;
 }

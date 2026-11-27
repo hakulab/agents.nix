@@ -171,6 +171,15 @@ let
               "reviewer"
             ];
 
+            auth.profileOverrides.gw-claude = {
+              extraEnv.OVERRIDE_FLAG = "yes";
+              extraHeaders."x-override" = "1";
+              sessionEffort = "high";
+              modelEfforts."claude-opus-5-5" = "max";
+              compactWindows."claude-opus-5-5" = 250000;
+              modelOverrides."claude-haiku-5-5" = "custom/claude-haiku-5-5";
+            };
+
             hooks.worktree.workmuxPackage = stubWorkmux;
 
             plugins = {
@@ -188,7 +197,10 @@ let
                   source.type = "http";
                 }
               ];
-              extraSettings.refresh_interval = 30;
+              extraSettings = {
+                refresh_interval = 30;
+                models."extra-model" = "Extra Model";
+              };
             };
 
             extraInstructions = "## Local Notes\n\nFollow repository conventions.";
@@ -241,9 +253,18 @@ let
             };
           };
 
-          profiles.official = {
-            family = "claude";
-            clients = [ "codex" ];
+          profiles = {
+            filtered-out = {
+              provider = null;
+              family = "claude";
+              clients = [ "claude-code" ];
+            };
+
+            custom = {
+              provider = null;
+              family = "claude";
+              clients = [ "claude-code" ];
+            };
           };
 
           claude-code = {
@@ -254,10 +275,10 @@ let
             mcp.disabledServers = [ "gitlab" ];
             auth = {
               defaultProfile = "custom";
-              profiles.custom = {
-                type = "subscription";
-                sessionEffort = null;
-                efforts = { };
+              enabledProfiles = [ "custom" ];
+              profileOverrides.custom = {
+                sessionEffort = "low";
+                nativeWebSearch = false;
               };
             };
           };
@@ -268,27 +289,62 @@ let
   # Negative assertion fixtures
   # ------------------------------------------------------------------------------------------------
   missingBaseUrlProfileCfg = evalHomeWith [ homeModules.claude-code ] {
-    agents.claude-code = {
-      enable = true;
-      package = stubClaude;
-      hooks.worktree.workmuxPackage = stubWorkmux;
-      statusline.package = stubStatusline;
-      auth.profiles.broken-api = {
-        type = "api-key";
-        tokenFile = "/run/secrets/token";
+    agents = {
+      providers.broken-api = {
+        apiKeyFile = "/run/secrets/token";
+      };
+
+      profiles.broken-api = {
+        provider = "broken-api";
+        family = "claude";
+        clients = [ "claude-code" ];
+      };
+
+      claude-code = {
+        enable = true;
+        package = stubClaude;
+        hooks.worktree.workmuxPackage = stubWorkmux;
+        statusline.package = stubStatusline;
       };
     };
   };
 
-  subscriptionWithTokenCfg = evalHomeWith [ homeModules.claude-code ] {
+  unknownOverrideProfileCfg = evalHomeWith [ homeModules.claude-code ] {
     agents.claude-code = {
       enable = true;
       package = stubClaude;
       hooks.worktree.workmuxPackage = stubWorkmux;
       statusline.package = stubStatusline;
-      auth.profiles.broken-sub = {
-        type = "subscription";
-        tokenFile = "/run/secrets/token";
+      auth.profileOverrides.nonexistent.sessionEffort = "low";
+    };
+  };
+
+  disabledOverrideProfileCfg = evalHomeWith [ homeModules.claude-code ] {
+    agents = {
+      profiles = {
+        filtered-out = {
+          provider = null;
+          family = "claude";
+          clients = [ "claude-code" ];
+        };
+
+        custom = {
+          provider = null;
+          family = "claude";
+          clients = [ "claude-code" ];
+        };
+      };
+
+      claude-code = {
+        enable = true;
+        package = stubClaude;
+        hooks.worktree.workmuxPackage = stubWorkmux;
+        statusline.package = stubStatusline;
+        auth = {
+          defaultProfile = "custom";
+          enabledProfiles = [ "custom" ];
+          profileOverrides.filtered-out.sessionEffort = "low";
+        };
       };
     };
   };
@@ -299,23 +355,7 @@ let
       package = stubClaude;
       hooks.worktree.workmuxPackage = stubWorkmux;
       statusline.package = stubStatusline;
-      auth.profiles.bad-env = {
-        type = "subscription";
-        extraEnv."1INVALID" = "nope";
-      };
-    };
-  };
-
-  pathSecretProfileCfg = evalHomeWith [ homeModules.claude-code ] {
-    agents.claude-code = {
-      enable = true;
-      package = stubClaude;
-      hooks.worktree.workmuxPackage = stubWorkmux;
-      statusline.package = stubStatusline;
-      auth.profiles.bad-path = {
-        type = "oauth-token";
-        tokenFile = /tmp/not-a-string;
-      };
+      auth.profileOverrides.official.extraEnv."1INVALID" = "nope";
     };
   };
 
@@ -416,26 +456,15 @@ let
     # Profiles, statusline, and platform paths
     # ----------------------------------------------------------------------------------------------
     {
-      name = "profiles resolve official, gateway anthropic, gateway non-anthropic, and oauth-token";
+      name = "profiles install official, gateway anthropic, gateway non-anthropic, and oauth-token bundles";
       ok =
         let
-          ps = fullCfg.agents.claude-code.auth.profiles;
+          profilesPrefix = "${fullCfg.xdg.stateHome}/claude-code/profiles";
         in
-        ps ? official
-        && ps ? gw-claude
-        && ps ? gw-alt
-        && ps ? official-token
-        && ps.official.type == "subscription"
-        && ps.gw-claude.type == "api-key"
-        && ps.gw-claude.tokenFile == "/run/secrets/gw-claude-key"
-        && ps.gw-claude.baseUrl == "https://gw.example.test/anthropic"
-        && ps.gw-claude.modelOverrides."claude-opus-5-5" == "gw/claude-opus-5-5"
-        && ps.gw-claude.agentModels.prose == "google/gemini-4-neon[1m]"
-        && !(ps.gw-claude.extraEnv ? CLAUDE_CODE_AUTO_MODE_SERVER)
-        && ps.gw-alt.extraEnv.CLAUDE_CODE_AUTO_MODE_SERVER == "0"
-        && ps.gw-alt.extraEnv.CLAUDE_CODE_AUTO_MODE_MODEL == "alt/claude-haiku-5-5"
-        && ps.official-token.type == "oauth-token"
-        && ps.official-token.tokenFile == "/run/secrets/claude-oauth"
+        fullCfg.home.file ? "${profilesPrefix}/official.d"
+        && fullCfg.home.file ? "${profilesPrefix}/gw-claude.d"
+        && fullCfg.home.file ? "${profilesPrefix}/gw-alt.d"
+        && fullCfg.home.file ? "${profilesPrefix}/official-token.d"
         && lib.all (a: a.assertion) fullCfg.assertions;
     }
     {
@@ -446,7 +475,7 @@ let
         && lib.hasPrefix "${homeDirectory}/" fullCfg.xdg.stateHome;
     }
     {
-      name = "statusline populates catalog models, channelIds, custom models, costSources, and extraSettings";
+      name = "statusline populates catalog models, channelIds, custom models, costSources, and recursive extraSettings";
       ok =
         let
           s = fullCfg.programs.claude-statusline.settings;
@@ -455,6 +484,7 @@ let
         && s.models."claude-opus-5-5" == "Claude Opus 5.5"
         && s.models."gw/claude-opus-5-5" == "Claude Opus 5.5"
         && s.models."custom-model" == "Custom Model"
+        && s.models."extra-model" == "Extra Model"
         && builtins.length s.cost_sources == 1
         && (builtins.head s.cost_sources).id == "demo-cost"
         && s.refresh_interval == 30;
@@ -464,26 +494,29 @@ let
     # Plugins, MCP, and profile edge cases
     # ----------------------------------------------------------------------------------------------
     {
-      name = "custom plugin entries merge with built-in plugin and marketplace defaults";
+      name = "custom plugin entries merge with built-in defaults and gate workmux plugin on workmux.enable";
       ok =
         let
           p = fullCfg.agents.claude-code.plugins;
         in
         p.marketplaces ? claude-plugins-official
-        && p.marketplaces ? workmux
+        && !(p.marketplaces ? workmux)
         && p.marketplaces ? custom-mkt
         && p.enabled."skill-creator@claude-plugins-official"
-        && p.enabled."workmux-status@workmux"
+        && !(p.enabled ? "workmux-status@workmux")
         && p.enabled."custom-plugin@custom-mkt";
     }
     {
-      name = "per-assistant disabledServers extends global disabledServers and absent official profile falls back cleanly";
+      name = "per-assistant disabledServers extends global disabledServers and enabledProfiles filters bundles";
       ok =
+        let
+          profilesPrefix = "${edgeCasesCfg.xdg.stateHome}/claude-code/profiles";
+        in
         lib.elem "deepwiki" edgeCasesCfg.agents.claude-code.mcp.disabledServers
         && lib.elem "gitlab" edgeCasesCfg.agents.claude-code.mcp.disabledServers
-        && !(edgeCasesCfg.agents.claude-code.auth.profiles ? official)
-        && edgeCasesCfg.agents.claude-code.auth.profiles.custom.sessionEffort == null
-        && edgeCasesCfg.agents.claude-code.auth.profiles.custom.efforts == { }
+        && !(edgeCasesCfg.home.file ? "${profilesPrefix}/official.d")
+        && !(edgeCasesCfg.home.file ? "${profilesPrefix}/filtered-out.d")
+        && edgeCasesCfg.home.file ? "${profilesPrefix}/custom.d"
         && lib.all (a: a.assertion) edgeCasesCfg.assertions;
     }
 
@@ -495,16 +528,16 @@ let
       ok = hasFailingAssertion missingBaseUrlProfileCfg;
     }
     {
-      name = "subscription profile with tokenFile fails assertion";
-      ok = hasFailingAssertion subscriptionWithTokenCfg;
+      name = "profileOverrides referencing unknown profile fails assertion";
+      ok = hasFailingAssertion unknownOverrideProfileCfg;
     }
     {
-      name = "non-POSIX extraEnv key fails assertion";
+      name = "profileOverrides referencing disabled profile fails assertion";
+      ok = hasFailingAssertion disabledOverrideProfileCfg;
+    }
+    {
+      name = "non-POSIX extraEnv key in profileOverrides fails assertion";
       ok = hasFailingAssertion invalidEnvNameProfileCfg;
-    }
-    {
-      name = "Nix path literal on tokenFile is rejected to prevent store copying";
-      ok = throws pathSecretProfileCfg.agents.claude-code.auth.profiles.bad-path.tokenFile;
     }
     {
       name = "unknown MCP server in enabledServers fails assertion";
@@ -519,6 +552,9 @@ let
   minimalSettingsFile = minimalHooksAndNoStatuslineCfg.home.file.".claude/settings.json".source;
   fullClaudePkg = fullCfg.programs.claude-code.package;
   gwProfileDir = fullCfg.home.file."${fullCfg.xdg.stateHome}/claude-code/profiles/gw-claude.d".source;
+  gwAltProfileDir = fullCfg.home.file."${fullCfg.xdg.stateHome}/claude-code/profiles/gw-alt.d".source;
+  oauthProfileDir =
+    fullCfg.home.file."${fullCfg.xdg.stateHome}/claude-code/profiles/official-token.d".source;
   customProfileDir =
     edgeCasesCfg.home.file."${edgeCasesCfg.xdg.stateHome}/claude-code/profiles/custom.d".source;
 
@@ -534,6 +570,8 @@ let
         minimal=${lib.escapeShellArg minimalSettingsFile}
         wrapper=${lib.escapeShellArg "${fullClaudePkg}/bin/claude"}
         gw_dir=${lib.escapeShellArg gwProfileDir}
+        gw_alt_dir=${lib.escapeShellArg gwAltProfileDir}
+        oauth_dir=${lib.escapeShellArg oauthProfileDir}
         custom_dir=${lib.escapeShellArg customProfileDir}
 
         jq -e '
@@ -544,11 +582,11 @@ let
           and (.autoMode.environment | any(contains("github.com/example-org")))
           and (.autoMode.allow | index("Custom allow policy for tests.") != null)
           and .enabledPlugins."skill-creator@claude-plugins-official" == true
-          and .enabledPlugins."workmux-status@workmux" == true
+          and (.enabledPlugins | has("workmux-status@workmux") | not)
           and .enabledPlugins."rust-analyzer-lsp@claude-plugins-official" == true
           and .enabledPlugins."custom-plugin@custom-mkt" == true
           and .extraKnownMarketplaces."claude-plugins-official".source.repo == "anthropics/claude-plugins-official"
-          and .extraKnownMarketplaces.workmux.source.repo == "raine/workmux"
+          and (.extraKnownMarketplaces | has("workmux") | not)
           and .extraKnownMarketplaces."custom-mkt".source.repo == "example/custom-mkt"
           and .statusLine.command == "claude-statusline"
           and .theme == "light"
@@ -585,16 +623,36 @@ let
         ' "$mcp_config" > /dev/null
 
         grep -q 'ANTHROPIC_AUTH_TOKEN' "$gw_dir/env.sh"
+        grep -q 'CUSTOM_PROVIDER_FLAG' "$gw_dir/env.sh"
         grep -q 'EXTRA_PROVIDER_SECRET' "$gw_dir/env.sh"
         grep -q 'NODE_EXTRA_CA_CERTS' "$gw_dir/env.sh"
+        grep -q 'OVERRIDE_FLAG' "$gw_dir/env.sh"
+        grep -q 'x-tenant: demo' "$gw_dir/env.sh"
+        grep -q 'x-override: 1' "$gw_dir/env.sh"
+        ! grep -q 'CLAUDE_CODE_AUTO_MODE_SERVER' "$gw_dir/env.sh"
+        grep -q 'CLAUDE_CODE_AUTO_MODE_SERVER' "$gw_alt_dir/env.sh"
+        grep -q 'alt/claude-haiku-5-5' "$gw_alt_dir/env.sh"
+        grep -q 'CLAUDE_CODE_OAUTH_TOKEN' "$oauth_dir/env.sh"
         test -f "$gw_dir/agents/architect.md"
         test -f "$gw_dir/agents/reviewer.md"
         test ! -e "$gw_dir/agents/implementer.md"
         grep -q '^name: reviewer$' "$gw_dir/agents/reviewer.md"
 
+        gw_settings="$(grep -oE '/nix/store/[^"'"'"' ]+claude-code-settings-gw-claude\.json' "$gw_dir/env.sh" | head -n 1)"
+        jq -e '
+          .effortLevel == "high"
+          and .modelSettings."claude-opus-5-5".effortLevel == "max"
+          and .modelSettings."claude-opus-5-5".autoCompactWindow == 250000
+          and .modelSettings."claude-sonnet-5-5".autoCompactWindow == 400000
+          and .modelOverrides."claude-opus-5-5" == "gw/claude-opus-5-5"
+          and .modelOverrides."claude-haiku-5-5" == "custom/claude-haiku-5-5"
+        ' "$gw_settings" > /dev/null
+
         custom_settings="$(grep -oE '/nix/store/[^"'"'"' ]+claude-code-settings-custom\.json' "$custom_dir/env.sh" | head -n 1)"
-        jq -e 'has("effortLevel") | not' "$custom_settings" > /dev/null
-        ! grep -q '^effort:' "$custom_dir/agents/reviewer.md"
+        jq -e '
+          .effortLevel == "low"
+          and .permissions.deny == ["WebSearch"]
+        ' "$custom_settings" > /dev/null
 
         touch "$out"
       '';

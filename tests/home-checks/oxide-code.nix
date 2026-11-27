@@ -100,7 +100,7 @@ let
             enable = true;
             package = stubOx;
             auth.defaultProfile = "gw-claude";
-            settings.tui.show_thinking = false;
+            extraSettings.tui.show_thinking = false;
           };
         };
       };
@@ -120,7 +120,7 @@ let
       oxide-code = {
         enable = true;
         package = stubOx;
-        auth.profiles = [ "official" ];
+        auth.enabledProfiles = [ "official" ];
       };
     };
   };
@@ -206,7 +206,7 @@ check "home-oxide-code" [
       && lib.hasInfix "OX_EXTRA_CA_CERTS=${lib.escapeShellArg "/run/secrets/gw-ca.pem"}" gwClaudeEnv;
   }
   {
-    name = "auth.profiles allowlist filters installed profile scripts";
+    name = "auth.enabledProfiles allowlist filters installed profile scripts";
     ok =
       filteredProfilesCfg.home.file ? "${filteredStateDir}/profiles/official.env.sh"
       && !(filteredProfilesCfg.home.file ? "${filteredStateDir}/profiles/gw-claude.env.sh");

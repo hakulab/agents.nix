@@ -41,9 +41,19 @@ let
   };
 
   readOnlyMutation = evalHome {
-    agents.resolved = {
-      dataDir = "/tmp/override";
+    agents.resolved.configDirs = {
+      claude = "/tmp/override";
     };
+  };
+
+  readOnlyForceMutation = evalHome {
+    agents.resolved.configDirs = lib.mkForce {
+      claude = "/tmp/override";
+    };
+  };
+
+  unknownResolvedKey = evalHome {
+    agents.resolved.unknownKey = 1;
   };
 in
 check "home-shared-defaults" [
@@ -81,7 +91,7 @@ check "home-shared-defaults" [
     ok =
       defaultCfg.xdg.dataFile ? "agents-nix/instructions/code-design.md"
       && defaultCfg.xdg.dataFile ? "agents-nix/instructions/writing.md"
-      && builtins.length (builtins.attrNames resolved.instructionDocs) == 8;
+      && builtins.length (builtins.attrNames defaultCfg.agents.instructions.docs) == 8;
   }
   {
     name = "extraSections appends to instructions and custom docs extend defaults";
@@ -133,7 +143,7 @@ check "home-shared-defaults" [
   {
     name = "fileFormatter and Nushell notify helpers resolve to executable store paths";
     ok =
-      lib.hasSuffix "/bin/file-formatter" resolved.fileFormatter
+      lib.hasSuffix "/bin/file-formatter" (lib.getExe defaultCfg.agents.hooks.fileFormatterPackage)
       && lib.hasSuffix "/bin/agents-notify" resolved.notify.notifyScript
       && lib.hasSuffix "/bin/project-notify" resolved.notify.mkProjectNotifyScript;
   }
@@ -152,7 +162,10 @@ check "home-shared-defaults" [
   # Read-only resolved interface
   # ------------------------------------------------------------------------------------------------
   {
-    name = "agents.resolved rejects external overrides";
-    ok = throws readOnlyMutation.agents.resolved;
+    name = "agents.resolved leaves reject external overrides, mkForce, and unknown keys";
+    ok =
+      throws readOnlyMutation.agents.resolved.configDirs
+      && throws readOnlyForceMutation.agents.resolved.configDirs
+      && throws unknownResolvedKey.agents.resolved;
   }
 ]

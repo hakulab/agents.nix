@@ -6,6 +6,7 @@
   agentsLib,
   assetsDir,
   devkitOutPath,
+  promptFragments,
 }:
 
 {
@@ -17,53 +18,40 @@
 let
   cfg = config.agents;
 
-  fragmentsDir = assetsDir + "/prompt-fragments";
-  instructionsDir = assetsDir + "/instructions";
-  docsDir = instructionsDir + "/docs";
+  instructionsAssetsDir = assetsDir + "/instructions";
+  docsAssetsDir = instructionsAssetsDir + "/docs";
+  installedDocsDir = "${cfg.dataDir}/instructions";
 
   # ------------------------------------------------------------------------------------------------
-  # Prompt fragments and built-in documents
+  # Built-in documents
   # ------------------------------------------------------------------------------------------------
-  renderer = agentsLib.prompts.mkPromptRenderer {
-    "@comments@\n" = fragmentsDir + "/comments.md";
-    "@phrasing@\n" = fragmentsDir + "/phrasing.md";
-    "@proseTics@\n" = fragmentsDir + "/prose-tics.md";
-    "@readOnly@\n" = fragmentsDir + "/read-only.md";
-  };
-
-  promptFragments = {
-    inherit (renderer) fragments renderPrompt readPrompt;
-    phrasing = renderer.fragments."@phrasing@\n";
-    roleSections = {
-      preamble = builtins.readFile (fragmentsDir + "/preamble.md");
-      memory = builtins.readFile (fragmentsDir + "/memory.md");
-      coordination = builtins.readFile (fragmentsDir + "/coordination.md");
-      status = builtins.readFile (fragmentsDir + "/status.md");
-    };
-  };
-
   defaultDocs = {
-    "code-design.md" = promptFragments.readPrompt (docsDir + "/code-design.md");
-    "delegation.md" = promptFragments.readPrompt (docsDir + "/delegation.md");
-    "documentation.md" = promptFragments.readPrompt (docsDir + "/documentation.md");
-    "editing-and-comments.md" = promptFragments.readPrompt (docsDir + "/editing-and-comments.md");
-    "mcp-servers.md" = promptFragments.readPrompt (docsDir + "/mcp-servers.md");
-    "terminals-and-workmux.md" = promptFragments.readPrompt (docsDir + "/terminals-and-workmux.md");
-    "verification-and-tests.md" = promptFragments.readPrompt (docsDir + "/verification-and-tests.md");
-    "writing.md" = promptFragments.readPrompt (docsDir + "/writing.md");
+    "code-design.md" = promptFragments.readPrompt (docsAssetsDir + "/code-design.md");
+    "delegation.md" = promptFragments.readPrompt (docsAssetsDir + "/delegation.md");
+    "documentation.md" = promptFragments.readPrompt (docsAssetsDir + "/documentation.md");
+    "editing-and-comments.md" = promptFragments.readPrompt (docsAssetsDir + "/editing-and-comments.md");
+    "mcp-servers.md" = promptFragments.readPrompt (docsAssetsDir + "/mcp-servers.md");
+    "terminals-and-workmux.md" = promptFragments.readPrompt (
+      docsAssetsDir + "/terminals-and-workmux.md"
+    );
+    "verification-and-tests.md" = promptFragments.readPrompt (
+      docsAssetsDir + "/verification-and-tests.md"
+    );
+    "writing.md" = promptFragments.readPrompt (docsAssetsDir + "/writing.md");
   };
 
   renderBase =
-    substitutions: promptFragments.renderPrompt substitutions (instructionsDir + "/instructions.md");
+    substitutions:
+    promptFragments.renderPrompt substitutions (instructionsAssetsDir + "/instructions.md");
 
   resolvedInstructions = agentsLib.prompts.joinSections [
     cfg.instructions.baseText
     cfg.instructions.extraSections
   ];
 
-  isUnderXdgData = lib.hasPrefix "${config.xdg.dataHome}/" cfg.instructions.docsDir;
-  docsDirXdgRel = lib.removePrefix "${config.xdg.dataHome}/" cfg.instructions.docsDir;
-  docsDirHomeRel = lib.removePrefix "${config.home.homeDirectory}/" cfg.instructions.docsDir;
+  isUnderXdgData = lib.hasPrefix "${config.xdg.dataHome}/" installedDocsDir;
+  docsDirXdgRel = lib.removePrefix "${config.xdg.dataHome}/" installedDocsDir;
+  docsDirHomeRel = lib.removePrefix "${config.home.homeDirectory}/" installedDocsDir;
 in
 {
   # ------------------------------------------------------------------------------------------------
@@ -77,32 +65,18 @@ in
         description = "Install shared agent instruction documents";
       };
 
-      docsDir = lib.mkOption {
-        type = lib.types.str;
-        default = "${cfg.dataDir}/instructions";
-        description = "Directory where companion instruction guides are installed";
-      };
-
       docs = lib.mkOption {
         type = lib.types.attrsOf lib.types.str;
         default = { };
-        description = "Companion instruction guide files installed under docsDir";
-      };
-
-      extraLinks = lib.mkOption {
-        type = lib.types.attrsOf lib.types.str;
-        default = { };
-        description = "Placeholder substitutions applied when rendering baseText";
+        description = "Companion instruction guide files installed under dataDir/instructions";
       };
 
       baseText = lib.mkOption {
         type = lib.types.lines;
-        default = renderBase (
-          cfg.instructions.extraLinks
-          // {
-            "@docsDir@" = cfg.instructions.docsDir;
-          }
-        );
+        default = renderBase {
+          "@devkitSource@" = devkitOutPath;
+          "@docsDir@" = installedDocsDir;
+        };
         description = "Base cross-assistant instruction text";
       };
 
@@ -113,26 +87,10 @@ in
       };
     };
 
-    _internal = {
-      instructionDocs = lib.mkOption {
-        type = lib.types.anything;
-        internal = true;
-      };
-
-      instructions = lib.mkOption {
-        type = lib.types.anything;
-        internal = true;
-      };
-
-      instructionsDir = lib.mkOption {
-        type = lib.types.anything;
-        internal = true;
-      };
-
-      promptFragments = lib.mkOption {
-        type = lib.types.anything;
-        internal = true;
-      };
+    resolved.instructions = lib.mkOption {
+      type = lib.types.str;
+      readOnly = true;
+      description = "Resolved cross-assistant instruction text combining baseText and extraSections";
     };
   };
 
@@ -142,17 +100,8 @@ in
   config = lib.mkMerge [
     {
       agents = {
-        instructions = {
-          docs = lib.mapAttrs (_: lib.mkDefault) defaultDocs;
-          extraLinks."@devkitSource@" = lib.mkDefault devkitOutPath;
-        };
-
-        _internal = {
-          inherit promptFragments;
-          instructionDocs = cfg.instructions.docs;
-          instructions = resolvedInstructions;
-          instructionsDir = cfg.instructions.docsDir;
-        };
+        instructions.docs = lib.mapAttrs (_: lib.mkDefault) defaultDocs;
+        resolved.instructions = resolvedInstructions;
       };
     }
 

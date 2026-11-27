@@ -15,6 +15,7 @@
 
 let
   p = config.agents.mcp.presets.chromeDevtools;
+  inherit (config.agents.browser) chromiumPackage;
 in
 {
   # ------------------------------------------------------------------------------------------------
@@ -28,12 +29,6 @@ in
       default = !pkgs.stdenv.isDarwin;
       description = "Launch Chromium in headless mode";
     };
-
-    chromiumPackage = lib.mkOption {
-      type = lib.types.nullOr lib.types.package;
-      default = config.agents.browser.chromiumPackage;
-      description = "Chromium executable package passed to chrome-devtools-mcp";
-    };
   };
 
   # ------------------------------------------------------------------------------------------------
@@ -46,7 +41,7 @@ in
       runtime = lib.mkDefault "npx";
       command = lib.mkDefault (
         [ "chrome-devtools-mcp" ]
-        ++ lib.optional (p.chromiumPackage != null) "--executable-path=${lib.getExe p.chromiumPackage}"
+        ++ lib.optional (chromiumPackage != null) "--executable-path=${lib.getExe chromiumPackage}"
         ++ [ "--isolated" ]
         ++ lib.optional p.headless "--headless"
       );

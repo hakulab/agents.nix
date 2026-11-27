@@ -102,11 +102,11 @@ Add `agents-nix` to your flake inputs and import `agents-nix.homeModules.default
 
 - `lib`: pure Nix helpers for models, profiles, permissions, MCP servers, prompts, proxies, and package wrappers.
 - `homeModules.default`: bundle importing all 12 Home Manager modules below with every assistant and tool disabled by default.
-- `homeModules.shared`: shared Home Manager module defining the core `agents.*` options (`dataDir`, `proxy`, `browser`, `instructions`, `roles`, `permissions`, `models`, `providers`, `profiles`, `modelCall`, `mcp`, `skills`, `hooks`, `notify`) and the read-only `config.agents.resolved` interface.
-- `homeModules.claude-code`: opt-in Home Manager module for Claude Code (`agents.claude-code.*`), importing `homeModules.shared` and configuring settings, permissions, hooks, custom agents, MCP servers, plugins, auth profiles, and `claude-statusline`.
-- `homeModules.codex`: standalone Home Manager module (`agents.codex`) configuring the Codex CLI, permission rules, hooks, custom agents, MCP servers, auth profiles, plugins, and desktop preferences.
+- `homeModules.shared`: shared Home Manager module defining the core `agents.*` options (`dataDir`, `proxy`, `browser`, `instructions`, `roles`, `permissions`, `models`, `providers`, `profiles`, `modelCall`, `mcp`, `skills`, `hooks`, `notify`) and the read-only `config.agents.resolved.*` leaves (`configDirs`, `instructions`, `mcp`, `agentRoles`, `modelCatalog`, `workloadPolicy`, `permissions`, `notify`, `preferences`).
+- `homeModules.claude-code`: opt-in Home Manager module for Claude Code (`agents.claude-code.*`), importing `homeModules.shared` and configuring settings, permissions, hooks, custom agents, MCP servers, plugins, auth profiles (`auth.defaultProfile`, `auth.enabledProfiles`, `auth.profileOverrides`), and `claude-statusline`.
+- `homeModules.codex`: standalone Home Manager module (`agents.codex`) configuring the Codex CLI, permission rules, hooks, custom agents, MCP servers, auth profiles (with `auth.allowedProviders` and `auth.allowedChannels` filters), plugins, and desktop preferences.
 - `homeModules.omp`: standalone Home Manager module (`agents.omp`) configuring Oh My Pi (`omp`), settings, permissions, custom agents, MCP servers, extensions, and auth profiles.
-- `homeModules.oxide-code`: standalone Home Manager module (`agents.oxide-code`) configuring `oxide-code` (`ox`), `programs.oxide-code` integration, settings, and Anthropic auth profiles.
+- `homeModules.oxide-code`: standalone Home Manager module (`agents.oxide-code`) configuring `oxide-code` (`ox`), `programs.oxide-code` integration, `extraSettings`, and Anthropic auth profiles.
 - `homeModules.{acp,activity-report,agent-project-move,ccusage,ctx7,t3code,workmux}`: standalone opt-in Home Manager modules for peripheral tools (`agents.acp`, `agents.activity-report`, `agents.agent-project-move`, `agents.ccusage`, `agents.ctx7`, `agents.t3code`, `agents.workmux`), each importing `homeModules.shared`.
 - `overlays.default`: overlay exposing the companion packages.
 - `packages.<system>`: companion packages (`acpx`, `browser-tools`, `file-formatter`, `mcp-server-github`, `mcp-server-gitlab`).

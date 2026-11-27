@@ -14,6 +14,7 @@
 
 let
   p = config.agents.mcp.presets.scrapling;
+  inherit (config.agents.browser) chromiumPackage;
 in
 {
   # ------------------------------------------------------------------------------------------------
@@ -21,12 +22,6 @@ in
   # ------------------------------------------------------------------------------------------------
   options.agents.mcp.presets.scrapling = {
     enable = lib.mkEnableOption "Scrapling MCP server preset";
-
-    chromiumPackage = lib.mkOption {
-      type = lib.types.nullOr lib.types.package;
-      default = config.agents.browser.chromiumPackage;
-      description = "Chromium executable package passed to scrapling-mcp";
-    };
   };
 
   # ------------------------------------------------------------------------------------------------
@@ -43,7 +38,7 @@ in
           "scrapling[ai]@latest"
           "scrapling-mcp"
         ]
-        ++ lib.optional (p.chromiumPackage != null) "--executable-path=${lib.getExe p.chromiumPackage}"
+        ++ lib.optional (chromiumPackage != null) "--executable-path=${lib.getExe chromiumPackage}"
       );
     };
   };

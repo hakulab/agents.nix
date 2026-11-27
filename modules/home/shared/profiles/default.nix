@@ -5,6 +5,7 @@
 {
   agentsLib,
   devkitLib,
+  nuModules,
   scriptsDir,
 }:
 
@@ -18,7 +19,6 @@
 let
   cfg = config.agents;
   dk = devkitLib.mkLib pkgs;
-  inherit (cfg._internal) nuModules;
 
   # ------------------------------------------------------------------------------------------------
   # Submodule types
@@ -165,10 +165,12 @@ let
   };
 
   resolvedWorkloadPolicy = lib.recursiveUpdate agentsLib.models.workloadPolicy cfg.models.workloadPolicy;
+  resolvedFamilyApis = agentsLib.models.familyApis // cfg.models.familyApis;
 
   profileResolver = agentsLib.profiles.mkResolver {
     modelCatalog = resolvedModelCatalog;
     workloadPolicy = resolvedWorkloadPolicy;
+    familyApis = resolvedFamilyApis;
     inherit (cfg) providers;
   };
 
@@ -212,6 +214,12 @@ in
         default = { };
         description = "Per-family effort levels per tier merged onto the built-in workload policy";
       };
+
+      familyApis = lib.mkOption {
+        type = lib.types.attrsOf lib.types.str;
+        default = { };
+        description = "Per-family default wire APIs merged onto the built-in family APIs";
+      };
     };
 
     providers = lib.mkOption {
@@ -226,35 +234,35 @@ in
       description = "Authentication and model-routing profiles shared across assistants";
     };
 
-    _internal = {
+    resolved = {
       modelCatalog = lib.mkOption {
-        type = lib.types.anything;
-        internal = true;
+        type = lib.types.attrsOf lib.types.anything;
+        readOnly = true;
+        description = "Resolved model catalog combining built-in and user model definitions";
       };
 
       workloadPolicy = lib.mkOption {
-        type = lib.types.anything;
-        internal = true;
-      };
-
-      profileResolver = lib.mkOption {
-        type = lib.types.anything;
-        internal = true;
+        type = lib.types.attrsOf (lib.types.attrsOf lib.types.str);
+        readOnly = true;
+        description = "Resolved per-family effort levels for each workload tier";
       };
 
       resolveProfiles = lib.mkOption {
         type = lib.types.anything;
         internal = true;
+        readOnly = true;
       };
 
       anthropicProfiles = lib.mkOption {
         type = lib.types.anything;
         internal = true;
+        readOnly = true;
       };
 
       mkProfileSwitch = lib.mkOption {
         type = lib.types.anything;
         internal = true;
+        readOnly = true;
       };
     };
   };
@@ -262,11 +270,10 @@ in
   # ------------------------------------------------------------------------------------------------
   # Config
   # ------------------------------------------------------------------------------------------------
-  config.agents._internal = {
+  config.agents.resolved = {
     modelCatalog = resolvedModelCatalog;
     workloadPolicy = resolvedWorkloadPolicy;
     inherit
-      profileResolver
       resolveProfiles
       anthropicProfiles
       mkProfileSwitch

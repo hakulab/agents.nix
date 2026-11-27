@@ -185,6 +185,88 @@ let
     ];
   };
 
+  derivedCcusageCfg = evalModulesWith {
+    modules = [
+      homeModules.ccusage
+      {
+        agents = {
+          models.catalog."claude-opus-5-5" = {
+            channelId = {
+              gateway = "gw/claude-opus-5-5";
+              inactive = "unused/claude-opus-5-5";
+            };
+            channelBilledCost = {
+              gateway = {
+                input = 10;
+                output = 50;
+                cacheRead = 1;
+                cacheWrite = 12;
+              };
+              inactive = {
+                input = 99;
+                output = 99;
+                cacheRead = 99;
+                cacheWrite = 99;
+              };
+            };
+          };
+
+          providers.my-gw = {
+            baseUrl = "https://gw.example.test";
+            channels.gateway.family = "claude";
+          };
+
+          ccusage = {
+            enable = true;
+            pricingOverrides."gw/claude-opus-5-5".outputCostPerToken = 0.0001;
+          };
+        };
+      }
+    ];
+  };
+
+  derivedCcusageJson =
+    builtins.fromJSON
+      derivedCcusageCfg.xdg.configFile."claude/ccusage.json".source.value;
+
+  t3codeProviderCaCfg = evalModulesWith {
+    modules = [
+      homeModules.t3code
+      {
+        agents = {
+          providers.my-gw = {
+            baseUrl = "https://gw.example.test";
+            caCertFile = "/run/secrets/provider-ca.pem";
+          };
+
+          t3code.enable = true;
+        };
+      }
+    ];
+  };
+
+  t3codeMultiProviderCaCfg = evalModulesWith {
+    modules = [
+      homeModules.t3code
+      {
+        agents = {
+          providers = {
+            gw-a = {
+              baseUrl = "https://a.example.test";
+              caCertFile = "/run/secrets/ca-a.pem";
+            };
+            gw-b = {
+              baseUrl = "https://b.example.test";
+              caCertFile = "/run/secrets/ca-b.pem";
+            };
+          };
+
+          t3code.enable = true;
+        };
+      }
+    ];
+  };
+
   t3codeDefaultCfg = evalModulesWith {
     modules = [
       homeModules.t3code
@@ -322,6 +404,9 @@ check "home-peripheral-tools" [
       && lib.all (a: a.assertion) headlessCfg.assertions
       && lib.all (a: a.assertion) headlessServeCfg.assertions
       && lib.all (a: a.assertion) ompCcusageCfg.assertions
+      && lib.all (a: a.assertion) derivedCcusageCfg.assertions
+      && lib.all (a: a.assertion) t3codeProviderCaCfg.assertions
+      && lib.all (a: a.assertion) t3codeMultiProviderCaCfg.assertions
       && lib.all (a: a.assertion) t3codeDefaultCfg.assertions
       && lib.all (a: a.assertion) t3codePartialCfg.assertions
       && lib.all (a: a.assertion) t3codeExplicitCfg.assertions
@@ -335,7 +420,8 @@ check "home-peripheral-tools" [
   {
     name = "acp installs acpx and enabled adapters and writes ~/.acpx/config.json";
     ok =
-      hasPkgPrefix "acpx-" desktopCfg.home.packages
+      lib.isDerivation desktopCfg.agents.acp.package
+      && hasPkgPrefix "acpx-" desktopCfg.home.packages
       && hasPkgPrefix "claude-agent-acp-" desktopCfg.home.packages
       && hasPkgPrefix "codex-acp-" desktopCfg.home.packages
       && desktopCfg.home.file ? ".acpx/config.json";
@@ -413,6 +499,22 @@ check "home-peripheral-tools" [
       && lib.any (pkg: pkg == desktopCfg.agents.ccusage.package) desktopCfg.home.packages;
   }
   {
+    name = "ccusage derives baseline pricingOverrides for active provider channels and merges user overrides";
+    ok =
+      derivedCcusageCfg.xdg.configFile ? "claude/ccusage.json"
+      && derivedCcusageJson.claude.defaults.pricingOverrides ? "gw/claude-opus-5-5"
+      && derivedCcusageJson.claude.defaults.pricingOverrides ? "claude-opus-5-5"
+      && !(derivedCcusageJson.claude.defaults.pricingOverrides ? "unused/claude-opus-5-5")
+      &&
+        derivedCcusageJson.claude.defaults.pricingOverrides."gw/claude-opus-5-5".inputCostPerToken
+        == 0.00001
+      &&
+        derivedCcusageJson.claude.defaults.pricingOverrides."gw/claude-opus-5-5".outputCostPerToken
+        == 0.0001
+      &&
+        derivedCcusageJson.claude.defaults.pricingOverrides."claude-opus-5-5".outputCostPerToken == 0.00005;
+  }
+  {
     name = "ccusage omits claude/ccusage.json when neither piStores nor pricingOverrides are set";
     ok =
       !(headlessCfg.xdg.configFile ? "claude/ccusage.json")
@@ -481,6 +583,13 @@ check "home-peripheral-tools" [
         lib.any (lib.hasInfix "--lan") (
           lib.toList headlessServeCfg.systemd.user.services.t3code-serve.Service.ExecStart
         );
+  }
+  {
+    name = "t3code caCertFile defaults from a unique provider caCertFile and stays null on ambiguity";
+    ok =
+      t3codeDefaultCfg.agents.t3code.caCertFile == null
+      && t3codeProviderCaCfg.agents.t3code.caCertFile == "/run/secrets/provider-ca.pem"
+      && t3codeMultiProviderCaCfg.agents.t3code.caCertFile == null;
   }
   {
     name = "t3code Darwin profile configures launchd agent with default and custom labels";

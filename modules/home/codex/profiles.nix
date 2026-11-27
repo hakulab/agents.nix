@@ -30,9 +30,15 @@ let
     client = "codex";
   };
 
+  enabledProfiles =
+    if cfg.auth.enabledProfiles == null then
+      resolvedProfiles
+    else
+      lib.filterAttrs (name: _: lib.elem name cfg.auth.enabledProfiles) resolvedProfiles;
+
   providerNames = lib.unique (
     lib.filter (provider: provider != null) (
-      lib.mapAttrsToList (_: profile: profile.provider) resolvedProfiles
+      lib.mapAttrsToList (_: profile: profile.provider) enabledProfiles
     )
   );
 
@@ -116,7 +122,7 @@ let
       model_auto_compact_token_limit = roles.default.model.autoCompactTokens;
     };
 
-  profiles = lib.mapAttrs mkProfile resolvedProfiles;
+  profiles = lib.mapAttrs mkProfile enabledProfiles;
 
   # ------------------------------------------------------------------------------------------------
   # Profile switcher

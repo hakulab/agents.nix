@@ -61,8 +61,8 @@ in
 
     package = lib.mkOption {
       type = lib.types.package;
-      default = pkgs.claude-code or llm-agents.packages.${system}.claude-code;
-      defaultText = lib.literalExpression "pkgs.claude-code or llm-agents.packages.\${system}.claude-code";
+      default = llm-agents.packages.${system}.claude-code;
+      defaultText = lib.literalExpression "llm-agents.packages.\${system}.claude-code";
       description = "Base Claude Code package to wrap";
     };
 
@@ -124,8 +124,8 @@ in
 
         workmuxPackage = lib.mkOption {
           type = lib.types.package;
-          default = pkgs.workmux or llm-agents.packages.${system}.workmux;
-          defaultText = lib.literalExpression "pkgs.workmux or llm-agents.packages.\${system}.workmux";
+          default = config.agents.workmux.package or llm-agents.packages.${system}.workmux;
+          defaultText = lib.literalExpression "config.agents.workmux.package or llm-agents.packages.\${system}.workmux";
           description = "Workmux package used by Claude Code worktree hooks";
         };
       };
@@ -173,8 +173,8 @@ in
 
       package = lib.mkOption {
         type = lib.types.package;
-        default = pkgs.claude-statusline or claude-statusline.packages.${system}.claude-statusline;
-        defaultText = lib.literalExpression "pkgs.claude-statusline or claude-statusline.packages.\${system}.claude-statusline";
+        default = claude-statusline.packages.${system}.claude-statusline;
+        defaultText = lib.literalExpression "claude-statusline.packages.\${system}.claude-statusline";
         description = "Package providing the claude-statusline binary";
       };
 
@@ -193,7 +193,7 @@ in
       extraSettings = lib.mkOption {
         type = lib.types.attrsOf lib.types.anything;
         default = { };
-        description = "Extra top-level settings merged into programs.claude-statusline.settings";
+        description = "Extra settings recursively merged into programs.claude-statusline.settings";
       };
     };
 
@@ -233,6 +233,7 @@ in
 
       permissionSettings = import ./permissions.nix {
         inherit lib resolved;
+        instructionsDir = "${config.agents.dataDir}/instructions";
       };
 
       plugins = import ./plugins.nix {
@@ -302,6 +303,7 @@ in
       ];
 
       unknownMcpServers = lib.filter (name: !(resolved.mcp.servers ? ${name})) enabledMcpServers;
+      workmuxEnabled = config.agents.workmux.enable or false;
     in
     lib.mkMerge [
       profiles.config
@@ -325,15 +327,23 @@ in
             mcp.disabledServers = resolved.mcp.disabledServers;
 
             plugins = {
-              marketplaces = lib.mapAttrs (_: lib.mkDefault) {
-                claude-plugins-official = "anthropics/claude-plugins-official";
-                workmux = "raine/workmux";
-              };
+              marketplaces = lib.mapAttrs (_: lib.mkDefault) (
+                {
+                  claude-plugins-official = "anthropics/claude-plugins-official";
+                }
+                // lib.optionalAttrs workmuxEnabled {
+                  workmux = "raine/workmux";
+                }
+              );
 
-              enabled = lib.mapAttrs (_: lib.mkDefault) {
-                "skill-creator@claude-plugins-official" = true;
-                "workmux-status@workmux" = true;
-              };
+              enabled = lib.mapAttrs (_: lib.mkDefault) (
+                {
+                  "skill-creator@claude-plugins-official" = true;
+                }
+                // lib.optionalAttrs workmuxEnabled {
+                  "workmux-status@workmux" = true;
+                }
+              );
             };
           };
 

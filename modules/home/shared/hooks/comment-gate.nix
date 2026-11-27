@@ -7,17 +7,17 @@
   mkNuHook,
   modelCall,
   patchInput,
-  internal,
-  modelCallCfg,
+  modelCatalog,
+  modelIdFor,
+  promptFragments,
+  modelOverride,
   timeouts,
 }:
 
 let
-  inherit (internal) modelCatalog modelIdFor promptFragments;
-
   commentGateModel =
-    if modelCallCfg.commentGateModel != null then
-      modelCallCfg.commentGateModel
+    if modelOverride != null then
+      modelOverride
     else
       modelIdFor modelCatalog modelCatalog.defaults.gemini.mini;
 in
@@ -26,7 +26,7 @@ in
   type = "command";
   tools = [ "fileWrite" ];
   usesModelCall = true;
-  timeout = timeouts.modelCall + timeouts.modelHookMargin;
+  timeout = timeouts.modelCall + timeouts.modelMargin;
   statusMessage = "Checking comments";
   command = mkNuHook {
     slug = "comment-gate";

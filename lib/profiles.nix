@@ -305,6 +305,12 @@ let
         default = defaultProfile;
         description = "Fallback authentication profile when no installed profile is active";
       };
+
+      enabledProfiles = lib.mkOption {
+        type = lib.types.nullOr (lib.types.listOf lib.types.str);
+        default = null;
+        description = "Optional allowlist of profile names to install";
+      };
     };
 in
 {

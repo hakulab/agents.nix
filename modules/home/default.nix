@@ -12,6 +12,7 @@
   claude-statusline,
   oxide-code,
   agentsLib,
+  nuModules,
   repoRoot,
 }:
 
@@ -29,6 +30,7 @@ let
         self
         devkit
         agentsLib
+        nuModules
         repoRoot
         ;
     }
@@ -55,6 +57,7 @@ let
           devkit
           llm-agents
           agentsLib
+          nuModules
           repoRoot
           sharedModule
           ;
@@ -108,7 +111,7 @@ let
 
     ccusage = mkHomeModule "ccusage" (
       import ./ccusage {
-        inherit llm-agents sharedModule;
+        inherit llm-agents agentsLib sharedModule;
       }
     );
 
@@ -124,6 +127,7 @@ let
           nixpkgs-unstable
           devkit
           agentsLib
+          nuModules
           repoRoot
           sharedModule
           ;

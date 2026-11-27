@@ -39,10 +39,10 @@ let
   ) resolvedProfiles;
 
   enabledProfiles =
-    if cfg.profiles == null then
+    if cfg.enabledProfiles == null then
       anthropicOnly
     else
-      lib.filterAttrs (name: _: lib.elem name cfg.profiles) anthropicOnly;
+      lib.filterAttrs (name: _: lib.elem name cfg.enabledProfiles) anthropicOnly;
 
   profiles = lib.mapAttrs mkProfile enabledProfiles;
 
@@ -86,13 +86,7 @@ in
   # ------------------------------------------------------------------------------------------------
   # Module options
   # ------------------------------------------------------------------------------------------------
-  options = agentsLib.profiles.mkOptions { } // {
-    profiles = lib.mkOption {
-      type = lib.types.nullOr (lib.types.listOf lib.types.str);
-      default = null;
-      description = "Optional allowlist of profile names to install for oxide-code";
-    };
-  };
+  options = agentsLib.profiles.mkOptions { };
 
   # ------------------------------------------------------------------------------------------------
   # Module config

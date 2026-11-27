@@ -1,94 +1,53 @@
 # ==================================================================================================
-# Claude Code Profile Module
+# Claude Code Profile Override Submodule
 # ==================================================================================================
 
 {
   lib,
-  officialProfile,
 }:
 
 lib.types.submodule {
   options = {
-    type = lib.mkOption {
-      type = lib.types.enum [
-        "subscription"
-        "oauth-token"
-        "api-key"
-      ];
-      default = "api-key";
-      description = "Authentication type";
-    };
-
-    sessionEffort = lib.mkOption {
-      type = lib.types.nullOr lib.types.str;
-      default = officialProfile.sessionEffort;
-      description = "Reasoning effort for the main session";
-    };
-
-    modelEfforts = lib.mkOption {
+    extraEnv = lib.mkOption {
       type = lib.types.attrsOf lib.types.str;
       default = { };
-      description = "Reasoning effort per model ID, overriding sessionEffort";
-    };
-
-    compactWindows = lib.mkOption {
-      type = lib.types.attrsOf lib.types.ints.positive;
-      default = officialProfile.compactWindows;
-      description = "Auto-compaction window in tokens for each model ID";
-    };
-
-    agentModels = lib.mkOption {
-      type = lib.types.attrsOf lib.types.str;
-      default = officialProfile.agentModels;
-      description = "Model identifier for each workload tier, used by custom agents";
-    };
-
-    efforts = lib.mkOption {
-      type = lib.types.attrsOf lib.types.str;
-      default = officialProfile.efforts;
-      description = "Reasoning effort for each model tier, used by custom agents";
-    };
-
-    baseUrl = lib.mkOption {
-      type = lib.types.nullOr lib.types.str;
-      default = null;
-      description = "API base URL (required for api-key, forbidden for oauth-token and subscription)";
-    };
-
-    tokenFile = lib.mkOption {
-      type = lib.types.nullOr lib.types.str;
-      default = null;
-      description = "Runtime file path containing the auth token (required for oauth-token and api-key, forbidden for subscription)";
+      description = "Additional environment variables merged into this profile";
     };
 
     extraHeaders = lib.mkOption {
       type = lib.types.attrsOf lib.types.str;
       default = { };
-      description = "Additional HTTP headers for this profile's API requests";
+      description = "Additional HTTP headers merged into this profile's API requests";
     };
 
-    extraEnv = lib.mkOption {
-      type = lib.types.attrsOf lib.types.str;
-      default = { };
-      description = "Additional environment variables exported for this profile";
+    nativeWebSearch = lib.mkOption {
+      type = lib.types.nullOr lib.types.bool;
+      default = null;
+      description = "Override whether native WebSearch is exposed for this profile";
     };
 
-    extraEnvFiles = lib.mkOption {
+    sessionEffort = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "Override reasoning effort for the main session";
+    };
+
+    modelEfforts = lib.mkOption {
       type = lib.types.attrsOf lib.types.str;
       default = { };
-      description = "Runtime file paths loaded into environment variables (forbidden for subscription)";
+      description = "Per-model reasoning effort overrides merged into this profile";
+    };
+
+    compactWindows = lib.mkOption {
+      type = lib.types.attrsOf lib.types.ints.positive;
+      default = { };
+      description = "Per-model auto-compaction window overrides in tokens";
     };
 
     modelOverrides = lib.mkOption {
       type = lib.types.attrsOf lib.types.str;
       default = { };
-      description = "Anthropic model IDs mapped to provider-specific model IDs";
-    };
-
-    nativeWebSearch = lib.mkOption {
-      type = lib.types.bool;
-      default = true;
-      description = "Expose native WebSearch for this profile";
+      description = "Anthropic model ID to provider model ID overrides merged into this profile";
     };
   };
 }

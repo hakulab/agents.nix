@@ -72,10 +72,10 @@ in
 
     auth = profiles.options;
 
-    settings = lib.mkOption {
+    extraSettings = lib.mkOption {
       type = lib.types.attrsOf lib.types.anything;
       default = { };
-      description = "Settings recursively merged into programs.oxide-code.settings";
+      description = "Extra settings recursively merged into programs.oxide-code.settings";
     };
   };
 
@@ -111,7 +111,7 @@ in
           enable = true;
           # Config checks cannot load the runtime auth profile. Keep its wrapper first in home.path.
           package = lib.lowPrio cfg.package;
-          settings = lib.recursiveUpdate defaultSettings cfg.settings;
+          settings = lib.recursiveUpdate defaultSettings cfg.extraSettings;
         };
       }
     ]

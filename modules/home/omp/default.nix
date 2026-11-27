@@ -194,7 +194,7 @@ in
         # Shared integration
         # ------------------------------------------------------------------------------------------
         agents = {
-          omp.mcp.disabledServers = lib.mkDefault config.agents.mcp.disabledServers;
+          omp.mcp.disabledServers = resolved.mcp.disabledServers;
           skills.targets.omp = lib.mkDefault true;
         };
 
@@ -215,7 +215,7 @@ in
             ".omp/agent/extensions/file-formatter.ts".source =
               pkgs.replaceVars (repoRoot + "/scripts/omp/file-formatter.ts")
                 {
-                  inherit (resolved) fileFormatter;
+                  fileFormatter = lib.getExe config.agents.hooks.fileFormatterPackage;
                 };
           }
           // lib.optionalAttrs cfg.extensions.telegram.enable {

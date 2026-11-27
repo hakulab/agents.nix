@@ -4,6 +4,7 @@
 
 {
   llm-agents,
+  agentsLib,
   sharedModule,
 }:
 
@@ -45,12 +46,42 @@ let
     ]
     ++ cfg.piStores;
 
+  perToken = rate: rate / 1000000.0;
+
+  mkPricingOverride = cost: {
+    inputCostPerToken = perToken cost.input;
+    outputCostPerToken = perToken cost.output;
+    cacheReadInputTokenCost = perToken cost.cacheRead;
+    cacheCreationInputTokenCost = perToken cost.cacheWrite;
+  };
+
+  activeChannels = lib.unique (
+    lib.concatMap (provider: builtins.attrNames provider.channels) (
+      builtins.attrValues config.agents.providers
+    )
+  );
+
+  derivedPricingOverrides = lib.concatMapAttrs (
+    _: model:
+    lib.concatMapAttrs (
+      channel: channelId:
+      lib.optionalAttrs (lib.elem channel activeChannels && (model.channelBilledCost or { }) ? ${channel})
+        (
+          lib.genAttrs (agentsLib.models.channelIds channelId) (
+            _: mkPricingOverride model.channelBilledCost.${channel}
+          )
+        )
+    ) (model.channelId or { })
+  ) config.agents.resolved.modelCatalog.models;
+
+  effectivePricingOverrides = lib.recursiveUpdate derivedPricingOverrides cfg.pricingOverrides;
+
   ccusageConfig =
     lib.optionalAttrs (effectivePiStores != [ ]) {
       pi.stores = effectivePiStores;
     }
-    // lib.optionalAttrs (cfg.pricingOverrides != { }) {
-      claude.defaults.pricingOverrides = cfg.pricingOverrides;
+    // lib.optionalAttrs (effectivePricingOverrides != { }) {
+      claude.defaults.pricingOverrides = effectivePricingOverrides;
     };
 in
 {
@@ -77,7 +108,7 @@ in
     pricingOverrides = lib.mkOption {
       type = lib.types.attrsOf json.type;
       default = { };
-      description = "Per-model token pricing overrides written to claude.defaults.pricingOverrides";
+      description = "Per-model token pricing overrides recursively merged onto catalog-derived channel defaults";
     };
   };
 

@@ -44,23 +44,95 @@ let
 
   enabledCfg = evalHome {
     agents = {
-      models.catalog."gemini-4-flash".channelId = {
-        alpha = "alpha/gemini-4-flash";
-        beta = "beta/gemini-4-flash";
+      models.catalog."gemini-4-hydrogen".channelId = {
+        alpha = "alpha/gemini-4-hydrogen";
+        beta = "beta/gemini-4-hydrogen";
+      };
+
+      providers.my-gw = {
+        baseUrl = "https://gateway.example.test";
+        apiKeyFile = "/run/secrets/model-call-key";
+        clientApiKeyFiles.claude-code = "/run/secrets/claude-model-call-key";
+        caCertFile = "/run/secrets/gw-ca.pem";
+        extraHeaders."x-provider" = "gw";
+        channels = {
+          alpha.family = "gemini";
+          beta.family = "gemini";
+        };
       };
 
       modelCall = {
         enable = true;
-        baseUrl = "https://gateway.example.test";
-        apiKeyFile = "/run/secrets/model-call-key";
+        provider = "my-gw";
         channels = [ "beta" ];
         extraHeaders."x-env" = "test";
+      };
+
+      hooks = {
+        commentGate.model = "custom/comment-gate-model";
+        timeouts.modelMargin = 15;
       };
 
       skills = {
         prosePolish.model = "custom/prose-model";
         targets.claude = true;
       };
+    };
+  };
+
+  inheritedProviderCfg = evalHome {
+    agents = {
+      providers.my-gw = {
+        baseUrl = "https://gateway.example.test";
+        apiKeyFile = "/run/secrets/model-call-key";
+        channels = {
+          alpha.family = "gemini";
+          beta.family = "gemini";
+        };
+      };
+
+      modelCall = {
+        enable = true;
+        provider = "my-gw";
+        baseUrl = lib.mkDefault "https://override.example.test";
+      };
+    };
+  };
+
+  defaultCommentGateCfg = evalHome {
+    agents = {
+      models.catalog."gemini-4-hydrogen".channelId = {
+        alpha = "alpha/gemini-4-hydrogen";
+        beta = "beta/gemini-4-hydrogen";
+      };
+
+      providers.my-gw = {
+        baseUrl = "https://gateway.example.test";
+        apiKeyFile = "/run/secrets/model-call-key";
+        clientApiKeyFiles.claude-code = "/run/secrets/claude-model-call-key";
+        caCertFile = "/run/secrets/gw-ca.pem";
+        extraHeaders."x-provider" = "gw";
+        channels = {
+          alpha.family = "gemini";
+          beta.family = "gemini";
+        };
+      };
+
+      modelCall = {
+        enable = true;
+        provider = "my-gw";
+        channels = [ "beta" ];
+        extraHeaders."x-env" = "test";
+      };
+
+      hooks.timeouts.modelMargin = 15;
+    };
+  };
+
+  unknownProviderModelCallCfg = evalHome {
+    agents.modelCall = {
+      enable = true;
+      provider = "undeclared-provider";
     };
   };
 
@@ -87,6 +159,11 @@ let
   ];
 
   enabledHooksFactory = enabledCfg.agents.resolved.mkHooks {
+    assistant = "claude-code";
+    inherit toolClasses;
+  };
+
+  defaultCommentGateHooksFactory = defaultCommentGateCfg.agents.resolved.mkHooks {
     assistant = "claude-code";
     inherit toolClasses;
   };
@@ -121,6 +198,30 @@ check "home-shared-hooks-skills" [
       &&
         (builtins.head (builtins.head enabledInstalled.events.PostToolUse).hooks).command
         == "${enabledCfg.agents.dataDir}/hooks/claude-code-auto-format";
+  }
+  {
+    name = "modelCall.provider inherits endpoint, credentials, channels, headers, and allows overrides";
+    ok =
+      enabledCfg.agents.modelCall.baseUrl == "https://gateway.example.test"
+      && enabledCfg.agents.modelCall.apiKeyFile == "/run/secrets/model-call-key"
+      && enabledCfg.agents.modelCall.clientApiKeyFiles.claude-code == "/run/secrets/claude-model-call-key"
+      && enabledCfg.agents.modelCall.caCertFile == "/run/secrets/gw-ca.pem"
+      && enabledCfg.agents.modelCall.extraHeaders."x-provider" == "gw"
+      && enabledCfg.agents.modelCall.extraHeaders."x-env" == "test"
+      && enabledCfg.agents.modelCall.channels == [ "beta" ]
+      &&
+        inheritedProviderCfg.agents.modelCall.channels == [
+          "alpha"
+          "beta"
+        ]
+      && inheritedProviderCfg.agents.modelCall.baseUrl == "https://override.example.test"
+      && enabledCfg.agents.hooks.commentGate.model == "custom/comment-gate-model"
+      &&
+        enabledHooksFactory.hooks.commentGate.command
+        != defaultCommentGateHooksFactory.hooks.commentGate.command
+      && enabledHooksFactory.hooks.commentGate.timeout == 105
+      && lib.all (a: a.assertion) inheritedProviderCfg.assertions
+      && throws unknownProviderModelCallCfg.assertions;
   }
   {
     name = "enabled modelCall without baseUrl fails module assertion";

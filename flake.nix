@@ -96,6 +96,18 @@
       # requires current stable Chrome, while stable nixpkgs freezes Chromium.
       playwrightDriverFor = system: nixpkgs-unstable.legacyPackages.${system}.playwright-driver;
 
+      nuModules = nixpkgs.lib.fileset.toSource {
+        root = ./scripts/lib;
+        fileset = nixpkgs.lib.fileset.fileFilter (
+          file:
+          !(
+            nixpkgs.lib.hasSuffix ".test.nu" file.name
+            || nixpkgs.lib.hasSuffix ".stub.nu" file.name
+            || nixpkgs.lib.hasSuffix ".testlib.nu" file.name
+          )
+        ) ./scripts/lib;
+      };
+
       homeModules = import ./modules/home {
         inherit
           self
@@ -107,6 +119,7 @@
           claude-statusline
           oxide-code
           agentsLib
+          nuModules
           ;
         repoRoot = ./.;
       };
