@@ -160,7 +160,8 @@ let
     {
       name = "static environment";
       provider.extraEnv.ANTHROPIC_BASE_URL = "https://gw.example.test";
-      settings = { };
+      settings.client.base_url = "https://fallback.example.test";
+      exportedEndpoint = "https://gw.example.test";
       valid = true;
     }
     {
@@ -173,6 +174,7 @@ let
       name = "client settings";
       provider = { };
       settings.client.base_url = "https://gw.example.test";
+      exportedEndpoint = "https://gw.example.test";
       valid = true;
     }
     {
@@ -271,8 +273,23 @@ check "home-oxide-code" [
     name = "provider profiles require an explicit endpoint and honor overrides";
     ok = lib.all (
       case:
+      let
+        config = evalEndpoint case.provider case.settings;
+        valid = !throws config.assertions;
+        profilePath = "${config.xdg.stateHome}/oxide-code/profiles/gateway.env.sh";
+        endpointExports = lib.filter (lib.hasPrefix "export ANTHROPIC_BASE_URL=") (
+          lib.splitString "\n" config.home.file."${profilePath}".source.text
+        );
+      in
       lib.assertMsg (
-        throws (evalEndpoint case.provider case.settings).assertions != case.valid
+        valid == case.valid
+        && (
+          case ? exportedEndpoint
+          ->
+            endpointExports == [
+              "export ANTHROPIC_BASE_URL=${lib.escapeShellArg case.exportedEndpoint}"
+            ]
+        )
       ) "oxide-code profile endpoint test failed for ${case.name}"
     ) endpointCases;
   }

@@ -52,11 +52,14 @@ let
   hasValue = value: builtins.isString value && value != "";
   endpointFile = profile: profile.extraEnvFiles.ANTHROPIC_BASE_URL or null;
 
-  hasEndpoint =
+  hasProfileEndpoint =
     profile:
     hasValue (endpointFile profile)
-    || hasValue (profile.extraEnv.ANTHROPIC_BASE_URL or (profile.baseUrl or null))
-    || hasValue (config.programs.oxide-code.settings.client.base_url or null);
+    || hasValue (profile.extraEnv.ANTHROPIC_BASE_URL or (profile.baseUrl or null));
+
+  clientEndpoint = config.programs.oxide-code.settings.client.base_url or null;
+  usesClientEndpoint =
+    profile: profile.type == "api-key" && !hasProfileEndpoint profile && hasValue clientEndpoint;
 
   # ------------------------------------------------------------------------------------------------
   # Profile scripts
@@ -72,6 +75,8 @@ let
             return 1
           fi
         ''
+        # The profile's credential is loaded even if Oxide uses another config directory.
+        ++ lib.optional (usesClientEndpoint profile) "export ANTHROPIC_BASE_URL=${lib.escapeShellArg clientEndpoint}"
       )
     );
 
@@ -119,7 +124,7 @@ in
       switch.assertion
     ]
     ++ lib.mapAttrsToList (name: profile: {
-      assertion = profile.type == "api-key" -> hasEndpoint profile;
+      assertion = profile.type == "api-key" -> hasProfileEndpoint profile || usesClientEndpoint profile;
       message = "agents.oxide-code: provider profile '${name}' requires an explicit Anthropic endpoint";
     }) profiles;
 
