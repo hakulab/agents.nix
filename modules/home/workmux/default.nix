@@ -3,8 +3,8 @@
 # ==================================================================================================
 
 {
+  llm-agents,
   sharedModule,
-  llmAgentsPackagesFor,
 }:
 
 {
@@ -17,11 +17,14 @@
 
 let
   cfg = config.agents.workmux;
-  llmAgentsPackages = llmAgentsPackagesFor pkgs.stdenv.hostPlatform.system;
+  llmAgentsPackages = llm-agents.packages.${pkgs.stdenv.hostPlatform.system};
   yaml = pkgs.formats.yaml { };
 
   configFile = yaml.generate "workmux-config.yaml" cfg.settings;
 
+  # ------------------------------------------------------------------------------------------------
+  # Codex hooks
+  # ------------------------------------------------------------------------------------------------
   mkCommandHook = command: [
     {
       hooks = [
@@ -55,6 +58,9 @@ let
     Stop = mkCommandHook "workmux set-window-status done";
   };
 
+  # ------------------------------------------------------------------------------------------------
+  # Bundled skills
+  # ------------------------------------------------------------------------------------------------
   workmuxSkills = [
     "coordinator"
     "merge"

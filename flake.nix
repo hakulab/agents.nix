@@ -92,143 +92,26 @@
         inherit (nixpkgs) lib;
       };
 
-      packagesFor = system: self.packages.${system};
-      unstablePackagesFor = system: nixpkgs-unstable.legacyPackages.${system};
-      llmAgentsPackagesFor = system: llm-agents.packages.${system};
-
       # Pull Playwright from nixpkgs-unstable because Chrome DevTools MCP tracks latest npm and
       # requires current stable Chrome, while stable nixpkgs freezes Chromium.
-      playwrightDriverFor = system: (unstablePackagesFor system).playwright-driver;
+      playwrightDriverFor = system: nixpkgs-unstable.legacyPackages.${system}.playwright-driver;
 
-      mkHomeModule = name: module: {
-        _class = "homeManager";
-        _file = "${self}/flake.nix#homeModules.${name}";
-        key = "${self}/flake.nix#homeModules.${name}";
-        imports = [ module ];
-      };
-
-      sharedHomeModule = mkHomeModule "shared" (
-        import ./modules/home/shared {
-          inherit agentsLib;
-          devkitLib = devkit.lib;
-          devkitOutPath = devkit.outPath;
-          repoRoot = ./.;
-          inherit packagesFor;
-        }
-      );
-
-      claudeCodeHomeModule = mkHomeModule "claude-code" (
-        import ./modules/home/claude-code {
-          inherit agentsLib;
-          claudeStatuslineFor = system: claude-statusline.packages.${system};
-          claudeStatuslineModule = claude-statusline.homeModules.default;
-          llmAgentsFor = system: llm-agents.packages.${system};
-          repoRoot = ./.;
-          inherit sharedHomeModule;
-        }
-      );
-
-      codexHomeModule = mkHomeModule "codex" (
-        import ./modules/home/codex {
-          inherit agentsLib;
-          devkitLib = devkit.lib;
-          llmAgents = llm-agents;
-          repoRoot = ./.;
-          inherit sharedHomeModule;
-        }
-      );
-
-      ompHomeModule = mkHomeModule "omp" (
-        import ./modules/home/omp {
-          inherit agentsLib sharedHomeModule;
-          llmAgentsPackagesFor = system: llm-agents.packages.${system};
-          repoRoot = ./.;
-        }
-      );
-
-      oxideCodeHomeModule = mkHomeModule "oxide-code" (
-        import ./modules/home/oxide-code {
-          inherit agentsLib sharedHomeModule;
-          oxideCodeHomeModule = oxide-code.homeModules.default;
-          oxideCodePackagesFor = system: oxide-code.packages.${system};
-          repoRoot = ./.;
-        }
-      );
-
-      individualHomeModules = {
-        acp = mkHomeModule "acp" (
-          import ./modules/home/acp {
-            inherit agentsLib;
-            sharedModule = sharedHomeModule;
-            inherit packagesFor llmAgentsPackagesFor;
-          }
-        );
-
-        activity-report = mkHomeModule "activity-report" (
-          import ./modules/home/activity-report {
-            sharedModule = sharedHomeModule;
-            activityReportModule = activity-report.homeModules.default;
-            activityReportPackagesFor = system: activity-report.packages.${system};
-          }
-        );
-
-        agent-project-move = mkHomeModule "agent-project-move" (
-          import ./modules/home/agent-project-move {
-            sharedModule = sharedHomeModule;
-            agentProjectMoveModule = agent-project-move.homeModules.default;
-            agentProjectMovePackagesFor = system: agent-project-move.packages.${system};
-          }
-        );
-
-        ccusage = mkHomeModule "ccusage" (
-          import ./modules/home/ccusage {
-            sharedModule = sharedHomeModule;
-            inherit llmAgentsPackagesFor;
-          }
-        );
-
-        claude-code = claudeCodeHomeModule;
-        codex = codexHomeModule;
-
-        ctx7 = mkHomeModule "ctx7" (
-          import ./modules/home/ctx7 {
-            inherit agentsLib;
-            sharedModule = sharedHomeModule;
-            inherit unstablePackagesFor;
-          }
-        );
-
-        omp = ompHomeModule;
-        oxide-code = oxideCodeHomeModule;
-        shared = sharedHomeModule;
-
-        t3code = mkHomeModule "t3code" (
-          import ./modules/home/t3code {
-            inherit agentsLib;
-            devkitLib = devkit.lib;
-            repoRoot = ./.;
-            sharedModule = sharedHomeModule;
-            inherit unstablePackagesFor;
-          }
-        );
-
-        workmux = mkHomeModule "workmux" (
-          import ./modules/home/workmux {
-            sharedModule = sharedHomeModule;
-            inherit llmAgentsPackagesFor;
-          }
-        );
-      };
-
-      homeModules = individualHomeModules // {
-        default = mkHomeModule "default" {
-          imports = builtins.attrValues individualHomeModules;
-        };
+      homeModules = import ./modules/home {
+        inherit
+          self
+          nixpkgs-unstable
+          devkit
+          llm-agents
+          activity-report
+          agent-project-move
+          claude-statusline
+          oxide-code
+          agentsLib
+          ;
       };
     in
     {
       lib = agentsLib;
-
       inherit homeModules;
 
       overlays.default =
@@ -253,14 +136,17 @@
           src = ./.;
           hooks = {
             doctoc.enable = true;
+
             lychee = {
               enable = true;
               settings.flags = "--offline --exclude '@(docsDir|devkitSource)@'";
             };
+
             nu-check = {
               enable = true;
               settings.libDirs = nuLibDirs;
             };
+
             prettier.enable = true;
             shellcheck.enable = true;
             shfmt.enable = true;
@@ -284,11 +170,6 @@
           inherit (nixpkgs) lib;
           inherit home-manager homeModules;
           darwinPkgs = nixpkgs.legacyPackages.aarch64-darwin;
-          sharedModule = sharedHomeModule;
-          claudeCodeModule = claudeCodeHomeModule;
-          codexModule = codexHomeModule;
-          ompModule = ompHomeModule;
-          oxideCodeModule = oxideCodeHomeModule;
         };
 
         nuTests = dk.nuTests {
@@ -341,7 +222,7 @@
         # Checks
         # ------------------------------------------------------------------------------------------
         checks =
-          self.packages.${system}
+          packages
           // libChecks
           // homeChecks
           // {

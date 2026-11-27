@@ -64,10 +64,10 @@ let
 in
 {
   inherit
-    mkProxyScript
-    mkProxyWrapArgs
     proxyVars
     renderNoProxy
+    mkProxyScript
+    mkProxyWrapArgs
     ;
 
   # Shell snippet that clears proxy env vars. Use in scripts that must reach the network bypassing

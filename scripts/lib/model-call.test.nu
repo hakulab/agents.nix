@@ -17,6 +17,10 @@ const CURL_ARGS = [
   --max-time "90"
 ]
 
+# --------------------------------------------------------------------------------------------------
+# Test helpers
+# --------------------------------------------------------------------------------------------------
+
 # `run` is the completed model call, `calls` holds what each curl call received, and `token_file`
 # is the token's path.
 def call [

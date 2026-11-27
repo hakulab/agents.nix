@@ -21,9 +21,9 @@ let
 
   mkEnabledServersOption =
     {
-      description,
       names ? null,
       default ? if names != null then names else [ ],
+      description,
     }:
     lib.mkOption {
       type = lib.types.listOf (if names != null then lib.types.enum names else lib.types.str);
@@ -46,8 +46,8 @@ let
     }:
     {
       enabledServers = mkEnabledServersOption {
-        description = "${description} to enable";
         inherit names default;
+        description = "${description} to enable";
       };
 
       disabledServers = mkDisabledServersOption {
@@ -59,11 +59,11 @@ let
 in
 {
   inherit
-    computeEnabledServers
-    mkDisabledServersOption
-    mkEnabledServersOption
-    mkMcpOptions
     presetDisplayNames
     presetServerNames
+    mkEnabledServersOption
+    mkDisabledServersOption
+    mkMcpOptions
+    computeEnabledServers
     ;
 }

@@ -16,6 +16,9 @@ let
   p = config.agents.mcp.presets.scrapling;
 in
 {
+  # ------------------------------------------------------------------------------------------------
+  # Options
+  # ------------------------------------------------------------------------------------------------
   options.agents.mcp.presets.scrapling = {
     enable = lib.mkEnableOption "Scrapling MCP server preset";
 
@@ -26,6 +29,9 @@ in
     };
   };
 
+  # ------------------------------------------------------------------------------------------------
+  # Config
+  # ------------------------------------------------------------------------------------------------
   config.agents.mcp.servers = lib.mkIf p.enable {
     scrapling = {
       displayName = lib.mkDefault agentsLib.mcp.presetDisplayNames.scrapling;

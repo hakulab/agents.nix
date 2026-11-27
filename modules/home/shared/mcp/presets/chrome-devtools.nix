@@ -17,6 +17,9 @@ let
   p = config.agents.mcp.presets.chromeDevtools;
 in
 {
+  # ------------------------------------------------------------------------------------------------
+  # Options
+  # ------------------------------------------------------------------------------------------------
   options.agents.mcp.presets.chromeDevtools = {
     enable = lib.mkEnableOption "Chrome DevTools MCP server preset";
 
@@ -33,6 +36,9 @@ in
     };
   };
 
+  # ------------------------------------------------------------------------------------------------
+  # Config
+  # ------------------------------------------------------------------------------------------------
   config.agents.mcp.servers = lib.mkIf p.enable {
     chromeDevtools = {
       displayName = lib.mkDefault agentsLib.mcp.presetDisplayNames.chromeDevtools;

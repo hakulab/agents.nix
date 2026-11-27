@@ -82,6 +82,7 @@ def "test create provisions or reuses a worktree" [] {
           cwd: $repo.app
           args: ["path" "demo"]
         }
+
         {
           cwd: $repo.app
           args: [
@@ -96,6 +97,7 @@ def "test create provisions or reuses a worktree" [] {
         }
       ]
     }
+
     {
       label: "no origin/HEAD"
       cwd: $remote_less.app
@@ -106,6 +108,7 @@ def "test create provisions or reuses a worktree" [] {
           cwd: $remote_less.app
           args: ["path" "demo"]
         }
+
         {
           cwd: $remote_less.app
           args: [
@@ -120,6 +123,7 @@ def "test create provisions or reuses a worktree" [] {
         }
       ]
     }
+
     {
       label: "reuse"
       cwd: $repo.app
@@ -132,6 +136,7 @@ def "test create provisions or reuses a worktree" [] {
         }
       ]
     }
+
     {
       label: "different basename"
       cwd: $repo.app
@@ -142,6 +147,7 @@ def "test create provisions or reuses a worktree" [] {
           cwd: $repo.app
           args: ["path" "demo"]
         }
+
         {
           cwd: $repo.app
           args: [

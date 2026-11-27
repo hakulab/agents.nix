@@ -9,7 +9,7 @@
 }:
 
 let
-  inherit (import ../lib.nix { inherit pkgs lib; }) check throws;
+  harness = import ../lib.nix { inherit pkgs lib; };
 
   evalOptionSet =
     options: cfg:
@@ -25,8 +25,7 @@ in
     inherit
       lib
       agentsLib
-      check
-      throws
+      harness
       evalOptionSet
       ;
   };
@@ -35,16 +34,14 @@ in
     inherit
       lib
       agentsLib
-      check
-      throws
+      harness
       ;
   };
 
   lib-profiles = import ./profiles.nix {
     inherit
       agentsLib
-      check
-      throws
+      harness
       ;
   };
 

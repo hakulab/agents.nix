@@ -29,6 +29,7 @@ lib.mkIf cfg.service.enable (
       systemd.user.services.t3code-serve = {
         Unit = {
           Description = "T3 Code headless agent control plane";
+
           # The interval must outlast five failed starts under stepped backoff (up to 70s each).
           StartLimitIntervalSec = "9min";
           StartLimitBurst = 5;
@@ -38,13 +39,17 @@ lib.mkIf cfg.service.enable (
           Environment = [
             "T3CODE_HOME=${baseDir}"
           ];
+
           ExecStart = lib.escapeShellArgs serveArgs;
+
           # `t3 serve` prints a one-time pairing token on every start, so keep stdout out of the
           # journal and pair through `t3 pair`.
           StandardOutput = "null";
+
           # Without a global DefaultOOMPolicy=continue, an earlyoom kill of one agent process would
           # stop the whole unit.
           OOMPolicy = "continue";
+
           Restart = "always";
           RestartSec = "5s";
           RestartSteps = 4;
@@ -69,12 +74,15 @@ lib.mkIf cfg.service.enable (
           Label = cfg.service.launchdLabel;
           ProgramArguments = serveArgs;
           WorkingDirectory = homeDir;
+
           EnvironmentVariables = {
             T3CODE_HOME = baseDir;
           };
+
           RunAtLoad = true;
           KeepAlive = true;
           ThrottleInterval = 5;
+
           StandardOutPath = "/dev/null";
           StandardErrorPath = "${homeDir}/Library/Logs/t3code-serve.log";
         };

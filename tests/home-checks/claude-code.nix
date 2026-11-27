@@ -5,15 +5,18 @@
 {
   pkgs,
   lib,
-  check,
-  throws,
-  evalHomeWith,
-  sharedModule,
-  claudeCodeModule,
-  homeDirectory,
+  harness,
+  homeModules,
 }:
 
 let
+  inherit (harness)
+    check
+    throws
+    evalHomeWith
+    homeDirectory
+    ;
+
   stubClaude = pkgs.writeShellScriptBin "claude" ''
     exit 0
   '';
@@ -35,157 +38,169 @@ let
   # ------------------------------------------------------------------------------------------------
   # Fixtures
   # ------------------------------------------------------------------------------------------------
-  disabledCfg = evalHomeWith [ claudeCodeModule ] { };
+  disabledCfg = evalHomeWith [ homeModules.claude-code ] { };
 
-  standaloneEnabledCfg = evalHomeWith [ claudeCodeModule ] {
+  standaloneEnabledCfg = evalHomeWith [ homeModules.claude-code ] {
     agents.claude-code.enable = true;
   };
 
-  combinedEnabledCfg = evalHomeWith [ sharedModule claudeCodeModule ] {
-    agents.claude-code = {
-      enable = true;
-      package = stubClaude;
-      hooks.worktree.workmuxPackage = stubWorkmux;
-      statusline.package = stubStatusline;
-    };
-  };
-
-  fullCfg = evalHomeWith [ sharedModule claudeCodeModule ] {
-    agents = {
-      browser.chromiumPackage = null;
-
-      permissions = {
-        ownRepositories = [ "github.com/example-org" ];
-        allowPolicies = [ "Custom allow policy for tests." ];
+  combinedEnabledCfg =
+    evalHomeWith
+      [
+        homeModules.shared
+        homeModules.claude-code
+      ]
+      {
+        agents.claude-code = {
+          enable = true;
+          package = stubClaude;
+          hooks.worktree.workmuxPackage = stubWorkmux;
+          statusline.package = stubStatusline;
+        };
       };
 
-      models.catalog = {
-        "claude-opus-5-5".channelId = {
-          anthropic = "gw/claude-opus-5-5";
-          alt = "alt/claude-opus-5-5";
-        };
-        "claude-sonnet-5-5".channelId = {
-          anthropic = "gw/claude-sonnet-5-5";
-          alt = "alt/claude-sonnet-5-5";
-        };
-        "claude-haiku-5-5".channelId = {
-          anthropic = "gw/claude-haiku-5-5";
-          alt = "alt/claude-haiku-5-5";
-        };
-        "gemini-4-neon".channelId.google = "google/gemini-4-neon";
-      };
+  fullCfg =
+    evalHomeWith
+      [
+        homeModules.shared
+        homeModules.claude-code
+      ]
+      {
+        agents = {
+          browser.chromiumPackage = null;
 
-      providers.example-gateway = {
-        baseUrl = "https://gw.example.test";
-        apiUrls.anthropic-messages = "https://gw.example.test/anthropic";
-        apiKeyFile = "/run/secrets/gw-key";
-        clientApiKeyFiles.claude-code = "/run/secrets/gw-claude-key";
-        caCertFile = "/run/secrets/gw-ca.pem";
-        extraHeaders."x-tenant" = "demo";
-        extraEnv.CUSTOM_PROVIDER_FLAG = "1";
-        extraEnvFiles.EXTRA_PROVIDER_SECRET = "/run/secrets/extra-secret";
-        channels = {
-          anthropic = {
-            family = "claude";
-            nativeWebSearch = false;
+          permissions = {
+            ownRepositories = [ "github.com/example-org" ];
+            allowPolicies = [ "Custom allow policy for tests." ];
           };
-          alt = {
-            family = "claude";
-            nativeWebSearch = false;
+
+          models.catalog = {
+            "claude-opus-5-5".channelId = {
+              anthropic = "gw/claude-opus-5-5";
+              alt = "alt/claude-opus-5-5";
+            };
+            "claude-sonnet-5-5".channelId = {
+              anthropic = "gw/claude-sonnet-5-5";
+              alt = "alt/claude-sonnet-5-5";
+            };
+            "claude-haiku-5-5".channelId = {
+              anthropic = "gw/claude-haiku-5-5";
+              alt = "alt/claude-haiku-5-5";
+            };
+            "gemini-4-neon".channelId.google = "google/gemini-4-neon";
           };
-          google = {
-            family = "gemini";
-            nativeWebSearch = false;
+
+          providers.example-gateway = {
+            baseUrl = "https://gw.example.test";
+            apiUrls.anthropic-messages = "https://gw.example.test/anthropic";
+            apiKeyFile = "/run/secrets/gw-key";
+            clientApiKeyFiles.claude-code = "/run/secrets/gw-claude-key";
+            caCertFile = "/run/secrets/gw-ca.pem";
+            extraHeaders."x-tenant" = "demo";
+            extraEnv.CUSTOM_PROVIDER_FLAG = "1";
+            extraEnvFiles.EXTRA_PROVIDER_SECRET = "/run/secrets/extra-secret";
+            channels = {
+              anthropic = {
+                family = "claude";
+                nativeWebSearch = false;
+              };
+              alt = {
+                family = "claude";
+                nativeWebSearch = false;
+              };
+              google = {
+                family = "gemini";
+                nativeWebSearch = false;
+              };
+            };
+          };
+
+          profiles = {
+            gw-claude = {
+              provider = "example-gateway";
+              family = "claude";
+              channel = "anthropic";
+              clients = [ "claude-code" ];
+            };
+
+            gw-alt = {
+              provider = "example-gateway";
+              family = "claude";
+              channel = "alt";
+              clients = [ "claude-code" ];
+            };
+
+            official-token = {
+              provider = null;
+              family = "claude";
+              oauthTokenFile = "/run/secrets/claude-oauth";
+              clients = [ "claude-code" ];
+            };
+          };
+
+          modelCall = {
+            enable = true;
+            baseUrl = "https://gw.example.test";
+            apiKeyFile = "/run/secrets/model-call-key";
+          };
+
+          mcp = {
+            disabledServers = [ "deepwiki" ];
+            presets = {
+              deepwiki.enable = true;
+              github.enable = true;
+            };
+            servers.customHttp = {
+              type = "http";
+              displayName = "CustomHttp";
+              url = "https://mcp.example.test/mcp";
+            };
+          };
+
+          skills.sources.trusted-skill = {
+            source = sampleSkill;
+            trustedScripts = [ "scripts/check.sh" ];
+          };
+
+          claude-code = {
+            enable = true;
+            package = stubClaude;
+
+            agents.enabledAgents = [
+              "architect"
+              "reviewer"
+            ];
+
+            hooks.worktree.workmuxPackage = stubWorkmux;
+
+            plugins = {
+              lspPlugins = true;
+              marketplaces.custom-mkt = "example/custom-mkt";
+              enabled."custom-plugin@custom-mkt" = true;
+            };
+
+            statusline = {
+              package = stubStatusline;
+              models."custom-model" = "Custom Model";
+              costSources = [
+                {
+                  id = "demo-cost";
+                  source.type = "http";
+                }
+              ];
+              extraSettings.refresh_interval = 30;
+            };
+
+            extraInstructions = "## Local Notes\n\nFollow repository conventions.";
+            extraSettings = {
+              theme = "light";
+              env.CUSTOM_CLAUDE_ENV = "yes";
+            };
           };
         };
       };
 
-      profiles = {
-        gw-claude = {
-          provider = "example-gateway";
-          family = "claude";
-          channel = "anthropic";
-          clients = [ "claude-code" ];
-        };
-
-        gw-alt = {
-          provider = "example-gateway";
-          family = "claude";
-          channel = "alt";
-          clients = [ "claude-code" ];
-        };
-
-        official-token = {
-          provider = null;
-          family = "claude";
-          oauthTokenFile = "/run/secrets/claude-oauth";
-          clients = [ "claude-code" ];
-        };
-      };
-
-      modelCall = {
-        enable = true;
-        baseUrl = "https://gw.example.test";
-        apiKeyFile = "/run/secrets/model-call-key";
-      };
-
-      mcp = {
-        disabledServers = [ "deepwiki" ];
-        presets = {
-          deepwiki.enable = true;
-          github.enable = true;
-        };
-        servers.customHttp = {
-          type = "http";
-          displayName = "CustomHttp";
-          url = "https://mcp.example.test/mcp";
-        };
-      };
-
-      skills.sources.trusted-skill = {
-        source = sampleSkill;
-        trustedScripts = [ "scripts/check.sh" ];
-      };
-
-      claude-code = {
-        enable = true;
-        package = stubClaude;
-
-        agents.enabledAgents = [
-          "architect"
-          "reviewer"
-        ];
-
-        hooks.worktree.workmuxPackage = stubWorkmux;
-
-        plugins = {
-          lspPlugins = true;
-          marketplaces.custom-mkt = "example/custom-mkt";
-          enabled."custom-plugin@custom-mkt" = true;
-        };
-
-        statusline = {
-          package = stubStatusline;
-          models."custom-model" = "Custom Model";
-          costSources = [
-            {
-              id = "demo-cost";
-              source.type = "http";
-            }
-          ];
-          extraSettings.refresh_interval = 30;
-        };
-
-        extraInstructions = "## Local Notes\n\nFollow repository conventions.";
-        extraSettings = {
-          theme = "light";
-          env.CUSTOM_CLAUDE_ENV = "yes";
-        };
-      };
-    };
-  };
-
-  minimalHooksAndNoStatuslineCfg = evalHomeWith [ claudeCodeModule ] {
+  minimalHooksAndNoStatuslineCfg = evalHomeWith [ homeModules.claude-code ] {
     agents.claude-code = {
       enable = true;
       package = stubClaude;
@@ -209,44 +224,50 @@ let
     };
   };
 
-  edgeCasesCfg = evalHomeWith [ sharedModule claudeCodeModule ] {
-    agents = {
-      mcp = {
-        disabledServers = [ "deepwiki" ];
-        presets = {
-          deepwiki.enable = true;
-          github.enable = true;
-          gitlab.enable = true;
-        };
-      };
+  edgeCasesCfg =
+    evalHomeWith
+      [
+        homeModules.shared
+        homeModules.claude-code
+      ]
+      {
+        agents = {
+          mcp = {
+            disabledServers = [ "deepwiki" ];
+            presets = {
+              deepwiki.enable = true;
+              github.enable = true;
+              gitlab.enable = true;
+            };
+          };
 
-      profiles.official = {
-        family = "claude";
-        clients = [ "codex" ];
-      };
+          profiles.official = {
+            family = "claude";
+            clients = [ "codex" ];
+          };
 
-      claude-code = {
-        enable = true;
-        package = stubClaude;
-        hooks.worktree.workmuxPackage = stubWorkmux;
-        statusline.package = stubStatusline;
-        mcp.disabledServers = [ "gitlab" ];
-        auth = {
-          defaultProfile = "custom";
-          profiles.custom = {
-            type = "subscription";
-            sessionEffort = null;
-            efforts = { };
+          claude-code = {
+            enable = true;
+            package = stubClaude;
+            hooks.worktree.workmuxPackage = stubWorkmux;
+            statusline.package = stubStatusline;
+            mcp.disabledServers = [ "gitlab" ];
+            auth = {
+              defaultProfile = "custom";
+              profiles.custom = {
+                type = "subscription";
+                sessionEffort = null;
+                efforts = { };
+              };
+            };
           };
         };
       };
-    };
-  };
 
   # ------------------------------------------------------------------------------------------------
   # Negative assertion fixtures
   # ------------------------------------------------------------------------------------------------
-  missingBaseUrlProfileCfg = evalHomeWith [ claudeCodeModule ] {
+  missingBaseUrlProfileCfg = evalHomeWith [ homeModules.claude-code ] {
     agents.claude-code = {
       enable = true;
       package = stubClaude;
@@ -259,7 +280,7 @@ let
     };
   };
 
-  subscriptionWithTokenCfg = evalHomeWith [ claudeCodeModule ] {
+  subscriptionWithTokenCfg = evalHomeWith [ homeModules.claude-code ] {
     agents.claude-code = {
       enable = true;
       package = stubClaude;
@@ -272,7 +293,7 @@ let
     };
   };
 
-  invalidEnvNameProfileCfg = evalHomeWith [ claudeCodeModule ] {
+  invalidEnvNameProfileCfg = evalHomeWith [ homeModules.claude-code ] {
     agents.claude-code = {
       enable = true;
       package = stubClaude;
@@ -285,7 +306,7 @@ let
     };
   };
 
-  pathSecretProfileCfg = evalHomeWith [ claudeCodeModule ] {
+  pathSecretProfileCfg = evalHomeWith [ homeModules.claude-code ] {
     agents.claude-code = {
       enable = true;
       package = stubClaude;
@@ -298,7 +319,7 @@ let
     };
   };
 
-  unknownMcpCfg = evalHomeWith [ claudeCodeModule ] {
+  unknownMcpCfg = evalHomeWith [ homeModules.claude-code ] {
     agents.claude-code = {
       enable = true;
       package = stubClaude;

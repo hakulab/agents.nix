@@ -11,14 +11,13 @@
   lib,
   dk,
   assetsDir,
-  modelCatalog,
-  modelIdFor,
-  promptFragments,
+  internal,
   modelCall,
   modelOverride,
 }:
 
 let
+  inherit (internal) modelCatalog modelIdFor promptFragments;
   json = pkgs.formats.json { };
 
   skillDir = assetsDir + "/skills/prose-polish";

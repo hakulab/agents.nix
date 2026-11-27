@@ -16,6 +16,9 @@ let
   p = config.agents.mcp.presets.exa;
 in
 {
+  # ------------------------------------------------------------------------------------------------
+  # Options
+  # ------------------------------------------------------------------------------------------------
   options.agents.mcp.presets.exa = {
     enable = lib.mkEnableOption "Exa MCP server preset";
 
@@ -37,6 +40,9 @@ in
     };
   };
 
+  # ------------------------------------------------------------------------------------------------
+  # Config
+  # ------------------------------------------------------------------------------------------------
   config.agents.mcp.servers = lib.mkIf p.enable {
     exa = {
       displayName = lib.mkDefault agentsLib.mcp.presetDisplayNames.exa;

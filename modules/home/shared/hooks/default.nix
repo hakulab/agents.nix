@@ -3,9 +3,8 @@
 # ==================================================================================================
 
 {
+  self,
   devkitLib,
-  mkNuModules,
-  packagesFor,
   scriptsDir,
 }:
 
@@ -20,14 +19,17 @@ let
   cfg = config.agents;
   internal = cfg._internal;
   dk = devkitLib.mkLib pkgs;
-  selfPackages = packagesFor pkgs.stdenv.hostPlatform.system;
-  nuModules = mkNuModules lib;
+  selfPackages = self.packages.${pkgs.stdenv.hostPlatform.system};
+  inherit (internal) nuModules;
 
   json = pkgs.formats.json { };
 
   fileFormatter = lib.getExe cfg.hooks.fileFormatterPackage;
   resolvedTimeouts = cfg.modelCall.timeouts // cfg.hooks.timeouts;
 
+  # ------------------------------------------------------------------------------------------------
+  # Hook factory
+  # ------------------------------------------------------------------------------------------------
   patchInput = lib.getExe (
     dk.writeNuApplication {
       name = "patch-input";
@@ -45,9 +47,6 @@ let
     "async"
   ];
 
-  # ------------------------------------------------------------------------------------------------
-  # Hook factory
-  # ------------------------------------------------------------------------------------------------
   # Codex trusts a hook by hashing its event, matcher, and handler, command included. Commands name
   # stable links, which each activation updates, so a rebuild that changes only a script keeps the
   # hook's hash.
@@ -146,8 +145,8 @@ let
             mkNuHook
             modelCall
             patchInput
+            internal
             ;
-          inherit (internal) modelCatalog modelIdFor promptFragments;
           modelCallCfg = cfg.modelCall;
           timeouts = resolvedTimeouts;
         };
@@ -164,23 +163,6 @@ in
   # Options
   # ------------------------------------------------------------------------------------------------
   options.agents = {
-    _internal = {
-      fileFormatter = lib.mkOption {
-        type = lib.types.anything;
-        internal = true;
-      };
-
-      mkHooks = lib.mkOption {
-        type = lib.types.anything;
-        internal = true;
-      };
-
-      timeouts = lib.mkOption {
-        type = lib.types.anything;
-        internal = true;
-      };
-    };
-
     hooks = {
       fileFormatterPackage = lib.mkOption {
         type = lib.types.package;
@@ -200,6 +182,23 @@ in
           default = 10;
           description = "Timeout in seconds for lightweight tool hooks";
         };
+      };
+    };
+
+    _internal = {
+      fileFormatter = lib.mkOption {
+        type = lib.types.anything;
+        internal = true;
+      };
+
+      mkHooks = lib.mkOption {
+        type = lib.types.anything;
+        internal = true;
+      };
+
+      timeouts = lib.mkOption {
+        type = lib.types.anything;
+        internal = true;
       };
     };
   };

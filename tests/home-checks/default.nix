@@ -8,15 +8,10 @@
   home-manager,
   homeModules,
   darwinPkgs,
-  sharedModule,
-  claudeCodeModule,
-  codexModule,
-  ompModule,
-  oxideCodeModule,
 }:
 
 let
-  inherit (import ../lib.nix { inherit pkgs lib; }) check throws;
+  baseHarness = import ../lib.nix { inherit pkgs lib; };
 
   homeDirectory = if pkgs.stdenv.isDarwin then "/Users/tester" else "/home/tester";
 
@@ -44,18 +39,24 @@ let
 
   evalHomeWith = modules: extraModule: evalModules (modules ++ [ extraModule ]);
 
-  evalHome = evalHomeWith [ sharedModule ];
+  evalHome = evalHomeWith [ homeModules.shared ];
+
+  harness = baseHarness // {
+    inherit
+      homeDirectory
+      evalModulesWith
+      evalModules
+      evalHomeWith
+      evalHome
+      ;
+  };
 
   claudeCodeChecks = import ./claude-code.nix {
     inherit
       pkgs
       lib
-      check
-      throws
-      evalHomeWith
-      sharedModule
-      claudeCodeModule
-      homeDirectory
+      harness
+      homeModules
       ;
   };
 in
@@ -64,62 +65,33 @@ in
     inherit
       pkgs
       lib
-      check
-      evalModules
+      harness
       homeModules
       ;
+  };
+
+  home-shared-defaults = import ./defaults.nix {
+    inherit pkgs lib harness;
+  };
+
+  home-shared-providers-profiles = import ./providers-profiles.nix {
+    inherit lib harness;
+  };
+
+  home-shared-mcp = import ./mcp.nix {
+    inherit lib harness;
+  };
+
+  home-shared-hooks-skills = import ./hooks-skills.nix {
+    inherit pkgs lib harness;
   };
 
   home-codex = import ./codex.nix {
     inherit
       pkgs
       lib
-      check
-      throws
-      evalModules
-      codexModule
-      sharedModule
-      homeDirectory
-      ;
-  };
-
-  home-shared-defaults = import ./defaults.nix {
-    inherit
-      pkgs
-      lib
-      check
-      throws
-      evalHome
-      homeDirectory
-      ;
-  };
-
-  home-shared-providers-profiles = import ./providers-profiles.nix {
-    inherit
-      lib
-      check
-      throws
-      evalHome
-      ;
-  };
-
-  home-shared-mcp = import ./mcp.nix {
-    inherit
-      lib
-      check
-      throws
-      evalHome
-      ;
-  };
-
-  home-shared-hooks-skills = import ./hooks-skills.nix {
-    inherit
-      pkgs
-      lib
-      check
-      throws
-      evalHome
-      homeDirectory
+      harness
+      homeModules
       ;
   };
 
@@ -127,11 +99,8 @@ in
     inherit
       pkgs
       lib
-      check
-      throws
-      evalHomeWith
-      sharedModule
-      ompModule
+      harness
+      homeModules
       ;
   };
 
@@ -139,12 +108,8 @@ in
     inherit
       pkgs
       lib
-      check
-      throws
-      evalHomeWith
-      sharedModule
-      ompModule
-      oxideCodeModule
+      harness
+      homeModules
       ;
   };
 
@@ -152,12 +117,10 @@ in
     inherit
       pkgs
       lib
-      check
+      harness
       homeModules
       darwinPkgs
-      homeDirectory
       ;
-    evalHomeWith = evalModulesWith;
   };
 }
 // claudeCodeChecks

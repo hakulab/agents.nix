@@ -5,19 +5,22 @@
 {
   pkgs,
   lib,
-  check,
-  throws,
-  evalModules,
-  codexModule,
-  sharedModule,
-  homeDirectory,
+  harness,
+  homeModules,
 }:
 
 let
+  inherit (harness)
+    check
+    throws
+    evalModules
+    homeDirectory
+    ;
+
   evalCodex =
     extraModule:
     evalModules [
-      codexModule
+      homeModules.codex
       extraModule
     ];
 
@@ -27,8 +30,8 @@ let
   disabledCfg = evalCodex { };
 
   combinedCfg = evalModules [
-    sharedModule
-    codexModule
+    homeModules.shared
+    homeModules.codex
     {
       agents.codex.enable = true;
     }
@@ -224,6 +227,36 @@ let
     };
   };
 
+  noResearcherCfg = evalCodex {
+    agents.codex = {
+      enable = true;
+      agents.enabledAgents = [ "implementer" ];
+    };
+  };
+
+  renamedGptCfg = evalCodex {
+    agents = {
+      models.catalog."gpt-6.2-sol".channelId.renamed = "custom/renamed-gpt";
+      providers.renamed-gw = {
+        baseUrl = "https://renamed.example.test";
+        channels.renamed = {
+          family = "gpt";
+          nativeWebSearch = false;
+        };
+      };
+      profiles.renamed = {
+        provider = "renamed-gw";
+        family = "gpt";
+        channel = "renamed";
+        clients = [ "codex" ];
+      };
+      codex.enable = true;
+    };
+  };
+
+  # ------------------------------------------------------------------------------------------------
+  # Negative assertion fixtures
+  # ------------------------------------------------------------------------------------------------
   invalidDefaultProfileCfg = evalCodex {
     agents.codex = {
       enable = true;
@@ -275,33 +308,6 @@ let
           family = "gpt";
           clients = [ "codex" ];
         };
-      };
-      codex.enable = true;
-    };
-  };
-
-  noResearcherCfg = evalCodex {
-    agents.codex = {
-      enable = true;
-      agents.enabledAgents = [ "implementer" ];
-    };
-  };
-
-  renamedGptCfg = evalCodex {
-    agents = {
-      models.catalog."gpt-6.2-sol".channelId.renamed = "custom/renamed-gpt";
-      providers.renamed-gw = {
-        baseUrl = "https://renamed.example.test";
-        channels.renamed = {
-          family = "gpt";
-          nativeWebSearch = false;
-        };
-      };
-      profiles.renamed = {
-        provider = "renamed-gw";
-        family = "gpt";
-        channel = "renamed";
-        clients = [ "codex" ];
       };
       codex.enable = true;
     };

@@ -5,14 +5,13 @@
 {
   pkgs,
   lib,
-  check,
-  throws,
-  evalHomeWith,
-  sharedModule,
-  ompModule,
+  harness,
+  homeModules,
 }:
 
 let
+  inherit (harness) check throws evalHomeWith;
+
   stubOmp = pkgs.writeShellScriptBin "omp" ''
     exit 0
   '';
@@ -32,13 +31,16 @@ let
   findPackageNamed =
     name: packages: lib.findFirst (pkg: (pkg.meta.mainProgram or pkg.name) == name) null packages;
 
-  disabledCfg = evalHomeWith [ ompModule ] { };
+  # ------------------------------------------------------------------------------------------------
+  # Fixtures
+  # ------------------------------------------------------------------------------------------------
+  disabledCfg = evalHomeWith [ homeModules.omp ] { };
 
-  defaultPkgCfg = evalHomeWith [ ompModule ] {
+  defaultPkgCfg = evalHomeWith [ homeModules.omp ] {
     agents.omp.enable = true;
   };
 
-  basicCfg = evalHomeWith [ ompModule ] {
+  basicCfg = evalHomeWith [ homeModules.omp ] {
     agents = {
       browser.chromiumPackage = null;
       omp = {
@@ -48,78 +50,84 @@ let
     };
   };
 
-  combinedCfg = evalHomeWith [ sharedModule ompModule ] {
-    agents = {
-      browser.chromiumPackage = stubChromium;
+  combinedCfg =
+    evalHomeWith
+      [
+        homeModules.shared
+        homeModules.omp
+      ]
+      {
+        agents = {
+          browser.chromiumPackage = stubChromium;
 
-      models.catalog = {
-        "claude-opus-5-5".channelId.anthropic = "gw/claude-opus-5-5";
-        "claude-sonnet-5-5".channelId.anthropic = "gw/claude-sonnet-5-5";
-        "claude-haiku-5-5".channelId.anthropic = "gw/claude-haiku-5-5";
-        "gemini-4-neon".channelId.google = "google/gemini-4-neon";
-      };
+          models.catalog = {
+            "claude-opus-5-5".channelId.anthropic = "gw/claude-opus-5-5";
+            "claude-sonnet-5-5".channelId.anthropic = "gw/claude-sonnet-5-5";
+            "claude-haiku-5-5".channelId.anthropic = "gw/claude-haiku-5-5";
+            "gemini-4-neon".channelId.google = "google/gemini-4-neon";
+          };
 
-      providers.my-gateway = {
-        baseUrl = "https://gw.example.test";
-        apiUrls = {
-          anthropic-messages = "https://gw.example.test/anthropic";
-          openai-responses = "https://gw.example.test/openai";
-        };
-        apiKeyFile = "/run/secrets/gw-default";
-        clientApiKeyFiles.omp = "/run/secrets/gw-omp";
-        caCertFile = "/run/secrets/gw-ca.pem";
-        extraHeaders."x-tenant" = "demo";
-        channels = {
-          anthropic = {
+          providers.my-gateway = {
+            baseUrl = "https://gw.example.test";
+            apiUrls = {
+              anthropic-messages = "https://gw.example.test/anthropic";
+              openai-responses = "https://gw.example.test/openai";
+            };
+            apiKeyFile = "/run/secrets/gw-default";
+            clientApiKeyFiles.omp = "/run/secrets/gw-omp";
+            caCertFile = "/run/secrets/gw-ca.pem";
+            extraHeaders."x-tenant" = "demo";
+            channels = {
+              anthropic = {
+                family = "claude";
+                nativeWebSearch = false;
+              };
+              google = {
+                family = "gemini";
+                nativeWebSearch = false;
+              };
+            };
+          };
+
+          profiles.work-claude = {
+            provider = "my-gateway";
             family = "claude";
-            nativeWebSearch = false;
+            channel = "anthropic";
+            clients = [ "omp" ];
           };
-          google = {
-            family = "gemini";
-            nativeWebSearch = false;
+
+          mcp = {
+            disabledServers = [ "exa" ];
+            presets = {
+              deepwiki.enable = true;
+              exa = {
+                enable = true;
+                apiKeyFile = "/run/secrets/exa-key";
+              };
+            };
           };
-        };
-      };
 
-      profiles.work-claude = {
-        provider = "my-gateway";
-        family = "claude";
-        channel = "anthropic";
-        clients = [ "omp" ];
-      };
-
-      mcp = {
-        disabledServers = [ "exa" ];
-        presets = {
-          deepwiki.enable = true;
-          exa = {
+          omp = {
             enable = true;
-            apiKeyFile = "/run/secrets/exa-key";
+            package = stubOmp;
+            auth.defaultProfile = "work-claude";
+            agents.enabledAgents = [ "reviewer" ];
+            extensions = {
+              fileFormatter.enable = false;
+              telegram = {
+                enable = true;
+                package = stubTelegram;
+                botTokenFile = "/run/secrets/telegram-bot";
+              };
+            };
+            extraEnvFiles.EXA_API_KEY = "/run/secrets/exa-key";
+            watchdogText = "Custom watchdog";
+            extraSettings.theme.dark = "custom-dark";
           };
         };
       };
 
-      omp = {
-        enable = true;
-        package = stubOmp;
-        auth.defaultProfile = "work-claude";
-        agents.enabledAgents = [ "reviewer" ];
-        extensions = {
-          fileFormatter.enable = false;
-          telegram = {
-            enable = true;
-            package = stubTelegram;
-            botTokenFile = "/run/secrets/telegram-bot";
-          };
-        };
-        extraEnvFiles.EXA_API_KEY = "/run/secrets/exa-key";
-        watchdogText = "Custom watchdog";
-        extraSettings.theme.dark = "custom-dark";
-      };
-    };
-  };
-
-  filteredProfilesCfg = evalHomeWith [ ompModule ] {
+  filteredProfilesCfg = evalHomeWith [ homeModules.omp ] {
     agents = {
       browser.chromiumPackage = null;
 
@@ -141,7 +149,10 @@ let
     };
   };
 
-  invalidDefaultCfg = evalHomeWith [ ompModule ] {
+  # ------------------------------------------------------------------------------------------------
+  # Negative assertion fixtures
+  # ------------------------------------------------------------------------------------------------
+  invalidDefaultCfg = evalHomeWith [ homeModules.omp ] {
     agents = {
       browser.chromiumPackage = null;
       omp = {
@@ -152,7 +163,7 @@ let
     };
   };
 
-  conflictingCaCfg = evalHomeWith [ ompModule ] {
+  conflictingCaCfg = evalHomeWith [ homeModules.omp ] {
     agents = {
       browser.chromiumPackage = null;
 
@@ -185,7 +196,7 @@ let
     };
   };
 
-  pathSecretCfg = evalHomeWith [ ompModule ] {
+  pathSecretCfg = evalHomeWith [ homeModules.omp ] {
     agents.omp = {
       enable = true;
       package = stubOmp;
@@ -193,7 +204,7 @@ let
     };
   };
 
-  longMcpToolCfg = evalHomeWith [ ompModule ] {
+  longMcpToolCfg = evalHomeWith [ homeModules.omp ] {
     agents = {
       browser.chromiumPackage = null;
       mcp.presets.github.enable = true;
@@ -210,7 +221,7 @@ let
     };
   };
 
-  missingBaseUrlCfg = evalHomeWith [ ompModule ] {
+  missingBaseUrlCfg = evalHomeWith [ homeModules.omp ] {
     agents = {
       browser.chromiumPackage = null;
 

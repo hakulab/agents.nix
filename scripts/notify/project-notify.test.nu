@@ -137,6 +137,7 @@ def "test claude-stop skips while background Agent task is unresolved" [] {
           ]
         }
       }
+
       {
         type: "user"
         toolUseResult: {
@@ -193,6 +194,7 @@ def "test claude-stop skips while background Bash task is unresolved or only que
           ]
         }
       }
+
       {
         type: "queue-operation"
         operation: "enqueue"
@@ -243,6 +245,7 @@ def "test claude-stop notifies once all background tasks resolve" [] {
           ]
         }
       }
+
       {
         type: "user"
         toolUseResult: {
@@ -258,12 +261,14 @@ def "test claude-stop notifies once all background tasks resolve" [] {
           ]
         }
       }
+
       {
         type: "user"
         message: {
           content: "<task-notification><task-id>agent_1</task-id><tool-use-id>tu_1</tool-use-id><status>completed</status></task-notification>"
         }
       }
+
       {
         type: "user"
         message: {
@@ -313,6 +318,7 @@ def "test claude-stop resolves multiple task-notification blocks in one message"
           ]
         }
       }
+
       {
         type: "user"
         toolUseResult: {
@@ -328,6 +334,7 @@ def "test claude-stop resolves multiple task-notification blocks in one message"
           ]
         }
       }
+
       {
         type: "user"
         message: {
@@ -375,6 +382,7 @@ def "test claude-stop resolves background task from queued-command attachment" [
           ]
         }
       }
+
       {
         type: "attachment"
         attachment: {
@@ -424,6 +432,7 @@ def "test claude-stop notifies when background launch fails or TaskStop resolves
           ]
         }
       }
+
       {
         type: "user"
         message: {
@@ -437,6 +446,7 @@ def "test claude-stop notifies when background launch fails or TaskStop resolves
           ]
         }
       }
+
       {
         type: "user"
         toolUseResult: {
@@ -452,6 +462,7 @@ def "test claude-stop notifies when background launch fails or TaskStop resolves
           ]
         }
       }
+
       {
         type: "assistant"
         message: {
@@ -509,6 +520,7 @@ def "test claude-stop drops placeholder when tool result has no async task id" [
           ]
         }
       }
+
       {
         type: "user"
         toolUseResult: {
@@ -559,10 +571,12 @@ def "test claude-stop ignores non-record message fields without error" [] {
         type: "system"
         message: "compact boundary"
       }
+
       {
         type: "user"
         message: "plain string message"
       }
+
       {
         type: "assistant"
         message: {
@@ -576,6 +590,7 @@ def "test claude-stop ignores non-record message fields without error" [] {
           ]
         }
       }
+
       {
         type: "attachment"
         attachment: "not-a-record"

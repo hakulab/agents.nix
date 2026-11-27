@@ -22,6 +22,9 @@ let
   cfg = config.agents.notify;
   dk = devkitLib.mkLib pkgs;
 
+  # ------------------------------------------------------------------------------------------------
+  # Notification packages
+  # ------------------------------------------------------------------------------------------------
   defaultToasty =
     if pkgs.stdenv.hostPlatform.system == "x86_64-linux" then
       pkgs.runCommand "toasty" { } ''
@@ -35,9 +38,6 @@ let
     else
       null;
 
-  # ------------------------------------------------------------------------------------------------
-  # Notification packages
-  # ------------------------------------------------------------------------------------------------
   notifyWrapperArgs =
     lib.optionals (cfg.toastyPackage != null) [
       "--set-default"
@@ -72,11 +72,6 @@ in
   # Options
   # ------------------------------------------------------------------------------------------------
   options.agents = {
-    _internal.notify = lib.mkOption {
-      type = lib.types.anything;
-      internal = true;
-    };
-
     notify = {
       libnotifyPackage = lib.mkOption {
         type = lib.types.nullOr lib.types.package;
@@ -90,6 +85,11 @@ in
         description = "Package providing toasty.exe for WSL toast notifications";
       };
     };
+
+    _internal.notify = lib.mkOption {
+      type = lib.types.anything;
+      internal = true;
+    };
   };
 
   # ------------------------------------------------------------------------------------------------
@@ -97,10 +97,10 @@ in
   # ------------------------------------------------------------------------------------------------
   config.agents._internal.notify = {
     inherit
-      mkProjectNotifyScript
       notifyPackage
       notifyScript
       projectNotifyPackage
+      mkProjectNotifyScript
       ;
   };
 }

@@ -117,29 +117,29 @@ in
   # Options
   # ------------------------------------------------------------------------------------------------
   options.agents = {
-    _internal = {
-      agentRoleOptions = lib.mkOption {
-        type = lib.types.anything;
-        internal = true;
-      };
-
-      agentRoles = lib.mkOption {
-        type = lib.types.anything;
-        internal = true;
-      };
-    };
-
     roles = {
+      definitions = lib.mkOption {
+        type = lib.types.attrsOf roleSubmodule;
+        default = { };
+        description = "Shared agent role definitions available to assistant adapters";
+      };
+
       defaultEnabled = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = builtins.attrNames cfg.roles.definitions;
         description = "Default list of enabled agent role names";
       };
+    };
 
-      definitions = lib.mkOption {
-        type = lib.types.attrsOf roleSubmodule;
-        default = { };
-        description = "Shared agent role definitions available to assistant adapters";
+    _internal = {
+      agentRoles = lib.mkOption {
+        type = lib.types.anything;
+        internal = true;
+      };
+
+      agentRoleOptions = lib.mkOption {
+        type = lib.types.anything;
+        internal = true;
       };
     };
   };

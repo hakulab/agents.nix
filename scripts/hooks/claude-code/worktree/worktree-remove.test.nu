@@ -53,6 +53,7 @@ def "test remove deletes through workmux and fails while the directory remains" 
         }
       ]
     }
+
     {
       label: "deferred"
       present: true
@@ -65,6 +66,7 @@ def "test remove deletes through workmux and fails while the directory remains" 
         }
       ]
     }
+
     {
       label: "missing"
       present: false

@@ -3,8 +3,8 @@
 # ==================================================================================================
 
 {
+  llm-agents,
   sharedModule,
-  llmAgentsPackagesFor,
 }:
 
 {
@@ -16,7 +16,7 @@
 
 let
   cfg = config.agents.ccusage;
-  llmAgentsPackages = llmAgentsPackagesFor pkgs.stdenv.hostPlatform.system;
+  llmAgentsPackages = llm-agents.packages.${pkgs.stdenv.hostPlatform.system};
   json = pkgs.formats.json { };
 
   piStoreSubmodule = lib.types.submodule {

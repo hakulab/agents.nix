@@ -4,11 +4,12 @@
 
 {
   agentsLib,
-  check,
-  throws,
+  harness,
 }:
 
 let
+  inherit (harness) check throws;
+
   # ------------------------------------------------------------------------------------------------
   # Catalog and provider fixtures
   # ------------------------------------------------------------------------------------------------
@@ -17,12 +18,15 @@ let
       "claude-opus-5-5".channelId.anthropic = "route/claude-opus-5-5";
       "claude-sonnet-5-5".channelId.anthropic = "route/claude-sonnet-5-5";
       "claude-haiku-5-5".channelId.anthropic = "route/claude-haiku-5-5";
+
       "gemini-4-neon".channelId = {
         a-unused = "unused/gemini-4-neon";
         google = "google/gemini-4-neon";
       };
+
       "gemini-4-hydrogen".channelId.google = "google/gemini-4-hydrogen";
     };
+
     defaults.hybrid = {
       default = "gemini-4-neon";
       flagship = "gemini-4-neon";
@@ -35,11 +39,13 @@ let
     baseUrl = "https://gateway.example.com";
     apiKeyFile = "/run/secrets/default-key";
     clientApiKeyFiles.claude-code = "/run/secrets/claude-key";
+
     channels = {
       anthropic = {
         family = "claude";
         nativeWebSearch = false;
       };
+
       google = {
         family = "gemini";
         nativeWebSearch = true;
@@ -51,6 +57,7 @@ let
     modelCatalog = extendedCatalog;
     providers = {
       gateway = gatewayProvider;
+
       direct = {
         apiUrls.anthropic-messages = "https://direct.example.com";
         apiKeyFile = "/run/secrets/direct-key";
@@ -71,6 +78,7 @@ let
       nativeWebSearch = false;
       clients = [ "claude-code" ];
     };
+
     direct-prose = {
       provider = "direct";
       channel = null;
@@ -80,6 +88,7 @@ let
       nativeWebSearch = null;
       clients = null;
     };
+
     gateway-anthropic = {
       provider = "gateway";
       channel = "anthropic";
@@ -88,18 +97,21 @@ let
       proseModel = null;
       nativeWebSearch = null;
     };
+
     gateway-custom-prose = {
       provider = "gateway";
       channel = "anthropic";
       family = "claude";
       proseModel = "gemini-4-hydrogen";
     };
+
     gateway-unknown-prose = {
       provider = "gateway";
       channel = "anthropic";
       family = "claude";
       proseModel = "nonexistent-model";
     };
+
     gateway-hybrid = {
       provider = "gateway";
       defaultsKey = "hybrid";

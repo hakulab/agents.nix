@@ -5,15 +5,13 @@
 {
   pkgs,
   lib,
-  check,
-  throws,
-  evalHomeWith,
-  sharedModule,
-  ompModule,
-  oxideCodeModule,
+  harness,
+  homeModules,
 }:
 
 let
+  inherit (harness) check throws evalHomeWith;
+
   stubOx = pkgs.writeShellScriptBin "ox" ''
     exit 0
   '';
@@ -31,73 +29,83 @@ let
       pkg: (pkg.meta.mainProgram or pkg.name) == name && (pkg.meta.priority or 0) == 0
     ) null packages;
 
-  disabledCfg = evalHomeWith [ oxideCodeModule ] { };
+  # ------------------------------------------------------------------------------------------------
+  # Fixtures
+  # ------------------------------------------------------------------------------------------------
+  disabledCfg = evalHomeWith [ homeModules.oxide-code ] { };
 
-  defaultPkgCfg = evalHomeWith [ oxideCodeModule ] {
+  defaultPkgCfg = evalHomeWith [ homeModules.oxide-code ] {
     agents.oxide-code.enable = true;
   };
 
-  basicCfg = evalHomeWith [ oxideCodeModule ] {
+  basicCfg = evalHomeWith [ homeModules.oxide-code ] {
     agents.oxide-code = {
       enable = true;
       package = stubOx;
     };
   };
 
-  combinedCfg = evalHomeWith [ sharedModule ompModule oxideCodeModule ] {
-    agents = {
-      browser.chromiumPackage = null;
+  combinedCfg =
+    evalHomeWith
+      [
+        homeModules.shared
+        homeModules.omp
+        homeModules.oxide-code
+      ]
+      {
+        agents = {
+          browser.chromiumPackage = null;
 
-      models.catalog = {
-        "claude-opus-5-5".channelId.anthropic = "gw/claude-opus-5-5";
-        "claude-sonnet-5-5".channelId.anthropic = "gw/claude-sonnet-5-5";
-        "claude-haiku-5-5".channelId.anthropic = "gw/claude-haiku-5-5";
-      };
+          models.catalog = {
+            "claude-opus-5-5".channelId.anthropic = "gw/claude-opus-5-5";
+            "claude-sonnet-5-5".channelId.anthropic = "gw/claude-sonnet-5-5";
+            "claude-haiku-5-5".channelId.anthropic = "gw/claude-haiku-5-5";
+          };
 
-      providers.my-gateway = {
-        baseUrl = "https://gw.example.test";
-        apiUrls = {
-          anthropic-messages = "https://gw.example.test/anthropic";
-          openai-responses = "https://gw.example.test/openai";
+          providers.my-gateway = {
+            baseUrl = "https://gw.example.test";
+            apiUrls = {
+              anthropic-messages = "https://gw.example.test/anthropic";
+              openai-responses = "https://gw.example.test/openai";
+            };
+            apiKeyFile = "/run/secrets/gw-default";
+            clientApiKeyFiles.oxide-code = "/run/secrets/gw-ox";
+            caCertFile = "/run/secrets/gw-ca.pem";
+            extraHeaders."x-tenant" = "demo";
+            channels.anthropic = {
+              family = "claude";
+              nativeWebSearch = false;
+            };
+          };
+
+          profiles = {
+            gw-claude = {
+              provider = "my-gateway";
+              family = "claude";
+              channel = "anthropic";
+            };
+
+            gw-gpt = {
+              provider = "my-gateway";
+              family = "gpt";
+            };
+          };
+
+          omp = {
+            enable = true;
+            package = stubOmp;
+          };
+
+          oxide-code = {
+            enable = true;
+            package = stubOx;
+            auth.defaultProfile = "gw-claude";
+            settings.tui.show_thinking = false;
+          };
         };
-        apiKeyFile = "/run/secrets/gw-default";
-        clientApiKeyFiles.oxide-code = "/run/secrets/gw-ox";
-        caCertFile = "/run/secrets/gw-ca.pem";
-        extraHeaders."x-tenant" = "demo";
-        channels.anthropic = {
-          family = "claude";
-          nativeWebSearch = false;
-        };
       };
 
-      profiles = {
-        gw-claude = {
-          provider = "my-gateway";
-          family = "claude";
-          channel = "anthropic";
-        };
-
-        gw-gpt = {
-          provider = "my-gateway";
-          family = "gpt";
-        };
-      };
-
-      omp = {
-        enable = true;
-        package = stubOmp;
-      };
-
-      oxide-code = {
-        enable = true;
-        package = stubOx;
-        auth.defaultProfile = "gw-claude";
-        settings.tui.show_thinking = false;
-      };
-    };
-  };
-
-  filteredProfilesCfg = evalHomeWith [ oxideCodeModule ] {
+  filteredProfilesCfg = evalHomeWith [ homeModules.oxide-code ] {
     agents = {
       providers.my-gateway = {
         baseUrl = "https://gw.example.test";
@@ -117,7 +125,10 @@ let
     };
   };
 
-  invalidDefaultCfg = evalHomeWith [ oxideCodeModule ] {
+  # ------------------------------------------------------------------------------------------------
+  # Negative assertion fixtures
+  # ------------------------------------------------------------------------------------------------
+  invalidDefaultCfg = evalHomeWith [ homeModules.oxide-code ] {
     agents.oxide-code = {
       enable = true;
       package = stubOx;

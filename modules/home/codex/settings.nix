@@ -3,9 +3,9 @@
 # ==================================================================================================
 
 {
+  resolved,
   hooks,
   mcp,
-  notify,
   permissions,
 }:
 
@@ -22,9 +22,11 @@
   approval_policy = "on-request";
   sandbox_mode = "workspace-write";
   approvals_reviewer = "auto_review";
+
   auto_review = {
     extra_policy = permissions.extraPolicy;
   };
+
   shell_environment_policy = {
     "inherit" = "all";
   };
@@ -75,7 +77,7 @@
   # Interface
   # ------------------------------------------------------------------------------------------------
   notify = [
-    "${notify.mkProjectNotifyScript}"
+    "${resolved.notify.mkProjectNotifyScript}"
     "--app"
     "codex"
     "Codex"
@@ -117,6 +119,7 @@
   # Features
   # ------------------------------------------------------------------------------------------------
   suppress_unstable_features_warning = true;
+
   features = {
     daemon_auto_start = true;
     default_mode_request_user_input = true;

@@ -16,6 +16,9 @@ let
   p = config.agents.mcp.presets.deepwiki;
 in
 {
+  # ------------------------------------------------------------------------------------------------
+  # Options
+  # ------------------------------------------------------------------------------------------------
   options.agents.mcp.presets.deepwiki = {
     enable = lib.mkEnableOption "DeepWiki HTTP MCP server preset";
 
@@ -26,6 +29,9 @@ in
     };
   };
 
+  # ------------------------------------------------------------------------------------------------
+  # Config
+  # ------------------------------------------------------------------------------------------------
   config.agents.mcp.servers = lib.mkIf p.enable {
     deepwiki = {
       displayName = lib.mkDefault agentsLib.mcp.presetDisplayNames.deepwiki;

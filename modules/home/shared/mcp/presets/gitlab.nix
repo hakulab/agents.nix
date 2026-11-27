@@ -3,8 +3,8 @@
 # ==================================================================================================
 
 {
+  self,
   agentsLib,
-  packagesFor,
 }:
 
 {
@@ -16,7 +16,7 @@
 
 let
   p = config.agents.mcp.presets.gitlab;
-  selfPackages = packagesFor pkgs.stdenv.hostPlatform.system;
+  selfPackages = self.packages.${pkgs.stdenv.hostPlatform.system};
   esc = lib.escapeShellArg;
 
   glabBin = lib.getExe p.glabPackage;
@@ -28,6 +28,9 @@ let
   '';
 in
 {
+  # ------------------------------------------------------------------------------------------------
+  # Options
+  # ------------------------------------------------------------------------------------------------
   options.agents.mcp.presets.gitlab = {
     enable = lib.mkEnableOption "GitLab MCP server preset";
 
@@ -70,6 +73,9 @@ in
     };
   };
 
+  # ------------------------------------------------------------------------------------------------
+  # Config
+  # ------------------------------------------------------------------------------------------------
   config.agents.mcp.servers = lib.mkIf p.enable {
     gitlab = {
       displayName = lib.mkDefault agentsLib.mcp.presetDisplayNames.gitlab;

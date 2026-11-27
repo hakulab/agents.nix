@@ -3,8 +3,8 @@
 # ==================================================================================================
 
 {
+  self,
   agentsLib,
-  packagesFor,
 }:
 
 {
@@ -183,6 +183,9 @@ let
       exec ${lib.escapeShellArgs command} "$@"
     '';
 
+  # ------------------------------------------------------------------------------------------------
+  # Server resolution
+  # ------------------------------------------------------------------------------------------------
   resolveServer =
     name: server:
     if server.type == "http" then
@@ -203,7 +206,7 @@ in
 {
   imports = [
     (import ./presets {
-      inherit agentsLib packagesFor;
+      inherit self agentsLib;
     })
   ];
 
@@ -211,20 +214,15 @@ in
   # Options
   # ------------------------------------------------------------------------------------------------
   options.agents = {
-    _internal.mcp = lib.mkOption {
-      type = lib.types.anything;
-      internal = true;
-    };
-
     mcp = {
-      disabledServers = agentsLib.mcp.mkDisabledServersOption {
-        description = "Global MCP servers to disable across all assistants";
-      };
-
       servers = lib.mkOption {
         type = lib.types.attrsOf mcpServerSubmodule;
         default = { };
         description = "Declared MCP servers wrapped and exposed to assistants";
+      };
+
+      disabledServers = agentsLib.mcp.mkDisabledServersOption {
+        description = "Global MCP servers to disable across all assistants";
       };
 
       timeouts = {
@@ -242,6 +240,11 @@ in
           description = "Pass --no-config to uvx when launching Python MCP servers";
         };
       };
+    };
+
+    _internal.mcp = lib.mkOption {
+      type = lib.types.anything;
+      internal = true;
     };
   };
 

@@ -3,17 +3,15 @@
 # ==================================================================================================
 
 {
+  llm-agents,
+  claude-statusline,
   agentsLib,
-  claudeStatuslineFor,
-  claudeStatuslineModule,
-  llmAgentsFor,
-  repoRoot,
-  sharedHomeModule,
+  sharedModule,
 }:
 
 let
-  assetsDir = repoRoot + "/assets";
-  scriptsDir = repoRoot + "/scripts";
+  assetsDir = ../../../assets;
+  scriptsDir = ../../../scripts;
 in
 {
   config,
@@ -43,17 +41,15 @@ let
       pkgs
       lib
       agentsLib
-      resolved
       scriptsDir
       mcpFlag
       ;
-    inherit (cfg.agents) enabledAgents;
   };
 in
 {
   imports = [
-    sharedHomeModule
-    claudeStatuslineModule
+    sharedModule
+    claude-statusline.homeModules.default
   ];
 
   # ------------------------------------------------------------------------------------------------
@@ -64,10 +60,12 @@ in
 
     package = lib.mkOption {
       type = lib.types.package;
-      default = pkgs.claude-code or (llmAgentsFor system).claude-code;
+      default = pkgs.claude-code or llm-agents.packages.${system}.claude-code;
       defaultText = lib.literalExpression "pkgs.claude-code or llm-agents.packages.\${system}.claude-code";
       description = "Base Claude Code package to wrap";
     };
+
+    auth = profiles.options;
 
     agents = {
       enabledAgents = resolved.agentRoleOptions.mkEnabledAgentsOption {
@@ -75,17 +73,7 @@ in
       };
     };
 
-    auth = profiles.options;
-
     hooks = {
-      autoDream = {
-        enable = lib.mkOption {
-          type = lib.types.bool;
-          default = true;
-          description = "Enable the SessionStart auto-dream memory consolidation hook";
-        };
-      };
-
       autoFormat = {
         enable = lib.mkOption {
           type = lib.types.bool;
@@ -110,11 +98,11 @@ in
         };
       };
 
-      notify = {
+      autoDream = {
         enable = lib.mkOption {
           type = lib.types.bool;
           default = true;
-          description = "Enable desktop notifications for Stop and AskUserQuestion hooks";
+          description = "Enable the SessionStart auto-dream memory consolidation hook";
         };
       };
 
@@ -135,9 +123,17 @@ in
 
         workmuxPackage = lib.mkOption {
           type = lib.types.package;
-          default = pkgs.workmux or (llmAgentsFor system).workmux;
+          default = pkgs.workmux or llm-agents.packages.${system}.workmux;
           defaultText = lib.literalExpression "pkgs.workmux or llm-agents.packages.\${system}.workmux";
           description = "Workmux package used by Claude Code worktree hooks";
+        };
+      };
+
+      notify = {
+        enable = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = "Enable desktop notifications for Stop and AskUserQuestion hooks";
         };
       };
     };
@@ -176,7 +172,7 @@ in
 
       package = lib.mkOption {
         type = lib.types.package;
-        default = pkgs.claude-statusline or (claudeStatuslineFor system).claude-statusline;
+        default = pkgs.claude-statusline or claude-statusline.packages.${system}.claude-statusline;
         defaultText = lib.literalExpression "pkgs.claude-statusline or claude-statusline.packages.\${system}.claude-statusline";
         description = "Package providing the claude-statusline binary";
       };
@@ -277,14 +273,13 @@ in
         import ./settings.nix {
           inherit
             lib
+            cfg
             resolved
             hooks
             permissionSettings
             plugins
             ;
           profileSettings = profiles.settings;
-          statuslineEnable = cfg.statusline.enable;
-          inherit (cfg) extraSettings;
         }
         // {
           "$schema" = "https://json.schemastore.org/claude-code-settings.json";
@@ -311,6 +306,9 @@ in
       profiles.config
 
       {
+        # ------------------------------------------------------------------------------------------
+        # Assertions
+        # ------------------------------------------------------------------------------------------
         assertions = [
           {
             assertion = unknownMcpServers == [ ];
@@ -318,23 +316,32 @@ in
           }
         ];
 
+        # ------------------------------------------------------------------------------------------
+        # Shared integration
+        # ------------------------------------------------------------------------------------------
         agents = {
           claude-code = {
             mcp.disabledServers = resolved.mcp.disabledServers;
+
             plugins = {
               marketplaces = lib.mapAttrs (_: lib.mkDefault) {
                 claude-plugins-official = "anthropics/claude-plugins-official";
                 workmux = "raine/workmux";
               };
+
               enabled = lib.mapAttrs (_: lib.mkDefault) {
                 "skill-creator@claude-plugins-official" = true;
                 "workmux-status@workmux" = true;
               };
             };
           };
+
           skills.targets.claude = lib.mkDefault true;
         };
 
+        # ------------------------------------------------------------------------------------------
+        # Program configuration
+        # ------------------------------------------------------------------------------------------
         programs = {
           claude-code = {
             enable = true;
@@ -344,6 +351,9 @@ in
           claude-statusline = lib.mkIf cfg.statusline.enable statusline;
         };
 
+        # ------------------------------------------------------------------------------------------
+        # Configuration files
+        # ------------------------------------------------------------------------------------------
         home.file = {
           ".claude/CLAUDE.md".text = claudeMdText;
           ".claude/settings.json".source = "${configFiles}/settings.json";

@@ -3,12 +3,12 @@
 # ==================================================================================================
 
 {
-  shared,
+  resolved,
 }:
 
 let
-  researcherWorkload = shared.agentRoles.researcher.workload or "standard";
-  reviewerWorkload = shared.agentRoles.reviewer.workload or "flagship";
+  researcherWorkload = resolved.agentRoles.researcher.workload or "standard";
+  reviewerWorkload = resolved.agentRoles.reviewer.workload or "flagship";
 in
 {
   # ------------------------------------------------------------------------------------------------
@@ -71,7 +71,7 @@ in
   followUpMode = "all";
   steeringMode = "all";
 
-  ask.timeout = shared.preferences.askTimeout;
+  ask.timeout = resolved.preferences.askTimeout;
 
   # ------------------------------------------------------------------------------------------------
   # Providers
@@ -89,7 +89,7 @@ in
   # ------------------------------------------------------------------------------------------------
   # Plan
   # ------------------------------------------------------------------------------------------------
-  plan.autosaveDir = shared.preferences.plansDir;
+  plan.autosaveDir = resolved.preferences.plansDir;
 
   # ------------------------------------------------------------------------------------------------
   # Memory

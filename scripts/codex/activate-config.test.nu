@@ -53,6 +53,7 @@ def "test activation records golden hook hashes and keeps other state" [] {
               })
             ]
           }
+
           {
             matcher: $edits
             hooks: [
@@ -62,10 +63,12 @@ def "test activation records golden hook hashes and keeps other state" [] {
               })
             ]
           }
+
           {
             hooks: [(command "/bin/status working")]
           }
         ]
+
         SessionStart: [
           {
             matcher: "compact"
@@ -76,6 +79,7 @@ def "test activation records golden hook hashes and keeps other state" [] {
               })
             ]
           }
+
           {
             matcher: "startup|resume|clear"
             hooks: [(command "/bin/register")]

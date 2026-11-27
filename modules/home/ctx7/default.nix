@@ -3,9 +3,9 @@
 # ==================================================================================================
 
 {
+  nixpkgs-unstable,
   agentsLib,
   sharedModule,
-  unstablePackagesFor,
 }:
 
 {
@@ -17,7 +17,7 @@
 
 let
   cfg = config.agents.ctx7;
-  unstablePackages = unstablePackagesFor pkgs.stdenv.hostPlatform.system;
+  unstablePackages = nixpkgs-unstable.legacyPackages.${pkgs.stdenv.hostPlatform.system};
 
   ctx7Pkg =
     if cfg.apiKeyFile != null then

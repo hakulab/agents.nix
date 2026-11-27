@@ -90,7 +90,7 @@ let
   };
 
   # ------------------------------------------------------------------------------------------------
-  # Tier defaults
+  # Default catalog
   # ------------------------------------------------------------------------------------------------
   familyDefaults = {
     claude = {
@@ -225,6 +225,9 @@ let
     };
   };
 
+  # ------------------------------------------------------------------------------------------------
+  # Family metadata and helpers
+  # ------------------------------------------------------------------------------------------------
   familyApis = {
     claude = "anthropic-messages";
     gpt = "openai-responses";
@@ -260,12 +263,12 @@ let
 in
 {
   inherit
-    channelIds
     defaultCatalog
-    extendCatalog
+    workloadPolicy
+    roleTiers
     familyApis
     modelAliases
-    roleTiers
-    workloadPolicy
+    channelIds
+    extendCatalog
     ;
 }

@@ -81,10 +81,10 @@ let
   # Installed hooks and notification events
   # ------------------------------------------------------------------------------------------------
   installed = sharedHooks.install (
-    lib.optional hooksCfg.autoDream.enable autoDream
-    ++ lib.optional hooksCfg.autoFormat.enable sharedHooks.hooks.autoFormat
+    lib.optional hooksCfg.autoFormat.enable sharedHooks.hooks.autoFormat
     ++ lib.optional hooksCfg.commentGate.enable sharedHooks.hooks.commentGate
     ++ lib.optional hooksCfg.completeness.enable sharedHooks.hooks.completeness
+    ++ lib.optional hooksCfg.autoDream.enable autoDream
     ++ lib.optional hooksCfg.teammateIdle.enable teammateIdle
     ++ lib.optionals hooksCfg.worktree.enable [
       worktreeCreate

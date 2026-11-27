@@ -80,18 +80,6 @@ in
   # Options
   # ------------------------------------------------------------------------------------------------
   options.agents = {
-    _internal = {
-      mkModelCall = lib.mkOption {
-        type = lib.types.anything;
-        internal = true;
-      };
-
-      modelIdFor = lib.mkOption {
-        type = lib.types.anything;
-        internal = true;
-      };
-    };
-
     modelCall = {
       enable = lib.mkEnableOption "OpenAI-compatible model call endpoint for LLM-backed hooks and skills";
 
@@ -155,6 +143,18 @@ in
           default = 10;
           description = "Extra seconds a hook outlives its model call so timeouts can be reported";
         };
+      };
+    };
+
+    _internal = {
+      mkModelCall = lib.mkOption {
+        type = lib.types.anything;
+        internal = true;
+      };
+
+      modelIdFor = lib.mkOption {
+        type = lib.types.anything;
+        internal = true;
       };
     };
   };

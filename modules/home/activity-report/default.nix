@@ -3,9 +3,8 @@
 # ==================================================================================================
 
 {
+  activity-report,
   sharedModule,
-  activityReportModule,
-  activityReportPackagesFor,
 }:
 
 {
@@ -17,7 +16,7 @@
 
 let
   cfg = config.agents.activity-report;
-  activityReportPackages = activityReportPackagesFor pkgs.stdenv.hostPlatform.system;
+  activityReportPackages = activity-report.packages.${pkgs.stdenv.hostPlatform.system};
   toml = pkgs.formats.toml { };
 
   workmuxEnabled = config.agents.workmux.enable or false;
@@ -43,7 +42,7 @@ in
 {
   imports = [
     sharedModule
-    activityReportModule
+    activity-report.homeModules.default
   ];
 
   # ------------------------------------------------------------------------------------------------

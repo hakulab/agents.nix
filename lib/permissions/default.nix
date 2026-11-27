@@ -44,19 +44,23 @@ let
           readOnly = baseAllows.commands.readOnly ++ (extraAllowCommands.readOnly or [ ]);
           mutating = baseAllows.commands.mutating ++ (extraAllowCommands.mutating or [ ]);
         };
+
         mcp = mergeMcpAttrs [
           baseAllows.mcp
           extraMcpAllows
         ];
+
         policies = baseAllows.policies ++ extraAllowPolicies;
       };
 
       gates = baseGates // {
         commands = baseGates.commands ++ extraGateCommands;
+
         mcp = mergeMcpAttrs [
           baseGates.mcp
           extraMcpGates
         ];
+
         policies = baseGates.policies ++ extraGatePolicies;
       };
 
@@ -80,6 +84,7 @@ let
         inherit ownRepositories allows gates;
         allowCommands = allows.commands.readOnly ++ allows.commands.mutating;
         gateCommands = map (gate: gate.command) gates.commands;
+
         mcpAllows = toMcpEntries (
           lib.mapAttrs (
             _:
@@ -88,6 +93,7 @@ let
             })
           ) allows.mcp
         );
+
         mcpGates = toMcpEntries gates.mcp;
       };
     in
