@@ -8,6 +8,7 @@
   home-manager,
   sharedModule,
   claudeCodeModule,
+  codexModule,
 }:
 
 let
@@ -15,11 +16,11 @@ let
 
   homeDirectory = if pkgs.stdenv.isDarwin then "/Users/tester" else "/home/tester";
 
-  evalHomeWith =
-    modules: extraModule:
+  evalModules =
+    modules:
     (home-manager.lib.homeManagerConfiguration {
       inherit pkgs;
-      modules = modules ++ [
+      modules = [
         {
           home = {
             username = "tester";
@@ -27,9 +28,11 @@ let
             stateVersion = "26.05";
           };
         }
-        extraModule
-      ];
+      ]
+      ++ modules;
     }).config;
+
+  evalHomeWith = modules: extraModule: evalModules (modules ++ [ extraModule ]);
 
   evalHome = evalHomeWith [ sharedModule ];
 
@@ -47,6 +50,19 @@ let
   };
 in
 {
+  home-codex = import ./codex.nix {
+    inherit
+      pkgs
+      lib
+      check
+      throws
+      evalModules
+      codexModule
+      sharedModule
+      homeDirectory
+      ;
+  };
+
   home-shared-defaults = import ./defaults.nix {
     inherit
       pkgs
