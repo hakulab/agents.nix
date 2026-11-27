@@ -87,7 +87,7 @@ let
     );
 
     acp = mkHomeModule "acp" (
-      import ./acp {
+      import ./acp.nix {
         inherit
           self
           llm-agents
@@ -98,25 +98,25 @@ let
     );
 
     activity-report = mkHomeModule "activity-report" (
-      import ./activity-report {
+      import ./activity-report.nix {
         inherit activity-report sharedModule;
       }
     );
 
     agent-project-move = mkHomeModule "agent-project-move" (
-      import ./agent-project-move {
+      import ./agent-project-move.nix {
         inherit agent-project-move sharedModule;
       }
     );
 
     ccusage = mkHomeModule "ccusage" (
-      import ./ccusage {
+      import ./ccusage.nix {
         inherit llm-agents agentsLib sharedModule;
       }
     );
 
     ctx7 = mkHomeModule "ctx7" (
-      import ./ctx7 {
+      import ./ctx7.nix {
         inherit nixpkgs-unstable agentsLib sharedModule;
       }
     );
@@ -135,7 +135,7 @@ let
     );
 
     workmux = mkHomeModule "workmux" (
-      import ./workmux {
+      import ./workmux.nix {
         inherit llm-agents sharedModule;
       }
     );
