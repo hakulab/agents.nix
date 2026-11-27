@@ -6,9 +6,91 @@
 
 Declarative Nix and Home Manager modules for coding agents, MCP servers, hooks, and skills across Linux (`x86_64-linux`, `aarch64-linux`) and macOS (`aarch64-darwin`).
 
+## Quickstart
+
+Add `agents-nix` to your flake inputs and import `agents-nix.homeModules.default` in your Home Manager configuration. Every assistant and peripheral tool is disabled by default so you opt in explicitly, or you can import individual modules from `homeModules.*` when you only want a subset.
+
+```nix
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
+    home-manager = {
+      url = "github:nix-community/home-manager/release-26.05";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    agents-nix = {
+      url = "github:hakulab/agents.nix";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        home-manager.follows = "home-manager";
+      };
+    };
+  };
+
+  outputs =
+    {
+      nixpkgs,
+      home-manager,
+      agents-nix,
+      ...
+    }:
+    {
+      homeConfigurations.dev = home-manager.lib.homeManagerConfiguration {
+        pkgs = nixpkgs.legacyPackages.x86_64-linux;
+        modules = [
+          agents-nix.homeModules.default
+          {
+            agents = {
+              # Enable only the assistants and tools you use.
+              claude-code.enable = true;
+              codex.enable = true;
+              workmux.enable = true;
+
+              # Custom provider and profile using backend-agnostic *File secret paths.
+              providers.gateway = {
+                baseUrl = "https://gateway.example.com";
+                apiUrls.anthropic-messages = "https://gateway.example.com/anthropic";
+                apiKeyFile = "/run/secrets/gateway-api-key";
+                caCertFile = "/run/secrets/gateway-ca.pem";
+                channels.claude = {
+                  family = "claude";
+                  nativeWebSearch = false;
+                };
+              };
+
+              profiles.gateway-claude = {
+                provider = "gateway";
+                family = "claude";
+                channel = "claude";
+                clients = [ "claude-code" ];
+              };
+
+              # Built-in MCP presets and custom servers.
+              mcp = {
+                presets.github = {
+                  enable = true;
+                  fallbackTokenFile = "/run/secrets/github-pat";
+                };
+
+                servers.docs = {
+                  type = "http";
+                  displayName = "Docs";
+                  url = "https://mcp.example.com/docs";
+                  permissions.allowTools = [ "search_docs" ];
+                };
+              };
+            };
+          }
+        ];
+      };
+    };
+}
+```
+
 ## Flake outputs
 
 - `lib`: pure Nix helpers for models, profiles, permissions, MCP servers, prompts, proxies, and package wrappers.
+- `homeModules.default`: bundle importing all 12 Home Manager modules below with every assistant and tool disabled by default.
 - `homeModules.shared`: shared Home Manager module defining the core `agents.*` options (`dataDir`, `proxy`, `browser`, `instructions`, `roles`, `permissions`, `models`, `providers`, `profiles`, `modelCall`, `mcp`, `skills`, `hooks`, `notify`) and the read-only `config.agents.resolved` interface.
 - `homeModules.claude-code`: opt-in Home Manager module for Claude Code (`agents.claude-code.*`), importing `homeModules.shared` and configuring settings, permissions, hooks, custom agents, MCP servers, plugins, auth profiles, and `claude-statusline`.
 - `homeModules.codex`: standalone Home Manager module (`agents.codex`) configuring the Codex CLI, permission rules, hooks, custom agents, MCP servers, auth profiles, plugins, and desktop preferences.
@@ -20,6 +102,16 @@ Declarative Nix and Home Manager modules for coding agents, MCP servers, hooks, 
 - `checks.<system>`: library evaluation checks, Home Manager module evaluation checks, Nushell script tests, TypeScript tests (`ts-tests` via `bun test`), and package builds.
 - `devShells.<system>.default`: development shell with Nushell, `nu-test`, `bun`, and pre-commit hooks.
 - `formatter.<system>`: `nixfmt-tree` formatter.
+
+## Using assets and scripts without Nix
+
+All prompts, instructions, skills, and helper scripts are plain files in this repository and can be browsed or copied directly without Nix:
+
+- `assets/instructions/`: global assistant instructions and linked topic guides (`code-design.md`, `documentation.md`, `editing-and-comments.md`, `verification-and-tests.md`, `writing.md`, and related guides).
+- `assets/prompt-fragments/`: reusable Markdown fragments composed into assistant and hook prompts.
+- `assets/agent-roles/`: subagent role definitions and coordination prompts.
+- `assets/skills/`: standalone skills such as `prose-polish`.
+- `scripts/`: Nushell and POSIX shell helpers for hooks (`auto-format`, `comment-gate`, `completeness`), cross-platform desktop notifications (`notify/`), profile switching (`profile-switch/`), and Oh My Pi extensions (`omp/`).
 
 ## Cache
 

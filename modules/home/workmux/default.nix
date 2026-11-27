@@ -9,6 +9,7 @@
 
 {
   config,
+  options,
   pkgs,
   lib,
   ...
@@ -20,6 +21,9 @@ let
   yaml = pkgs.formats.yaml { };
 
   configFile = yaml.generate "workmux-config.yaml" cfg.settings;
+
+  workmuxCodexHooks =
+    (lib.importJSON "${cfg.package.src}/resources/codex/hooks/workmux-status.json").hooks;
 
   workmuxSkills = [
     "coordinator"
@@ -84,6 +88,12 @@ in
       description = "Install bundled Workmux skills under ~/.agents/skills";
     };
 
+    installCodexHooks = lib.mkOption {
+      type = lib.types.bool;
+      default = config.agents.codex.enable or false;
+      description = "Install Workmux status hooks into Codex";
+    };
+
     installOmpExtension = lib.mkOption {
       type = lib.types.bool;
       default = config.agents.omp.enable or false;
@@ -114,6 +124,10 @@ in
 
         xdg.configFile."workmux/config.yaml".source = configFile;
       }
+
+      (lib.optionalAttrs (options.agents ? codex) {
+        agents.codex.hooks.extraEvents = lib.mkIf cfg.installCodexHooks workmuxCodexHooks;
+      })
 
       (lib.mkIf cfg.tmuxIntegration {
         programs.tmux.extraConfig = lib.mkBefore ''
