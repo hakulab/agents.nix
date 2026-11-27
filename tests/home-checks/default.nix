@@ -9,6 +9,8 @@
   sharedModule,
   claudeCodeModule,
   codexModule,
+  ompModule,
+  oxideCodeModule,
 }:
 
 let
@@ -100,6 +102,31 @@ in
       throws
       evalHome
       homeDirectory
+      ;
+  };
+
+  home-omp = import ./omp.nix {
+    inherit
+      pkgs
+      lib
+      check
+      throws
+      evalHomeWith
+      sharedModule
+      ompModule
+      ;
+  };
+
+  home-oxide-code = import ./oxide-code.nix {
+    inherit
+      pkgs
+      lib
+      check
+      throws
+      evalHomeWith
+      sharedModule
+      ompModule
+      oxideCodeModule
       ;
   };
 }
