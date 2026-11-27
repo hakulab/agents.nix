@@ -9,6 +9,7 @@ use test-runner.testlib.nu [run-script]
 
 const SCRIPT_DIR = path self "."
 const SCRIPT = ($SCRIPT_DIR | path join "worktree-remove.nu")
+const SESSION_ID = "test-session"
 
 def invoke [payload: record, vars: record]: nothing -> record {
   let dir = (mktemp --directory)
@@ -41,23 +42,39 @@ def "test remove requires an owned worktree and matching branch and handle" [] {
     {
       label: "removed"
       ownership: "worktree-demo"
+      session_id: $SESSION_ID
       handle: "demo"
+      remote_collision: false
       leaves: false
       exit_code: 0
-      calls: [["path" "demo"] ["remove" "--force" "demo"]]
+      calls: [["list" "--json" "demo"] ["remove" "--force" "demo"]]
     }
     {
       label: "deferred"
       ownership: "worktree-demo"
+      session_id: $SESSION_ID
       handle: "demo"
+      remote_collision: false
       leaves: true
       exit_code: 1
-      calls: [["path" "demo"] ["remove" "--force" "demo"]]
+      calls: [["list" "--json" "demo"] ["remove" "--force" "demo"]]
     }
     {
       label: "unowned"
       ownership: null
+      session_id: $SESSION_ID
       handle: "demo"
+      remote_collision: false
+      leaves: true
+      exit_code: 1
+      calls: []
+    }
+    {
+      label: "different session"
+      ownership: "worktree-demo"
+      session_id: "earlier-session"
+      handle: "demo"
+      remote_collision: false
       leaves: true
       exit_code: 1
       calls: []
@@ -65,7 +82,9 @@ def "test remove requires an owned worktree and matching branch and handle" [] {
     {
       label: "different branch"
       ownership: "worktree-original"
+      session_id: $SESSION_ID
       handle: "demo"
+      remote_collision: false
       leaves: true
       exit_code: 1
       calls: []
@@ -73,10 +92,22 @@ def "test remove requires an owned worktree and matching branch and handle" [] {
     {
       label: "different checkout"
       ownership: "worktree-demo"
+      session_id: $SESSION_ID
       handle: "other"
+      remote_collision: false
       leaves: true
       exit_code: 1
-      calls: [["path" "demo"]]
+      calls: [["list" "--json" "demo"]]
+    }
+    {
+      label: "remote handle collision"
+      ownership: "worktree-demo"
+      session_id: $SESSION_ID
+      handle: "demo"
+      remote_collision: true
+      leaves: true
+      exit_code: 1
+      calls: [["list" "--json" "demo"]]
     }
   ]
 
@@ -98,12 +129,21 @@ def "test remove requires an owned worktree and matching branch and handle" [] {
 
     if $case.ownership != null {
       let git_dir = (^git -C $worktree rev-parse --absolute-git-dir | str trim)
-      $case.ownership | save ($git_dir | path join "claude-code-worktree")
+      {
+        session_id: $SESSION_ID
+        branch: $case.ownership
+      }
+      | to json --raw
+      | save ($git_dir | path join "claude-code-worktree.json")
     }
 
     let result = (
-      invoke {worktree_path: $worktree} {
+      invoke {
+        worktree_path: $worktree
+        session_id: $case.session_id
+      } {
         STUB_EXISTING_PATH: ($root | path join $case.handle)
+        STUB_REMOTE_COLLISION: (if $case.remote_collision { "1" } else { "" })
         STUB_REMOVE_PATH: $worktree
         STUB_REMOVE_LEAVES: (if $case.leaves { "1" } else { "" })
       }

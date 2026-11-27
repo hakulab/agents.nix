@@ -20,6 +20,11 @@ def base-ref [cwd: string]: nothing -> string {
 
 def main [] {
   let input = (^cat | from json)
+  let session_id = $input.session_id
+  if ($session_id | is-empty) {
+    error make {msg: "Claude Code did not provide a worktree session ID."}
+  }
+
   cd $input.cwd
 
   let branch = $"worktree-($input.name)"
@@ -53,6 +58,11 @@ def main [] {
   }
 
   let git_dir = (^git -C $receipt.worktree_path rev-parse --absolute-git-dir | str trim)
-  $branch | save ($git_dir | path join "claude-code-worktree")
+  {
+    session_id: $session_id
+    branch: $branch
+  }
+  | to json --raw
+  | save ($git_dir | path join "claude-code-worktree.json")
   print $receipt.worktree_path
 }

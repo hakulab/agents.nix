@@ -45,6 +45,19 @@ def --wrapped main [...args: string] {
       }
       | to json --raw
     }
+    "list" => {
+      let handle = ($args | get 2)
+      let local = {
+        handle: $handle
+        path: $env.STUB_EXISTING_PATH
+      }
+      let remote = ($env.STUB_REMOTE_COLLISION? | default "") == "1"
+      if $remote {
+        [$local {handle: $handle, remote: "node"}] | to json --raw
+      } else {
+        [$local] | to json --raw
+      }
+    }
     "remove" => {
       let leaves = ($env.STUB_REMOVE_LEAVES? | default "")
       if ($leaves | is-empty) {

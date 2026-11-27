@@ -9,6 +9,7 @@ use test-runner.testlib.nu [run-script]
 
 const SCRIPT_DIR = path self "."
 const SCRIPT = ($SCRIPT_DIR | path join "worktree-create.nu")
+const SESSION_ID = "test-session"
 
 # Creates a repository at `root/app`, optionally with a remote whose default branch is set.
 def setup-repo [root: string, --with-origin]: nothing -> record {
@@ -99,6 +100,7 @@ def "test create claims a newly provisioned worktree" [] {
       invoke {
         name: $case.name
         cwd: $case.cwd
+        session_id: $SESSION_ID
       } {
         STUB_EXISTING_PATH: $case.existing
         STUB_ADD_PATH: $created
@@ -112,8 +114,8 @@ def "test create claims a newly provisioned worktree" [] {
       ["add" $branch "--base" $case.base "--name" $case.name "--no-hooks" "--headless" "--json"]
     ] $case.label
     let git_dir = (^git -C $created rev-parse --absolute-git-dir | str trim)
-    let marker = ($git_dir | path join "claude-code-worktree")
-    assert equal (open --raw $marker) $branch $case.label
+    let marker = ($git_dir | path join "claude-code-worktree.json")
+    assert equal (open $marker) {session_id: $SESSION_ID, branch: $branch} $case.label
     assert equal (git-rev $created "HEAD") (git-rev $case.cwd $case.base) $case.label
   }
 }
@@ -124,6 +126,7 @@ def "test create refuses existing handles and branches" [] {
   let payload = {
     name: "demo"
     cwd: $repo.app
+    session_id: $SESSION_ID
   }
 
   ^git -C $repo.app worktree add --quiet -b manual $existing
@@ -133,7 +136,7 @@ def "test create refuses existing handles and branches" [] {
   assert ($handle_collision.run.stderr | str contains "Worktree demo already exists")
   assert equal ($handle_collision.calls | get args) [["path" "demo"]]
   let git_dir = (^git -C $existing rev-parse --absolute-git-dir | str trim)
-  assert (not ($git_dir | path join "claude-code-worktree" | path exists))
+  assert (not ($git_dir | path join "claude-code-worktree.json" | path exists))
 
   ^git -C $repo.app branch "worktree-demo"
   let branch_collision = (invoke $payload {})
@@ -151,6 +154,7 @@ def "test create refuses ownership when a branch appears during provisioning" []
     invoke {
       name: "demo"
       cwd: $repo.app
+      session_id: $SESSION_ID
     } {
       STUB_ADD_PATH: $created
       STUB_ADD_EXISTING: "1"
@@ -161,5 +165,5 @@ def "test create refuses ownership when a branch appears during provisioning" []
   assert equal $result.run.stdout ""
   assert ($result.run.stderr | str contains "Workmux checked out an existing branch")
   let git_dir = (^git -C $created rev-parse --absolute-git-dir | str trim)
-  assert (not ($git_dir | path join "claude-code-worktree" | path exists))
+  assert (not ($git_dir | path join "claude-code-worktree.json" | path exists))
 }
