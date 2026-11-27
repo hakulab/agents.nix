@@ -12,6 +12,7 @@
   claude-statusline,
   oxide-code,
   agentsLib,
+  repoRoot,
 }:
 
 let
@@ -24,7 +25,12 @@ let
 
   sharedModule = mkHomeModule "shared" (
     import ./shared {
-      inherit self devkit agentsLib;
+      inherit
+        self
+        devkit
+        agentsLib
+        repoRoot
+        ;
     }
   );
 
@@ -37,6 +43,7 @@ let
           llm-agents
           claude-statusline
           agentsLib
+          repoRoot
           sharedModule
           ;
       }
@@ -48,6 +55,7 @@ let
           devkit
           llm-agents
           agentsLib
+          repoRoot
           sharedModule
           ;
       }
@@ -55,13 +63,23 @@ let
 
     omp = mkHomeModule "omp" (
       import ./omp {
-        inherit llm-agents agentsLib sharedModule;
+        inherit
+          llm-agents
+          agentsLib
+          repoRoot
+          sharedModule
+          ;
       }
     );
 
     oxide-code = mkHomeModule "oxide-code" (
       import ./oxide-code {
-        inherit oxide-code agentsLib sharedModule;
+        inherit
+          oxide-code
+          agentsLib
+          repoRoot
+          sharedModule
+          ;
       }
     );
 
@@ -106,6 +124,7 @@ let
           nixpkgs-unstable
           devkit
           agentsLib
+          repoRoot
           sharedModule
           ;
       }

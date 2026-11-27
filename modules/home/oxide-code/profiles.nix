@@ -7,6 +7,7 @@
   pkgs,
   lib,
   agentsLib,
+  repoRoot,
 }:
 
 let
@@ -64,7 +65,7 @@ let
     ];
   } profiles;
 
-  profileLoader = pkgs.replaceVars ../../../scripts/oxide-code/profile-loader.sh {
+  profileLoader = pkgs.replaceVars (repoRoot + "/scripts/oxide-code/profile-loader.sh") {
     inherit stateDir;
     profileEnvVars = toString profileEnvVars;
   };

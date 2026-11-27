@@ -153,7 +153,6 @@ def "test repositories without an installed hook or a gate config are skipped" [
       name: "no installed hook"
       repo: (make-repo ($env.TMPDIR | path join "repo-without-hook") $config --no-hook)
     }
-
     {
       name: "no gate config"
       repo: (make-repo ($env.TMPDIR | path join "repo-without-config") $config --no-config)
@@ -406,7 +405,6 @@ def "test failed hook blocks keep failures and drop formatter rewrites" [] {
       output: ""
       reports: [""]
     }
-
     {
       name: "formatter only"
       output: (
@@ -419,7 +417,6 @@ def "test failed hook blocks keep failures and drop formatter rewrites" [] {
       )
       reports: []
     }
-
     {
       name: "failed and formatting hooks"
       output: (
@@ -454,7 +451,6 @@ def "test failed hook blocks keep failures and drop formatter rewrites" [] {
         )
       ]
     }
-
     {
       name: "long block truncates"
       output: $long

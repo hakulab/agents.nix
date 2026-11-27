@@ -6,6 +6,7 @@
   nixpkgs-unstable,
   devkit,
   agentsLib,
+  repoRoot,
   sharedModule,
 }:
 
@@ -139,7 +140,7 @@ let
 
   activateConfig = dk.writeNuApplication {
     name = "activate-t3code-config";
-    text = builtins.readFile ../../../scripts/t3code/activate-config.nu;
+    text = builtins.readFile (repoRoot + "/scripts/t3code/activate-config.nu");
     runtimeInputs = [ pkgs.coreutils ];
     libDirs = [ config.agents._internal.nuModules ];
     flags.config = json.generate "activate-t3code-config.json" {

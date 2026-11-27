@@ -75,7 +75,6 @@ def "test edits forward paths from the event cwd" [] {
       }
       paths: ["notes.md"]
     }
-
     {
       input: {
         tool_name: "apply_patch"
@@ -92,7 +91,6 @@ def "test edits forward paths from the event cwd" [] {
       }
       paths: ["--notes.md" "./notes.md" "added.md"]
     }
-
     {
       input: {
         tool_name: "apply_patch"
@@ -106,7 +104,6 @@ def "test edits forward paths from the event cwd" [] {
       }
       paths: ["--x;print INJECTED"]
     }
-
     {
       input: {
         tool_name: "apply_patch"

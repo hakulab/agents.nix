@@ -129,7 +129,6 @@ in
   config = {
     assertions = [
       switch.assertion
-
       {
         assertion = builtins.length caCertFiles <= 1;
         message = "OMP: enabled providers specify multiple distinct caCertFile paths";

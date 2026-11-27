@@ -108,6 +108,7 @@
           oxide-code
           agentsLib
           ;
+        repoRoot = ./.;
       };
     in
     {
@@ -136,17 +137,14 @@
           src = ./.;
           hooks = {
             doctoc.enable = true;
-
             lychee = {
               enable = true;
               settings.flags = "--offline --exclude '@(docsDir|devkitSource)@'";
             };
-
             nu-check = {
               enable = true;
               settings.libDirs = nuLibDirs;
             };
-
             prettier.enable = true;
             shellcheck.enable = true;
             shfmt.enable = true;

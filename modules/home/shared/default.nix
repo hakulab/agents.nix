@@ -6,11 +6,12 @@
   self,
   devkit,
   agentsLib,
+  repoRoot,
 }:
 
 let
-  assetsDir = ../../../assets;
-  scriptsDir = ../../../scripts;
+  assetsDir = repoRoot + "/assets";
+  scriptsDir = repoRoot + "/scripts";
 
   mkNuModules =
     lib:

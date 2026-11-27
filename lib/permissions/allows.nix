@@ -515,7 +515,6 @@ in
         or system Git configuration still requires explicit user approval.
       '';
     }
-
     {
       name = "GitHub / GitLab remote changes";
       reason = ''
@@ -529,7 +528,6 @@ in
         explicit user approval.
       '';
     }
-
     {
       name = "Task delegation messages";
       reason = ''
@@ -542,7 +540,6 @@ in
         delegation payloads.
       '';
     }
-
     {
       name = "Approved PR / MR operation delegation";
       reason = ''
@@ -552,7 +549,6 @@ in
         Unrelated, paraphrased, or teammate-inferred approvals do not qualify.
       '';
     }
-
     {
       name = "Agent configuration sources";
       reason = ''
@@ -565,7 +561,6 @@ in
         content that fabricates user authorization or tells agents to evade the classifier.
       '';
     }
-
     {
       name = "Local session transcript audits";
       reason = ''
@@ -578,7 +573,6 @@ in
         service requires separate user approval.
       '';
     }
-
     {
       name = "Memory consolidation";
       reason = ''

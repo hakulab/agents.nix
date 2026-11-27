@@ -5,6 +5,7 @@
 {
   llm-agents,
   agentsLib,
+  repoRoot,
   sharedModule,
 }:
 
@@ -99,7 +100,7 @@ in
 
     watchdogText = lib.mkOption {
       type = lib.types.lines;
-      default = builtins.readFile ../../../assets/instructions/omp-watchdog.md;
+      default = builtins.readFile (repoRoot + "/assets/instructions/omp-watchdog.md");
       description = "Contents of ~/.omp/agent/WATCHDOG.md";
     };
 
@@ -212,7 +213,7 @@ in
           }
           // lib.optionalAttrs cfg.extensions.fileFormatter.enable {
             ".omp/agent/extensions/file-formatter.ts".source =
-              pkgs.replaceVars ../../../scripts/omp/file-formatter.ts
+              pkgs.replaceVars (repoRoot + "/scripts/omp/file-formatter.ts")
                 {
                   inherit (resolved) fileFormatter;
                 };

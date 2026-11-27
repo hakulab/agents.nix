@@ -173,7 +173,6 @@ let
         "subscription"
       ];
     }
-
     {
       field = "tokenFile";
       isSet = p: p.tokenFile != null;
@@ -183,7 +182,6 @@ let
       ];
       forbidden = [ "subscription" ];
     }
-
     {
       field = "extraEnvFiles";
       isSet = p: p.extraEnvFiles != { };

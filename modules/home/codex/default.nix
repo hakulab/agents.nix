@@ -6,11 +6,12 @@
   devkit,
   llm-agents,
   agentsLib,
+  repoRoot,
   sharedModule,
 }:
 
 let
-  scriptsDir = ../../../scripts;
+  scriptsDir = repoRoot + "/scripts";
 in
 {
   config,

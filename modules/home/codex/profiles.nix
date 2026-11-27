@@ -102,13 +102,11 @@ let
       model_provider = if profile.provider == null then "openai" else profile.provider;
       model_reasoning_effort = roles.default.effort;
       plan_mode_reasoning_effort = roles.plan.effort;
-
       agents = {
         default_subagent_model = roles.task.modelId;
         default_subagent_reasoning_effort = roles.task.effort;
       }
       // mkAgents workloads;
-
       web_search = if profile.nativeWebSearch then "live" else "disabled";
     }
     // lib.optionalAttrs (profile.provider != null) {
@@ -147,7 +145,6 @@ in
   config = {
     assertions = [
       switch.assertion
-
       {
         assertion = builtins.length caCertFiles <= 1;
         message = "Codex: enabled providers declare multiple distinct caCertFile values, but CODEX_CA_CERTIFICATE accepts only one";

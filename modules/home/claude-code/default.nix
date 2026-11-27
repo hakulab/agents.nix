@@ -6,12 +6,13 @@
   llm-agents,
   claude-statusline,
   agentsLib,
+  repoRoot,
   sharedModule,
 }:
 
 let
-  assetsDir = ../../../assets;
-  scriptsDir = ../../../scripts;
+  assetsDir = repoRoot + "/assets";
+  scriptsDir = repoRoot + "/scripts";
 in
 {
   config,

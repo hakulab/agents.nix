@@ -5,6 +5,7 @@
 {
   oxide-code,
   agentsLib,
+  repoRoot,
   sharedModule,
 }:
 
@@ -24,6 +25,7 @@ let
       pkgs
       lib
       agentsLib
+      repoRoot
       ;
   };
 
