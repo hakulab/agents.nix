@@ -20,7 +20,7 @@ lib.types.submodule {
     };
 
     sessionEffort = lib.mkOption {
-      type = lib.types.str;
+      type = lib.types.nullOr lib.types.str;
       default = officialProfile.sessionEffort;
       description = "Reasoning effort for the main session";
     };
@@ -58,7 +58,7 @@ lib.types.submodule {
     tokenFile = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = null;
-      description = "Runtime file path containing the auth token (forbidden for subscription)";
+      description = "Runtime file path containing the auth token (required for oauth-token and api-key, forbidden for subscription)";
     };
 
     extraHeaders = lib.mkOption {

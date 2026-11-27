@@ -68,33 +68,33 @@
       # requires current stable Chrome, while stable nixpkgs freezes Chromium.
       playwrightDriverFor = system: nixpkgs-unstable.legacyPackages.${system}.playwright-driver;
 
-      sharedHomeModule = {
+      mkHomeModule = name: module: {
         _class = "homeManager";
-        key = "${self}/flake.nix#homeModules.shared";
-        imports = [
-          (import ./modules/home/shared {
-            inherit agentsLib;
-            devkitLib = devkit.lib;
-            devkitOutPath = devkit.outPath;
-            repoRoot = ./.;
-            packagesFor = system: self.packages.${system};
-          })
-        ];
+        _file = "${self}/flake.nix#homeModules.${name}";
+        key = "${self}/flake.nix#homeModules.${name}";
+        imports = [ module ];
       };
 
-      claudeCodeHomeModule = {
-        _class = "homeManager";
-        key = "${self}/flake.nix#homeModules.claude-code";
-        imports = [
-          (import ./modules/home/claude-code {
-            inherit agentsLib sharedHomeModule;
-            claudeStatuslineFor = system: claude-statusline.packages.${system};
-            claudeStatuslineModule = claude-statusline.homeModules.default;
-            llmAgentsFor = system: llm-agents.packages.${system};
-            repoRoot = ./.;
-          })
-        ];
-      };
+      sharedHomeModule = mkHomeModule "shared" (
+        import ./modules/home/shared {
+          inherit agentsLib;
+          devkitLib = devkit.lib;
+          devkitOutPath = devkit.outPath;
+          repoRoot = ./.;
+          packagesFor = system: self.packages.${system};
+        }
+      );
+
+      claudeCodeHomeModule = mkHomeModule "claude-code" (
+        import ./modules/home/claude-code {
+          inherit agentsLib;
+          claudeStatuslineFor = system: claude-statusline.packages.${system};
+          claudeStatuslineModule = claude-statusline.homeModules.default;
+          llmAgentsFor = system: llm-agents.packages.${system};
+          repoRoot = ./.;
+          inherit sharedHomeModule;
+        }
+      );
     in
     {
       lib = agentsLib;

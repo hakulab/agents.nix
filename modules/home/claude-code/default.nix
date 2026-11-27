@@ -69,18 +69,13 @@ in
       description = "Base Claude Code package to wrap";
     };
 
-    auth = profiles.options;
-
     agents = {
       enabledAgents = resolved.agentRoleOptions.mkEnabledAgentsOption {
         description = "Custom agents enabled for Claude Code";
       };
     };
 
-    mcp = resolved.mcp.mkMcpOptions {
-      default = resolved.mcp.serverNames;
-      description = "MCP servers for Claude Code";
-    };
+    auth = profiles.options;
 
     hooks = {
       autoDream = {
@@ -147,22 +142,21 @@ in
       };
     };
 
+    mcp = resolved.mcp.mkMcpOptions {
+      default = resolved.mcp.serverNames;
+      description = "MCP servers for Claude Code";
+    };
+
     plugins = {
       marketplaces = lib.mkOption {
         type = lib.types.attrsOf lib.types.str;
-        default = {
-          claude-plugins-official = "anthropics/claude-plugins-official";
-          workmux = "raine/workmux";
-        };
+        default = { };
         description = "GitHub plugin marketplaces keyed by marketplace name";
       };
 
       enabled = lib.mkOption {
         type = lib.types.attrsOf lib.types.bool;
-        default = {
-          "skill-creator@claude-plugins-official" = true;
-          "workmux-status@workmux" = true;
-        };
+        default = { };
         description = "Plugins enabled in Claude Code settings";
       };
 
@@ -260,10 +254,11 @@ in
       wrapArgs = profiles.wrapArgs ++ agentsLib.proxy.mkProxyWrapArgs config.agents.proxy;
 
       claudeCodeBin = agentsLib.wrapPackage {
-        inherit pkgs wrapArgs;
+        inherit pkgs;
         pkg = cfg.package;
         name = "claude-code-${cfg.package.version or "wrapped"}";
         bin = "claude";
+        inherit wrapArgs;
         envVars = {
           # Restores the upstream default, since nixpkgs narrows it to `system`, which loads only a
           # few Keychain roots in macOS SSH sessions.
@@ -324,7 +319,19 @@ in
         ];
 
         agents = {
-          claude-code.mcp.disabledServers = lib.mkDefault resolved.mcp.disabledServers;
+          claude-code = {
+            mcp.disabledServers = resolved.mcp.disabledServers;
+            plugins = {
+              marketplaces = lib.mapAttrs (_: lib.mkDefault) {
+                claude-plugins-official = "anthropics/claude-plugins-official";
+                workmux = "raine/workmux";
+              };
+              enabled = lib.mapAttrs (_: lib.mkDefault) {
+                "skill-creator@claude-plugins-official" = true;
+                "workmux-status@workmux" = true;
+              };
+            };
+          };
           skills.targets.claude = lib.mkDefault true;
         };
 
@@ -334,7 +341,7 @@ in
             package = claudeCodeBin;
           };
 
-          claude-statusline = statusline;
+          claude-statusline = lib.mkIf cfg.statusline.enable statusline;
         };
 
         home.file = {

@@ -17,10 +17,14 @@ let
   renderFrontmatter =
     name: agent:
     let
-      settings = agent.claude // {
-        model = agentModels.${agent.workload};
-        effort = efforts.${agent.workload};
-      };
+      settings =
+        agent.claude
+        // {
+          model = agentModels.${agent.workload};
+        }
+        // lib.optionalAttrs (efforts ? ${agent.workload}) {
+          effort = efforts.${agent.workload};
+        };
 
       frontmatterLines = [
         "name: ${name}"

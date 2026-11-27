@@ -201,9 +201,44 @@ let
           workmuxPackage = stubWorkmux;
         };
       };
+
       statusline = {
         enable = false;
         package = stubStatusline;
+      };
+    };
+  };
+
+  edgeCasesCfg = evalHomeWith [ sharedModule claudeCodeModule ] {
+    agents = {
+      mcp = {
+        disabledServers = [ "deepwiki" ];
+        presets = {
+          deepwiki.enable = true;
+          github.enable = true;
+          gitlab.enable = true;
+        };
+      };
+
+      profiles.official = {
+        family = "claude";
+        clients = [ "codex" ];
+      };
+
+      claude-code = {
+        enable = true;
+        package = stubClaude;
+        hooks.worktree.workmuxPackage = stubWorkmux;
+        statusline.package = stubStatusline;
+        mcp.disabledServers = [ "gitlab" ];
+        auth = {
+          defaultProfile = "custom";
+          profiles.custom = {
+            type = "subscription";
+            sessionEffort = null;
+            efforts = lib.mkForce { };
+          };
+        };
       };
     };
   };
@@ -404,6 +439,30 @@ let
         && s.refresh_interval == 30;
     }
 
+    {
+      name = "custom plugin entries merge with built-in plugin and marketplace defaults";
+      ok =
+        let
+          p = fullCfg.agents.claude-code.plugins;
+        in
+        p.marketplaces ? claude-plugins-official
+        && p.marketplaces ? workmux
+        && p.marketplaces ? custom-mkt
+        && p.enabled."skill-creator@claude-plugins-official"
+        && p.enabled."workmux-status@workmux"
+        && p.enabled."custom-plugin@custom-mkt";
+    }
+    {
+      name = "per-assistant disabledServers extends global disabledServers and absent official profile falls back cleanly";
+      ok =
+        lib.elem "deepwiki" edgeCasesCfg.agents.claude-code.mcp.disabledServers
+        && lib.elem "gitlab" edgeCasesCfg.agents.claude-code.mcp.disabledServers
+        && !(edgeCasesCfg.agents.claude-code.auth.profiles ? official)
+        && edgeCasesCfg.agents.claude-code.auth.profiles.custom.sessionEffort == null
+        && edgeCasesCfg.agents.claude-code.auth.profiles.custom.efforts == { }
+        && lib.all (a: a.assertion) edgeCasesCfg.assertions;
+    }
+
     # ----------------------------------------------------------------------------------------------
     # Validation and secret path constraints
     # ----------------------------------------------------------------------------------------------
@@ -436,6 +495,8 @@ let
   minimalSettingsFile = minimalHooksAndNoStatuslineCfg.home.file.".claude/settings.json".source;
   fullClaudePkg = fullCfg.programs.claude-code.package;
   gwProfileDir = fullCfg.home.file."${fullCfg.xdg.stateHome}/claude-code/profiles/gw-claude.d".source;
+  customProfileDir =
+    edgeCasesCfg.home.file."${edgeCasesCfg.xdg.stateHome}/claude-code/profiles/custom.d".source;
 
   artifactsCheck =
     pkgs.runCommand "check-home-claude-code-artifacts"
@@ -449,6 +510,7 @@ let
         minimal=${lib.escapeShellArg minimalSettingsFile}
         wrapper=${lib.escapeShellArg "${fullClaudePkg}/bin/claude"}
         gw_dir=${lib.escapeShellArg gwProfileDir}
+        custom_dir=${lib.escapeShellArg customProfileDir}
 
         jq -e '
           ."$schema" == "https://json.schemastore.org/claude-code-settings.json"
@@ -457,8 +519,12 @@ let
           and (.permissions.allow | index("Bash(${homeDirectory}/.claude/skills/trusted-skill/scripts/check.sh *)") != null)
           and (.autoMode.environment | any(contains("github.com/example-org")))
           and (.autoMode.allow | index("Custom allow policy for tests.") != null)
+          and .enabledPlugins."skill-creator@claude-plugins-official" == true
+          and .enabledPlugins."workmux-status@workmux" == true
           and .enabledPlugins."rust-analyzer-lsp@claude-plugins-official" == true
           and .enabledPlugins."custom-plugin@custom-mkt" == true
+          and .extraKnownMarketplaces."claude-plugins-official".source.repo == "anthropics/claude-plugins-official"
+          and .extraKnownMarketplaces.workmux.source.repo == "raine/workmux"
           and .extraKnownMarketplaces."custom-mkt".source.repo == "example/custom-mkt"
           and .statusLine.command == "claude-statusline"
           and .theme == "light"
@@ -468,7 +534,7 @@ let
 
         jq -e '
           (.hooks.Stop | map(.hooks[]) | any(.type == "command" and (.command | contains("--app claude --claude-stop"))))
-          and (.hooks.PermissionRequest | any(.matcher == "AskUserQuestion" and (.hooks | any(.command | contains("--app claude") and (contains("--claude-stop") | not)))))
+          and (.hooks.PermissionRequest | any(.matcher == "AskUserQuestion" and (.hooks | any(.command | contains("--app claude --stdin") and (contains("--claude-stop") | not)))))
           and (.hooks.PostToolUse | length == 2)
           and (.hooks.SessionStart | length == 1)
           and (.hooks.TeammateIdle | length == 1)
@@ -501,6 +567,10 @@ let
         test -f "$gw_dir/agents/reviewer.md"
         test ! -e "$gw_dir/agents/implementer.md"
         grep -q '^name: reviewer$' "$gw_dir/agents/reviewer.md"
+
+        custom_settings="$(grep -oE '/nix/store/[^"'"'"' ]+claude-code-settings-custom\.json' "$custom_dir/env.sh" | head -n 1)"
+        jq -e 'has("effortLevel") | not' "$custom_settings" > /dev/null
+        ! grep -q '^effort:' "$custom_dir/agents/reviewer.md"
 
         touch "$out"
       '';

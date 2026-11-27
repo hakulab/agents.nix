@@ -120,7 +120,9 @@ let
           modelAliases.claude.${tier} or modelAliases.claude.flagship
       ) workloads;
 
-      efforts = lib.mapAttrs (_: workload: workload.effort) workloads;
+      efforts = lib.filterAttrs (_: effort: effort != null) (
+        lib.mapAttrs (_: workload: workload.effort) workloads
+      );
 
       modelOverrides = lib.optionalAttrs (lib.any (workload: workload.channel == "anthropic") (
         builtins.attrValues workloads
@@ -137,12 +139,25 @@ let
 
   profiles = lib.mapAttrs mkProfile resolvedProfiles;
 
+  officialProfile =
+    profiles.official or (mkProfile "official" (
+      resolved.profileResolver.resolveProfile {
+        name = "official";
+        profile = {
+          provider = null;
+          channel = null;
+          family = "claude";
+          nativeWebSearch = true;
+          oauthTokenFile = null;
+        };
+      }
+    ));
+
   # ------------------------------------------------------------------------------------------------
   # Profile submodule
   # ------------------------------------------------------------------------------------------------
   profileType = import ./profile-module.nix {
-    inherit lib;
-    officialProfile = profiles.official;
+    inherit lib officialProfile;
   };
 
   # ------------------------------------------------------------------------------------------------
@@ -245,7 +260,7 @@ let
       ];
 
       settings = json.generate "claude-code-settings-${name}.json" (
-        {
+        lib.optionalAttrs (profile.sessionEffort != null) {
           effortLevel = profile.sessionEffort;
         }
         // lib.optionalAttrs (modelSettings != { }) {
@@ -292,12 +307,12 @@ let
   };
 
   switch = resolved.mkProfileSwitch {
-    inherit stateDir;
-    inherit (cfg.auth) defaultProfile;
     name = "claude-switch";
     assistant = "Claude Code";
+    inherit stateDir;
     extension = "d";
     profiles = profileBundles;
+    inherit (cfg.auth) defaultProfile;
   };
 
   processWrapper = pkgs.writeShellScript "claude-process-wrapper" (

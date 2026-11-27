@@ -24,6 +24,7 @@ let
   // statuslineCfg.extraSettings;
 in
 {
-  inherit (statuslineCfg) enable package;
+  enable = true;
+  inherit (statuslineCfg) package;
   inherit settings;
 }

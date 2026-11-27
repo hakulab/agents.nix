@@ -101,7 +101,7 @@ let
         hooks = [
           {
             type = "command";
-            command = ''${projectNotify} --app claude 'Claude Code' "Question asked"'';
+            command = "${projectNotify} --app claude --stdin 'Claude Code' 'Question asked'";
           }
         ];
       }
@@ -112,7 +112,7 @@ let
         hooks = [
           {
             type = "command";
-            command = ''${projectNotify} --app claude --claude-stop 'Claude Code' "Response complete"'';
+            command = "${projectNotify} --app claude --claude-stop 'Claude Code' 'Response complete'";
           }
         ];
       }
