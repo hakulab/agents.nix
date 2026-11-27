@@ -9,27 +9,11 @@ Use the [release skill](https://github.com/hakulab/plugins/blob/main/plugins/hak
 
 ### Stability surface
 
-Within a minor version, stable releases keep exported flake outputs and documented module interfaces compatible. Currently exported outputs:
-
-- `lib`
-- `homeModules.default`
-- `homeModules.shared`
-- `homeModules.claude-code`
-- `homeModules.codex`
-- `homeModules.omp`
-- `homeModules.oxide-code`
-- `homeModules.{acp,activity-report,agent-project-move,ccusage,ctx7,t3code,workmux}`
-- `overlays.default`
-- `packages.<system>`
-- `checks.<system>`
-- `devShells.<system>.default`
-- `formatter.<system>`
-
-Expand this list as Home Manager, NixOS, and nix-darwin modules are added.
+Within a minor version, stable releases keep all exported flake outputs in [`flake.nix`](flake.nix) and documented module interfaces compatible, including Home Manager, NixOS, and nix-darwin modules as they are added.
 
 ## Preparation and verification
 
-Draft release notes with devkit's shared changelog generator, update `CHANGELOG.md`, and run the [verification commands](AGENTS.md#verification). Mark changes to the stability surface with `!` in the conventional commit title.
+Draft release notes with devkit's shared changelog generator, update `CHANGELOG.md`, and run the [verification commands](AGENTS.md#verification). Mark breaking changes to the stability surface with `!` in the conventional commit title.
 
 ```bash
 nix run github:hakulab/devkit/v3#changelog -- vX.Y.Z
