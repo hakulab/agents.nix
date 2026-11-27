@@ -1,5 +1,51 @@
 {
   "nodes": {
+    "activity-report": {
+      "inputs": {
+        "devkit": [
+          "devkit"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1795733435,
+        "narHash": "sha256-Jq/ayrHDa46G4/pk0XyzVjDyu7xMt8ZukDtE2S6DPA8=",
+        "owner": "hakulab",
+        "repo": "activity-report",
+        "rev": "e9b27a677bfd46f39bff7063abb446bebbdd4b64",
+        "type": "github"
+      },
+      "original": {
+        "owner": "hakulab",
+        "repo": "activity-report",
+        "type": "github"
+      }
+    },
+    "agent-project-move": {
+      "inputs": {
+        "devkit": [
+          "devkit"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1795740082,
+        "narHash": "sha256-3uZsYGVgPKtMg1r2uJkFoan077TsvVIqR2wCupugN40=",
+        "owner": "hakulab",
+        "repo": "agent-project-move",
+        "rev": "bbce4026d2077e4a8ba94967e68e48698b45bc3e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "hakulab",
+        "repo": "agent-project-move",
+        "type": "github"
+      }
+    },
     "bun2nix": {
       "inputs": {
         "flake-parts": [
@@ -247,6 +293,8 @@
     },
     "root": {
       "inputs": {
+        "activity-report": "activity-report",
+        "agent-project-move": "agent-project-move",
         "claude-statusline": "claude-statusline",
         "devkit": "devkit",
         "home-manager": "home-manager",

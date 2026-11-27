@@ -12,6 +12,7 @@ deepwiki
 devkit
 direnv
 doctoc
+earlyoom
 elif
 envrc
 esep

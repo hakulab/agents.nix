@@ -17,6 +17,7 @@ Within a minor version, stable releases keep exported flake outputs and document
 - `homeModules.omp`
 - `homeModules.oxide-code`
 - `homeModules.shared`
+- `homeModules.{acp,activity-report,agent-project-move,ccusage,ctx7,t3code,workmux}`
 - `overlays.default`
 - `packages.<system>`
 - `checks.<system>`
