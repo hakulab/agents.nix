@@ -4,6 +4,7 @@
   "enableGlobDot": true,
   "useGitignore": true,
   "gitignoreRoot": ".",
+  "allowCompoundWords": true,
   "dictionaryDefinitions": [
     {
       "name": "project-words",
@@ -12,5 +13,5 @@
     }
   ],
   "dictionaries": ["project-words"],
-  "ignorePaths": [".git", "flake.lock"]
+  "ignorePaths": [".git", "**/fixtures/**", "flake.lock"]
 }

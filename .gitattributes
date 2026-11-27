@@ -1,0 +1,3 @@
+* text=auto
+flake.lock linguist-generated
+**/fixtures/** -text

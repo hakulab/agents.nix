@@ -1,0 +1,2 @@
+- Send code defects directly to the implementer.
+- When user-facing docs or CLI copy change substantially, share the summary with the usability reviewer if one is active on the team.
