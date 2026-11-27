@@ -62,7 +62,7 @@ in
       enable = lib.mkOption {
         type = lib.types.bool;
         default = true;
-        description = "Install shared agent instruction documents";
+        description = "Include the bundled instruction text and install companion guides";
       };
 
       docs = lib.mkOption {
@@ -73,10 +73,14 @@ in
 
       baseText = lib.mkOption {
         type = lib.types.lines;
-        default = renderBase {
-          "@devkitSource@" = devkitOutPath;
-          "@docsDir@" = installedDocsDir;
-        };
+        default =
+          if cfg.instructions.enable then
+            renderBase {
+              "@devkitSource@" = devkitOutPath;
+              "@docsDir@" = installedDocsDir;
+            }
+          else
+            "";
         description = "Base cross-assistant instruction text";
       };
 
