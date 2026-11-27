@@ -51,7 +51,7 @@ def run-notify [
 }
 
 # --------------------------------------------------------------------------------------------------
-# Platform dispatch
+# WSL (toasty.exe)
 # --------------------------------------------------------------------------------------------------
 
 def "test notify.nu forwards app and icon flags to toasty on WSL" [] {
@@ -81,6 +81,19 @@ def "test notify.nu omits empty app and icon flags on WSL" [] {
   ]
 }
 
+def "test notify.nu passes title as message when body is empty on WSL" [] {
+  let result = (run-notify "wsl" "TOASTY_BIN" ["Claude Code" "" --app "claude"])
+
+  assert equal $result.run.exit_code 0 $result.run.stderr
+  assert equal $result.calls [
+    ["Claude Code" "--app" "claude"]
+  ]
+}
+
+# --------------------------------------------------------------------------------------------------
+# Linux (notify-send)
+# --------------------------------------------------------------------------------------------------
+
 def "test notify.nu forwards app and icon flags to notify-send on Linux" [] {
   let result = (
     run-notify "linux" "NOTIFY_SEND_BIN" [
@@ -95,9 +108,31 @@ def "test notify.nu forwards app and icon flags to notify-send on Linux" [] {
 
   assert equal $result.run.exit_code 0 $result.run.stderr
   assert equal $result.calls [
-    ["-a" "codex" "-i" "dialog-information" "Codex" "[demo] Response complete"]
+    ["-a" "codex" "-i" "dialog-information" "--" "Codex" "[demo] Response complete"]
   ]
 }
+
+def "test notify.nu separates leading-dash title from options on Linux" [] {
+  let result = (run-notify "linux" "NOTIFY_SEND_BIN" [-- "--urgent" "[demo] Check"])
+
+  assert equal $result.run.exit_code 0 $result.run.stderr
+  assert equal $result.calls [
+    ["--" "--urgent" "[demo] Check"]
+  ]
+}
+
+def "test notify.nu defaults title when called with no arguments" [] {
+  let result = (run-notify "linux" "NOTIFY_SEND_BIN" [])
+
+  assert equal $result.run.exit_code 0 $result.run.stderr
+  assert equal $result.calls [
+    ["--" "Notification" ""]
+  ]
+}
+
+# --------------------------------------------------------------------------------------------------
+# macOS (osascript)
+# --------------------------------------------------------------------------------------------------
 
 def "test notify.nu passes title and body via argv to osascript on macOS" [] {
   let result = (
@@ -125,14 +160,9 @@ def "test notify.nu passes title and body via argv to osascript on macOS" [] {
   ]
 }
 
-def "test notify.nu defaults title when called with no arguments" [] {
-  let result = (run-notify "linux" "NOTIFY_SEND_BIN" [])
-
-  assert equal $result.run.exit_code 0 $result.run.stderr
-  assert equal $result.calls [
-    ["Notification" ""]
-  ]
-}
+# --------------------------------------------------------------------------------------------------
+# Fallback behavior
+# --------------------------------------------------------------------------------------------------
 
 def "test notify.nu exits cleanly when notifier binary is missing" [] {
   let run = with-env {

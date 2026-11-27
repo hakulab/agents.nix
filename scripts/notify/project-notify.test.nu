@@ -52,7 +52,7 @@ def run-project-notify [
 }
 
 # --------------------------------------------------------------------------------------------------
-# project-notify.nu: argument and flag forwarding
+# Argument and flag forwarding
 # --------------------------------------------------------------------------------------------------
 
 def "test project-notify forwards app and icon flags and uses payload cwd" [] {
@@ -71,7 +71,7 @@ def "test project-notify forwards app and icon flags and uses payload cwd" [] {
 
   assert equal $result.run.exit_code 0 $result.run.stderr
   assert equal $result.calls [
-    ["Codex" "[demo-repo] Response complete" "--app" "codex" "--icon" "/tmp/codex.png"]
+    ["--app" "codex" "--icon" "/tmp/codex.png" "Codex" "[demo-repo] Response complete"]
   ]
 }
 
@@ -85,8 +85,18 @@ def "test project-notify omits empty app and icon flags" [] {
   ]
 }
 
+def "test project-notify omits trailing space when message is empty" [] {
+  let payload = ({cwd: "/tmp/workspace/demo-repo"} | to json --raw)
+  let result = (run-project-notify ["Claude Code" "" $payload])
+
+  assert equal $result.run.exit_code 0 $result.run.stderr
+  assert equal $result.calls [
+    ["Claude Code" "[demo-repo]"]
+  ]
+}
+
 # --------------------------------------------------------------------------------------------------
-# project-notify.nu: Claude Code Stop hook filtering
+# Claude Code Stop hook: suppression
 # --------------------------------------------------------------------------------------------------
 
 def "test claude-stop skips when stop hook is active" [] {
@@ -208,6 +218,10 @@ def "test claude-stop skips while background Bash task is unresolved or only que
   assert equal $result.calls []
 }
 
+# --------------------------------------------------------------------------------------------------
+# Claude Code Stop hook: task resolution
+# --------------------------------------------------------------------------------------------------
+
 def "test claude-stop notifies once all background tasks resolve" [] {
   let dir = (mktemp --directory)
   let transcript = (
@@ -274,7 +288,119 @@ def "test claude-stop notifies once all background tasks resolve" [] {
 
   assert equal $result.run.exit_code 0 $result.run.stderr
   assert equal $result.calls [
-    ["Claude Code" "[demo-repo] Response complete" "--app" "claude"]
+    ["--app" "claude" "Claude Code" "[demo-repo] Response complete"]
+  ]
+}
+
+def "test claude-stop resolves multiple task-notification blocks in one message" [] {
+  let dir = (mktemp --directory)
+  let transcript = (
+    write-transcript $dir [
+      {
+        type: "user"
+        toolUseResult: {
+          isAsync: true
+          status: "async_launched"
+          agentId: "agent_m1"
+        }
+        message: {
+          content: [
+            {
+              type: "tool_result"
+              tool_use_id: "tu_m1"
+              content: "launched"
+            }
+          ]
+        }
+      }
+      {
+        type: "user"
+        toolUseResult: {
+          backgroundTaskId: "b_m2"
+        }
+        message: {
+          content: [
+            {
+              type: "tool_result"
+              tool_use_id: "tu_m2"
+              content: "running"
+            }
+          ]
+        }
+      }
+      {
+        type: "user"
+        message: {
+          content: "<task-notification><task-id>agent_m1</task-id><status>completed</status></task-notification>\n<task-notification><task-id>b_m2</task-id><status>completed</status></task-notification>"
+        }
+      }
+    ]
+  )
+  let event = (
+    {
+      cwd: "/tmp/workspace/demo-repo"
+      stop_hook_active: false
+      transcript_path: $transcript
+    }
+    | to json --raw
+  )
+  let result = (
+    run-project-notify
+      ["Claude Code" "Response complete" --app "claude" --claude-stop]
+      --stdin-text $event
+  )
+
+  assert equal $result.run.exit_code 0 $result.run.stderr
+  assert equal $result.calls [
+    ["--app" "claude" "Claude Code" "[demo-repo] Response complete"]
+  ]
+}
+
+def "test claude-stop resolves background task from queued-command attachment" [] {
+  let dir = (mktemp --directory)
+  let transcript = (
+    write-transcript $dir [
+      {
+        type: "user"
+        toolUseResult: {
+          backgroundTaskId: "b_att_1"
+        }
+        message: {
+          content: [
+            {
+              type: "tool_result"
+              tool_use_id: "tu_att_1"
+              content: "running"
+            }
+          ]
+        }
+      }
+      {
+        type: "attachment"
+        attachment: {
+          type: "queued_command"
+          prompt: "<task-notification><task-id>b_att_1</task-id><status>completed</status></task-notification>"
+        }
+      }
+    ]
+  )
+  let event = (
+    {
+      cwd: "/tmp/workspace/demo-repo"
+      stop_hook_active: false
+      transcript_path: $transcript
+    }
+    | to json --raw
+  )
+  let result = (
+    run-project-notify
+      ["Claude Code" "Response complete" --app "claude" --claude-stop]
+      --stdin-text $event
+  )
+
+  assert equal $result.run.exit_code 0 $result.run.stderr
+  assert equal $result.calls [
+    ["--app" "claude" "Claude Code" "[demo-repo] Response complete"]
   ]
 }
 
@@ -359,6 +485,119 @@ def "test claude-stop notifies when background launch fails or TaskStop resolves
 
   assert equal $result.run.exit_code 0 $result.run.stderr
   assert equal $result.calls [
-    ["Claude Code" "[demo-repo] Response complete" "--app" "claude"]
+    ["--app" "claude" "Claude Code" "[demo-repo] Response complete"]
+  ]
+}
+
+def "test claude-stop drops placeholder when tool result has no async task id" [] {
+  let dir = (mktemp --directory)
+  let transcript = (
+    write-transcript $dir [
+      {
+        type: "assistant"
+        message: {
+          content: [
+            {
+              type: "tool_use"
+              id: "tu_teammate_1"
+              name: "Agent"
+              input: {
+                description: "Spawn teammate"
+                run_in_background: true
+              }
+            }
+          ]
+        }
+      }
+      {
+        type: "user"
+        toolUseResult: {
+          status: "teammate_spawned"
+          agentId: "teammate_1"
+        }
+        message: {
+          content: [
+            {
+              type: "tool_result"
+              tool_use_id: "tu_teammate_1"
+              content: "Teammate spawned"
+            }
+          ]
+        }
+      }
+    ]
+  )
+  let event = (
+    {
+      cwd: "/tmp/workspace/demo-repo"
+      stop_hook_active: false
+      transcript_path: $transcript
+    }
+    | to json --raw
+  )
+  let result = (
+    run-project-notify
+      ["Claude Code" "Response complete" --app "claude" --claude-stop]
+      --stdin-text $event
+  )
+
+  assert equal $result.run.exit_code 0 $result.run.stderr
+  assert equal $result.calls [
+    ["--app" "claude" "Claude Code" "[demo-repo] Response complete"]
+  ]
+}
+
+# --------------------------------------------------------------------------------------------------
+# Claude Code Stop hook: malformed transcript entries
+# --------------------------------------------------------------------------------------------------
+
+def "test claude-stop ignores non-record message fields without error" [] {
+  let dir = (mktemp --directory)
+  let transcript = (
+    write-transcript $dir [
+      {
+        type: "system"
+        message: "compact boundary"
+      }
+      {
+        type: "user"
+        message: "plain string message"
+      }
+      {
+        type: "assistant"
+        message: {
+          content: [
+            {
+              type: "tool_use"
+              id: "tu_bad_input"
+              name: "Bash"
+              input: "not-a-record"
+            }
+          ]
+        }
+      }
+      {
+        type: "attachment"
+        attachment: "not-a-record"
+      }
+    ]
+  )
+  let event = (
+    {
+      cwd: "/tmp/workspace/demo-repo"
+      stop_hook_active: false
+      transcript_path: $transcript
+    }
+    | to json --raw
+  )
+  let result = (
+    run-project-notify
+      ["Claude Code" "Response complete" --app "claude" --claude-stop]
+      --stdin-text $event
+  )
+
+  assert equal $result.run.exit_code 0 $result.run.stderr
+  assert equal $result.calls [
+    ["--app" "claude" "Claude Code" "[demo-repo] Response complete"]
   ]
 }

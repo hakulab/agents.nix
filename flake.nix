@@ -71,27 +71,19 @@
         preCommit = dk.preCommit {
           src = ./.;
           hooks = {
-            cspell.excludes = [ "/fixtures/" ];
             doctoc.enable = true;
-            end-of-file-fixer.excludes = [ "/fixtures/" ];
             lychee = {
               enable = true;
-              excludes = [ "/fixtures/" ];
               settings.flags = "--offline --exclude '@(docsDir|devkitSource)@'";
             };
-            markdownlint-cli2.excludes = [ "/fixtures/" ];
             nu-check = {
               enable = true;
               settings.libDirs = nuLibDirs;
             };
-            prettier = {
-              enable = true;
-              excludes = [ "/fixtures/" ];
-            };
+            prettier.enable = true;
             shellcheck.enable = true;
             shfmt.enable = true;
             taplo.enable = true;
-            trim-trailing-whitespace.excludes = [ "/fixtures/" ];
           };
         };
 

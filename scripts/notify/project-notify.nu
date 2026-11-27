@@ -7,6 +7,11 @@
 const SCRIPT_DIR = path self "."
 const DEFAULT_NOTIFY = ($SCRIPT_DIR | path join "notify.nu")
 
+# Return true when `$value` is a Nushell record.
+def is-record [value: any]: nothing -> bool {
+  $value | describe | str starts-with "record"
+}
+
 # Parse a JSON string into a record, returning null when the input is empty or not a JSON object.
 def parse-json-record [text: string]: nothing -> oneof<record, nothing> {
   if ($text | str trim | is-empty) {
@@ -20,7 +25,7 @@ def parse-json-record [text: string]: nothing -> oneof<record, nothing> {
     null
   }
 
-  if ($parsed | describe | str starts-with "record") {
+  if (is-record $parsed) {
     $parsed
   } else {
     null
@@ -51,15 +56,21 @@ def resolve-task [
   }
 }
 
-# Resolve any `<task-notification>` embedded in `$text` against `$pending`.
+# Resolve every `<task-notification>` block embedded in `$text` against `$pending`.
 def resolve-notification-text [pending: list<record>, text: string]: nothing -> list<record> {
   if not ($text | str contains "<task-notification>") {
     return $pending
   }
 
-  let task_id = (extract-xml-tag $text "task-id")
-  let tool_use_id = (extract-xml-tag $text "tool-use-id")
-  resolve-task $pending $task_id $tool_use_id
+  $text
+  | split row "<task-notification>"
+  | skip 1
+  | reduce --fold $pending {|segment, acc|
+    let block = ($segment | split row "</task-notification>" | first)
+    let task_id = (extract-xml-tag $block "task-id")
+    let tool_use_id = (extract-xml-tag $block "tool-use-id")
+    resolve-task $acc $task_id $tool_use_id
+  }
 }
 
 # Return true when `$value` is a Nushell list or table (JSON array of records).
@@ -69,7 +80,7 @@ def is-sequence [value: any]: nothing -> bool {
 }
 
 # Return true when a Claude Code JSONL transcript has unresolved background Agent or Bash tasks.
-export def has-pending-background-tasks [transcript_path: path]: nothing -> bool {
+def has-pending-background-tasks [transcript_path: path]: nothing -> bool {
   if not ($transcript_path | path exists) {
     return false
   }
@@ -89,21 +100,48 @@ export def has-pending-background-tasks [transcript_path: path]: nothing -> bool
     }
 
     let entry_type = ($entry | get -o type | default "")
-    let content = ($entry | get -o message.content)
+
+    if $entry_type == "attachment" {
+      let attachment = ($entry | get -o attachment)
+      if (is-record $attachment) {
+        let att_type = ($attachment | get -o type | default "")
+        let prompt = ($attachment | get -o prompt)
+        if $att_type == "queued_command" and ($prompt | describe) == "string" {
+          $pending = (resolve-notification-text $pending $prompt)
+        }
+      }
+      continue
+    }
+
+    if $entry_type not-in ["assistant" "user"] {
+      continue
+    }
+
+    let message = ($entry | get -o message)
+    let content = if (is-record $message) {
+      $message | get -o content
+    } else {
+      null
+    }
     let content_is_seq = (is-sequence $content)
 
     if $entry_type == "assistant" and $content_is_seq {
       for block in $content {
-        if not ($block | describe | str starts-with "record") {
+        if not (is-record $block) {
           continue
         }
         if ($block | get -o type | default "") != "tool_use" {
           continue
         }
 
+        let input = ($block | get -o input)
+        if not (is-record $input) {
+          continue
+        }
+
         let name = ($block | get -o name | default "")
         if $name in ["Agent" "Bash"] {
-          let is_bg = ($block | get -o input.run_in_background | default false)
+          let is_bg = ($input | get -o run_in_background | default false)
           let tool_use_id = ($block | get -o id | default "")
           if $is_bg == true and ($tool_use_id | is-not-empty) {
             $pending = (
@@ -115,7 +153,7 @@ export def has-pending-background-tasks [transcript_path: path]: nothing -> bool
             )
           }
         } else if $name == "TaskStop" {
-          let stopped_id = ($block | get -o input.task_id | default "")
+          let stopped_id = ($input | get -o task_id | default "")
           if ($stopped_id | is-not-empty) {
             $pending = (resolve-task $pending $stopped_id "")
           }
@@ -129,7 +167,7 @@ export def has-pending-background-tasks [transcript_path: path]: nothing -> bool
     }
 
     let result = ($entry | get -o toolUseResult)
-    if ($result | describe | str starts-with "record") {
+    if (is-record $result) {
       let is_async = (
         (($result | get -o isAsync | default false) == true)
         or (($result | get -o status | default "") == "async_launched")
@@ -146,10 +184,7 @@ export def has-pending-background-tasks [transcript_path: path]: nothing -> bool
         let tool_use_id = if $content_is_seq {
           $content
           | where {|block|
-            (
-              ($block | describe | str starts-with "record")
-              and (($block | get -o type | default "") == "tool_result")
-            )
+            (is-record $block) and (($block | get -o type | default "") == "tool_result")
           }
           | first
           | default {}
@@ -173,13 +208,20 @@ export def has-pending-background-tasks [transcript_path: path]: nothing -> bool
       $pending = (resolve-notification-text $pending $content)
     } else if $content_is_seq {
       for block in $content {
-        if not ($block | describe | str starts-with "record") {
+        if not (is-record $block) {
           continue
         }
         if ($block | get -o type | default "") == "tool_result" {
+          let res_tool_id = ($block | get -o tool_use_id | default "")
           if ($block | get -o is_error | default false) == true {
-            let err_tool_id = ($block | get -o tool_use_id | default "")
-            $pending = (resolve-task $pending "" $err_tool_id)
+            $pending = (resolve-task $pending "" $res_tool_id)
+          } else if ($res_tool_id | is-not-empty) {
+            $pending = (
+              $pending
+              | where {|task|
+                not (($task.task_id | is-empty) and ($task.tool_use_id == $res_tool_id))
+              }
+            )
           }
 
           let block_content = ($block | get -o content)
@@ -238,13 +280,20 @@ def main [
     }
   }
 
-  mut args = [$title $"[($project)] ($message)"]
+  let body = if ($message | is-not-empty) {
+    $"[($project)] ($message)"
+  } else {
+    $"[($project)]"
+  }
+
+  mut args: list<string> = []
   if ($app | is-not-empty) {
     $args = ($args | append [--app $app])
   }
   if ($icon | is-not-empty) {
     $args = ($args | append [--icon $icon])
   }
+  $args = ($args | append [$title $body])
 
   if $notify != null {
     ^$notify ...$args

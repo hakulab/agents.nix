@@ -62,7 +62,11 @@ def main [
 ] {
   match (detect-platform) {
     "wsl" => {
-      mut args: list<string> = [$body -t $title]
+      mut args: list<string> = if ($body | is-not-empty) {
+        [$body -t $title]
+      } else {
+        [$title]
+      }
       if ($app | is-not-empty) {
         $args = ($args | append [--app $app])
       }
@@ -81,7 +85,7 @@ def main [
       if ($icon | is-not-empty) {
         $args = ($args | append [-i $icon])
       }
-      $args = ($args | append [$title $body])
+      $args = ($args | append [-- $title $body])
 
       run-notifier (env-or-default "NOTIFY_SEND_BIN" "notify-send") $args
     }

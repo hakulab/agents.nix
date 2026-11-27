@@ -64,6 +64,10 @@ def reply [content: string, finish: string]: nothing -> record {
   }
 }
 
+# --------------------------------------------------------------------------------------------------
+# Request dispatch and reply handling
+# --------------------------------------------------------------------------------------------------
+
 def "test a request passes the token by file and prints the reply" [] {
   let request = {
     model: "stub"
@@ -82,7 +86,6 @@ def "test a request passes the token by file and prints the reply" [] {
       args: [
         "https://gateway.test/v1/chat/completions"
         ...$CURL_ARGS
-        --ipv4
         --cacert "/ca.pem"
         --variable $"token@($result.token_file)"
         --expand-header "Authorization: Bearer {{token:trim}}"

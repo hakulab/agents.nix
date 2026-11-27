@@ -3,8 +3,8 @@
 # ==================================================================================================
 # Shared Model Call
 # ==================================================================================================
-# Sends one chat completion to the corp gateway and prints the reply. Without a usable reply it
-# exits nonzero with the reason on stderr.
+# Sends one chat completion to a configured LLM gateway and prints the reply. Without a usable
+# reply it exits nonzero with the reason on stderr.
 # ==================================================================================================
 
 def fail [reason: string] {
@@ -36,14 +36,12 @@ def main [
     $body
   }
   let curl = $config.curl
-  # The gateway's advertised IPv6 endpoint closes during TLS. The token stays off curl's command
-  # line, which other local users can read.
+  # Keep the token off curl's command line, which other local users can read.
   let run = (
     $shaped
     | to json
     | ^$curl $"($gateway.baseUrl)/v1/chat/completions"
       ...$config.curlArgs
-      --ipv4
       --cacert $gateway.caFile
       --variable $"token@($gateway.tokenFile)"
       --expand-header "Authorization: Bearer {{token:trim}}"
