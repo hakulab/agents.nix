@@ -48,15 +48,7 @@
     activity-report.url = "github:hakulab/activity-report";
     agent-project-move.url = "github:hakulab/agent-project-move";
     claude-statusline.url = "github:hakulab/claude-statusline";
-
-    oxide-code = {
-      url = "github:hakulab/oxide-code";
-      inputs = {
-        nixpkgs.follows = "nixpkgs";
-        devkit.follows = "devkit";
-        home-manager.follows = "home-manager";
-      };
-    };
+    oxide-code.url = "github:hakulab/oxide-code";
   };
 
   # ------------------------------------------------------------------------------------------------
