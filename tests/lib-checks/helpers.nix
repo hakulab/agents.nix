@@ -48,9 +48,10 @@ let
     enabledServers = [ "custom-server" ];
   };
 
+  promptFile = ./fixtures/prompt.txt;
   promptRenderer = agentsLib.prompts.mkPromptRenderer {
-    "Prompt Rendering" = "Prompt Engine";
-    "@words@" = ../../.cspell/words.txt;
+    "@who@" = "world";
+    "@body@\n" = ./fixtures/prompt-fragment.txt;
   };
 in
 check "lib-helpers" [
@@ -82,14 +83,16 @@ check "lib-helpers" [
     name = "prompts renderText, renderFile, mkPromptRenderer, and joinSections";
     ok =
       agentsLib.prompts.renderText { "@who@" = "world"; } "hello @who@" == "hello world"
-      && lib.hasInfix "Custom Prompt" (
-        agentsLib.prompts.renderFile { "Prompt Rendering" = "Custom Prompt"; } ../../lib/prompts.nix
-      )
-      && lib.hasInfix "Prompt Engine" (promptRenderer.readPrompt ../../lib/prompts.nix)
-      && lib.hasInfix "Custom Composition" (
-        promptRenderer.renderPrompt { "Composition" = "Custom Composition"; } ../../lib/prompts.nix
-      )
-      && lib.hasInfix "acpx" promptRenderer.fragments."@words@"
+      &&
+        agentsLib.prompts.renderFile { "@who@" = "world"; } promptFile
+        == "Hello world.\n@body@\n@closing@\n"
+      && promptRenderer.readPrompt promptFile == "Hello world.\nA short example.\n@closing@\n"
+      &&
+        promptRenderer.renderPrompt {
+          "@who@" = "reader";
+          "@closing@" = "Thank you.";
+        } promptFile == "Hello reader.\nA short example.\nThank you.\n"
+      && promptRenderer.fragments."@body@\n" == "A short example.\n"
       &&
         agentsLib.prompts.joinSections [
           "a"

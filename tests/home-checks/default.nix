@@ -8,6 +8,7 @@
   nushell,
   home-manager,
   homeModules,
+  mkCodexModelCatalog,
   darwinPkgs,
 }:
 
@@ -75,6 +76,7 @@ in
       lib
       harness
       homeModules
+      mkCodexModelCatalog
       ;
   };
 

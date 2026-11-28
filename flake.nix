@@ -163,6 +163,7 @@
           inherit (nixpkgs) lib;
           inherit (dk) nushell;
           inherit home-manager homeModules;
+          mkCodexModelCatalog = import ./modules/home/codex/models.nix;
           darwinPkgs = nixpkgs.legacyPackages.aarch64-darwin;
         };
 
