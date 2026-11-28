@@ -138,7 +138,7 @@ in
       };
 
       agentRoleOptions = lib.mkOption {
-        type = lib.types.anything;
+        type = lib.types.raw;
         internal = true;
         readOnly = true;
       };

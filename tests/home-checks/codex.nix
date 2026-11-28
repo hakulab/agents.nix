@@ -530,7 +530,8 @@ check "home-codex" [
   {
     name = "auth.enabledProfiles allowlist filters installed Codex profiles";
     ok =
-      filteredProfilesCfg.home.file ? "${filteredStateDir}/profiles/official.config.toml"
+      builtins.attrNames filteredProfilesCfg.agents.resolved.clientProfiles.codex == [ "official" ]
+      && filteredProfilesCfg.home.file ? "${filteredStateDir}/profiles/official.config.toml"
       && !(filteredProfilesCfg.home.file ? "${filteredStateDir}/profiles/gw-gpt.config.toml")
       && !(filteredProfilesCfg.agents.codex.finalSettings ? model_providers)
       && lib.all (a: a.assertion) filteredProfilesCfg.assertions;

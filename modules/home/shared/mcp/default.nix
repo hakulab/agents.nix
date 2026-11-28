@@ -262,7 +262,7 @@ in
     };
 
     resolved.mcp = lib.mkOption {
-      type = lib.types.attrsOf lib.types.anything;
+      type = lib.types.raw;
       readOnly = true;
       description = "Resolved MCP server definitions, display names, timeouts, and helpers";
     };

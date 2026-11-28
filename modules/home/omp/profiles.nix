@@ -61,16 +61,7 @@ let
   # ------------------------------------------------------------------------------------------------
   # Profile definitions
   # ------------------------------------------------------------------------------------------------
-  resolvedProfiles = resolved.resolveProfiles {
-    nativeFamily = "gpt";
-    client = "omp";
-  };
-
-  enabledProfiles =
-    if cfg.enabledProfiles == null then
-      resolvedProfiles
-    else
-      lib.filterAttrs (name: _: lib.elem name cfg.enabledProfiles) resolvedProfiles;
+  enabledProfiles = resolved.clientProfiles.omp;
 
   profiles = lib.mapAttrs mkProfile enabledProfiles;
 

@@ -191,7 +191,11 @@ check "home-oxide-code" [
   {
     name = "Anthropic profiles are installed while non-Anthropic profiles are excluded";
     ok =
-      combinedCfg.home.file ? "${stateDir}/profiles/official.env.sh"
+      builtins.attrNames combinedCfg.agents.resolved.clientProfiles.oxide-code == [
+        "gw-claude"
+        "official"
+      ]
+      && combinedCfg.home.file ? "${stateDir}/profiles/official.env.sh"
       && combinedCfg.home.file ? "${stateDir}/profiles/gw-claude.env.sh"
       && !(combinedCfg.home.file ? "${stateDir}/profiles/gw-gpt.env.sh")
       && combinedCfg.home.activation ? oxideCodeProfile;

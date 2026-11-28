@@ -24,17 +24,7 @@ let
   # ------------------------------------------------------------------------------------------------
   # Profile resolution
   # ------------------------------------------------------------------------------------------------
-  resolvedProfiles = resolved.resolveProfiles {
-    nativeFamily = "gpt";
-    inherit (cfg.auth) allowedProviders allowedChannels;
-    client = "codex";
-  };
-
-  enabledProfiles =
-    if cfg.auth.enabledProfiles == null then
-      resolvedProfiles
-    else
-      lib.filterAttrs (name: _: lib.elem name cfg.auth.enabledProfiles) resolvedProfiles;
+  enabledProfiles = resolved.clientProfiles.codex;
 
   providerNames = lib.unique (
     lib.filter (provider: provider != null) (

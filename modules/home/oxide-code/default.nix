@@ -79,6 +79,15 @@ in
     };
   };
 
+  options.agents.resolved.clientProfiles.oxide-code = agentsLib.profiles.mkClientProfilesOption (
+    config.agents.resolved.resolveProfiles {
+      nativeFamily = "claude";
+      client = "oxide-code";
+      inherit (cfg.auth) enabledProfiles;
+      requiredApi = "anthropic-messages";
+    }
+  );
+
   # ------------------------------------------------------------------------------------------------
   # Config
   # ------------------------------------------------------------------------------------------------

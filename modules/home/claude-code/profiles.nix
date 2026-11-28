@@ -132,16 +132,7 @@ let
   # ------------------------------------------------------------------------------------------------
   # Profile definitions
   # ------------------------------------------------------------------------------------------------
-  resolvedProfiles = resolved.resolveProfiles {
-    nativeFamily = "claude";
-    client = "claude-code";
-  };
-
-  enabledProfiles =
-    if cfg.auth.enabledProfiles == null then
-      resolvedProfiles
-    else
-      lib.filterAttrs (name: _: lib.elem name cfg.auth.enabledProfiles) resolvedProfiles;
+  enabledProfiles = resolved.clientProfiles.claude-code;
 
   baseProfiles = lib.mapAttrs mkProfile enabledProfiles;
 
