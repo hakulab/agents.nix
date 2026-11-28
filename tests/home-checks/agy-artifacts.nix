@@ -14,13 +14,20 @@ let
     printf '%s\n' "$HTTPS_PROXY" "$NO_PROXY" "$@"
   '';
 
-  eval = modules: harness.evalModules ([ homeModules.acp ] ++ modules);
+  eval =
+    modules:
+    harness.evalModules (
+      [
+        homeModules.acp
+        { agents.acp.enable = true; }
+      ]
+      ++ modules
+    );
 
   combined = eval [
     homeModules.agy
     {
       agents = {
-        acp.enable = true;
         agy = {
           enable = true;
           package = probe;
@@ -46,21 +53,15 @@ let
         enable = true;
         package = probe;
       };
-      agents.acp = {
-        enable = true;
-        agyAdapter.enable = false;
-      };
+      agents.acp.agyAdapter.enable = false;
     }
   ];
 
   standalone = eval [
     {
-      agents.acp = {
+      agents.acp.agyAdapter = {
         enable = true;
-        agyAdapter = {
-          enable = true;
-          package = probe;
-        };
+        package = probe;
       };
       programs.antigravity-cli = {
         enable = true;
@@ -69,20 +70,57 @@ let
     }
   ];
 
+  explicitExecutable = "/fixtures/local/bin/agy";
+  explicit = eval [
+    {
+      agents.acp.agyAdapter = {
+        enable = true;
+        package = probe;
+        executable = explicitExecutable;
+      };
+    }
+  ];
+
+  managedWithNullExecutable = eval [
+    {
+      agents.acp.agyAdapter = {
+        enable = true;
+        package = probe;
+        executable = null;
+      };
+      programs.antigravity-cli = {
+        enable = true;
+        package = probe;
+      };
+    }
+  ];
+
   acpConfig = cfg: cfg.home.file.".acpx/config.json".source;
-  standaloneCli = lib.findFirst (pkg: lib.getName pkg == "agy") null standalone.home.packages;
+  agyPackages = cfg: lib.filter (pkg: lib.getName pkg == "agy") cfg.home.packages;
+  standalonePackages = agyPackages standalone;
+  standaloneCli = builtins.head standalonePackages;
   combinedCli = combined.programs.antigravity-cli.package;
+  profileAgy = "${combined.home.profileDirectory}/bin/agy";
   rolesDir = "${combined.agents.resolved.configDirs.agy}/agents";
 in
 assert lib.elem optOut.programs.antigravity-cli.package optOut.home.packages;
-assert standaloneCli != null;
+assert combined.agents.acp.agyAdapter.executable == profileAgy;
+assert standalone.agents.acp.agyAdapter.executable == null;
+assert builtins.length standalonePackages == 1;
+assert agyPackages explicit == [ ];
+assert agyPackages managedWithNullExecutable == [ probe ];
 assert lib.hasInfix "model: inherit\n" combined.home.file."${rolesDir}/researcher.md".text;
 assert lib.hasInfix "model: pro\n" combined.home.file."${rolesDir}/implementer.md".text;
 pkgs.runCommand "home-agy-artifacts" { nativeBuildInputs = [ pkgs.jq ]; } ''
-  for config in ${acpConfig combined} ${acpConfig standalone}; do
-    jq -e --arg bin ${lib.escapeShellArg "${combined.home.profileDirectory}/bin/agy"} \
+  for config in \
+    ${acpConfig combined} \
+    ${acpConfig standalone} \
+    ${acpConfig managedWithNullExecutable}; do
+    jq -e --arg bin ${lib.escapeShellArg profileAgy} \
       '.agents.agy.argv == [$bin, "acp"]' "$config"
   done
+  jq -e --arg bin ${lib.escapeShellArg explicitExecutable} \
+    '.agents.agy.argv == [$bin, "acp"]' ${acpConfig explicit}
   jq -e '.agents | has("agy") | not' ${acpConfig optOut}
 
   ${combinedCli}/bin/agy --model gemini-pro-orchestrator-neon > args

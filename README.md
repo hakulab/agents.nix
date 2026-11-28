@@ -60,7 +60,7 @@ To use Antigravity CLI with a Google AI subscription, set `agents.agy.enable = t
 
 Custom agents request the native Flash or Pro tier when their shared workload uses a distinct mini or flagship model. Google selects the model and effort for those tiers. Otherwise custom agents inherit the active session model and effort.
 
-With `agents.acp.enable` and `agents.agy.enable`, `acpx` can launch `agy acp`. To register the same server independently, enable `agents.acp.agyAdapter.enable` in your ACP configuration.
+With `agents.acp.enable` and `agents.agy.enable`, `acpx` can launch `agy acp`. To register the same server independently, enable `agents.acp.agyAdapter.enable` in your ACP configuration. To use an existing `agy` executable, set `agents.acp.agyAdapter.executable` to its path.
 
 Supply each secret as a runtime file path string, such as `"/run/secrets/api-key"`. Literal environment values and HTTP headers in your Nix configuration are written to the Nix store.
 
