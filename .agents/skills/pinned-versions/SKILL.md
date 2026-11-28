@@ -13,10 +13,12 @@ Locate pins through `scripts/check-pins.nu`, compare upstream versions, and upda
 ## Check for drift
 
 ```bash
-.agents/skills/pinned-versions/scripts/check-pins.nu
+nix develop -c .agents/skills/pinned-versions/scripts/check-pins.nu
 ```
 
-`list` prints the registry without network calls and needs Nushell and Git. The default command and `check` also need `gh` authenticated to `github.com`. A `STALE` value differs from the upstream target. An `UNKNOWN` means a lookup failed. Rerun the check and investigate any persistent failure. A complete check exits `0` when all pins match or `1` when any pin is stale. An incomplete check exits `2`, including when it also finds stale pins.
+The dev shell makes devkit's Nushell module available to the checker. Preparing the shell may require a download. Once it is ready, `list` prints the registry offline. The default command and `check` also need `gh` authenticated to `github.com`.
+
+A `STALE` value differs from the upstream target. An `UNKNOWN` means a lookup failed. Rerun the check and investigate any persistent failure. A complete check exits `0` when all pins match or `1` when any pin is stale. An incomplete check exits `2`, including when it also finds stale pins.
 
 The registry can lag the repository. For a repository-wide audit, also inspect new packages, module defaults, flake inputs, and workflow references.
 
