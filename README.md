@@ -60,7 +60,7 @@ To use Antigravity CLI with a Google AI subscription, set `agents.agy.enable = t
 
 Supply each secret as a runtime file path string, such as `"/run/secrets/api-key"`. Literal environment values and HTTP headers in your Nix configuration are written to the Nix store.
 
-Read `config.agents.resolved.clientProfiles.<client>` to select a default authentication profile from the profiles available to an imported client. The read-only map applies the client's allowlists and API restrictions before generating client-specific files.
+For clients that support authentication profiles, use `config.agents.resolved.clientProfiles.<client>` to select a default profile. The read-only map applies the client's allowlists and API restrictions before generating client-specific files.
 
 See [`flake.nix`](flake.nix) for exported outputs, [`modules/home/`](modules/home/) for available modules and option definitions, and [`packages/`](packages/) for companion packages. Prompts, instructions, skills, and helper scripts live as plain files under [`assets/`](assets/) and [`scripts/`](scripts/) for browsing or adapting outside Nix, while the Nix modules expand `@placeholder@` tokens and wrap scripts at build time.
 
