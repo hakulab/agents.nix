@@ -141,9 +141,11 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         dk = devkit.lib.mkLib pkgs;
+        devkitNuLib = "${devkit}/lib";
         nuLibDirs = [
           ./scripts/lib
           ./tests/lib
+          devkitNuLib
         ];
 
         preCommit = dk.preCommit {
@@ -221,7 +223,7 @@
           ];
           shellHook = ''
             repo_root="$(git rev-parse --show-toplevel)"
-            export NU_LIB_DIRS="$repo_root/scripts/lib:$repo_root/tests/lib"
+            export NU_LIB_DIRS="$repo_root/scripts/lib:$repo_root/tests/lib:${devkitNuLib}"
           '';
         };
 
