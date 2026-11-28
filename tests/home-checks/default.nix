@@ -30,6 +30,16 @@ let
       homeModules
       ;
   };
+
+  agyChecks = import ./agy {
+    inherit
+      pkgs
+      lib
+      nushell
+      harness
+      homeModules
+      ;
+  };
 in
 {
   home-default = import ./bundle.nix {
@@ -59,7 +69,7 @@ in
 
   inherit (claudeCodeChecks) home-claude-code home-claude-code-artifacts;
 
-  home-codex = import ./codex.nix {
+  home-codex = import ./codex {
     inherit
       pkgs
       lib
@@ -68,7 +78,7 @@ in
       ;
   };
 
-  home-omp = import ./omp.nix {
+  home-omp = import ./omp {
     inherit
       pkgs
       lib
@@ -77,20 +87,9 @@ in
       ;
   };
 
-  home-agy = import ./agy.nix {
-    inherit lib harness homeModules;
-  };
+  inherit (agyChecks) home-agy home-agy-artifacts;
 
-  home-agy-artifacts = import ./agy-artifacts.nix {
-    inherit
-      pkgs
-      lib
-      harness
-      homeModules
-      ;
-  };
-
-  home-oxide-code = import ./oxide-code.nix {
+  home-oxide-code = import ./oxide-code {
     inherit
       pkgs
       lib

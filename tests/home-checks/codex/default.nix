@@ -368,7 +368,7 @@ let
 
   mkModelCatalog =
     cfg:
-    import ../../modules/home/codex/models.nix {
+    import ../../../modules/home/codex/models.nix {
       inherit pkgs lib;
       codexPackage = cfg.agents.codex.package;
     };
