@@ -24,6 +24,7 @@ let
 
   readOnlyRole = lib.recursiveUpdate {
     claude.permissionMode = "plan";
+
     codex.sandboxMode = "read-only";
 
     omp.tools = [
