@@ -167,6 +167,7 @@ check "home-claude-code" [
       in
       lib.elem "deepwiki" edgeCasesCfg.agents.claude-code.mcp.disabledServers
       && lib.elem "gitlab" edgeCasesCfg.agents.claude-code.mcp.disabledServers
+      && builtins.attrNames edgeCasesCfg.agents.resolved.clientProfiles.claude-code == [ "custom" ]
       && !(edgeCasesCfg.home.file ? "${profilesPrefix}/official.d")
       && !(edgeCasesCfg.home.file ? "${profilesPrefix}/filtered-out.d")
       && edgeCasesCfg.home.file ? "${profilesPrefix}/custom.d"

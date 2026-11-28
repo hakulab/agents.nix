@@ -128,27 +128,33 @@ let
         };
       };
 
-  filteredProfilesCfg = evalHomeWith [ homeModules.omp ] {
-    agents = {
-      browser.chromiumPackage = null;
+  filteredProfilesCfg = evalHomeWith [ homeModules.omp ] (
+    { config, ... }: {
+      agents = {
+        browser.chromiumPackage = null;
 
-      providers.my-gateway = {
-        baseUrl = "https://gw.example.test";
-        apiKeyFile = "/run/secrets/gw-key";
-      };
+        providers.my-gateway = {
+          baseUrl = "https://gw.example.test";
+          apiKeyFile = "/run/secrets/gw-key";
+        };
 
-      profiles.gw-gpt = {
-        provider = "my-gateway";
-        family = "gpt";
-      };
+        profiles.gw-gpt = {
+          provider = "my-gateway";
+          family = "gpt";
+        };
 
-      omp = {
-        enable = true;
-        package = stubOmp;
-        auth.enabledProfiles = [ "official" ];
+        omp = {
+          enable = true;
+          package = stubOmp;
+          auth = {
+            enabledProfiles = [ "official" ];
+            defaultProfile =
+              if config.agents.resolved.clientProfiles.omp ? gw-gpt then "gw-gpt" else "official";
+          };
+        };
       };
-    };
-  };
+    }
+  );
 
   # ------------------------------------------------------------------------------------------------
   # Negative assertion fixtures
@@ -435,8 +441,10 @@ check "home-omp" [
   {
     name = "auth.enabledProfiles allowlist filters installed profile files";
     ok =
-      filteredProfilesCfg.home.file ? "${filteredStateDir}/profiles/official.config.yml"
-      && !(filteredProfilesCfg.home.file ? "${filteredStateDir}/profiles/gw-gpt.config.yml");
+      builtins.attrNames filteredProfilesCfg.agents.resolved.clientProfiles.omp == [ "official" ]
+      && filteredProfilesCfg.home.file ? "${filteredStateDir}/profiles/official.config.yml"
+      && !(filteredProfilesCfg.home.file ? "${filteredStateDir}/profiles/gw-gpt.config.yml")
+      && lib.all (a: a.assertion) filteredProfilesCfg.assertions;
   }
   {
     name = "invalid auth.defaultProfile fails module assertion";

@@ -152,6 +152,15 @@ in
     };
   };
 
+  options.agents.resolved.clientProfiles.codex = agentsLib.profiles.mkClientProfilesOption (
+    resolved.resolveProfiles {
+      nativeFamily = "gpt";
+      inherit (cfg.auth) allowedProviders allowedChannels;
+      client = "codex";
+      inherit (cfg.auth) enabledProfiles;
+    }
+  );
+
   # ------------------------------------------------------------------------------------------------
   # Config
   # ------------------------------------------------------------------------------------------------

@@ -210,6 +210,14 @@ in
     };
   };
 
+  options.agents.resolved.clientProfiles.claude-code = agentsLib.profiles.mkClientProfilesOption (
+    resolved.resolveProfiles {
+      nativeFamily = "claude";
+      client = "claude-code";
+      inherit (cfg.auth) enabledProfiles;
+    }
+  );
+
   # ------------------------------------------------------------------------------------------------
   # Config
   # ------------------------------------------------------------------------------------------------

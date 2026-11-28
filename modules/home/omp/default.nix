@@ -111,6 +111,14 @@ in
     };
   };
 
+  options.agents.resolved.clientProfiles.omp = agentsLib.profiles.mkClientProfilesOption (
+    resolved.resolveProfiles {
+      nativeFamily = "gpt";
+      client = "omp";
+      inherit (cfg.auth) enabledProfiles;
+    }
+  );
+
   # ------------------------------------------------------------------------------------------------
   # Config
   # ------------------------------------------------------------------------------------------------

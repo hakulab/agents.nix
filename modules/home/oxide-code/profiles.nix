@@ -28,21 +28,7 @@ let
   # ------------------------------------------------------------------------------------------------
   # Profile definitions
   # ------------------------------------------------------------------------------------------------
-  resolvedProfiles = resolved.resolveProfiles {
-    nativeFamily = "claude";
-    client = "oxide-code";
-  };
-
-  # oxide-code speaks only the Anthropic Messages API.
-  anthropicOnly = lib.filterAttrs (
-    _: profile: profile.roles.default.api == "anthropic-messages"
-  ) resolvedProfiles;
-
-  enabledProfiles =
-    if cfg.enabledProfiles == null then
-      anthropicOnly
-    else
-      lib.filterAttrs (name: _: lib.elem name cfg.enabledProfiles) anthropicOnly;
+  enabledProfiles = resolved.clientProfiles.oxide-code;
 
   profiles = lib.mapAttrs mkProfile enabledProfiles;
 

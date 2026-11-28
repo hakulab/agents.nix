@@ -234,6 +234,8 @@ let
           allowedProviders ? null,
           allowedChannels ? null,
           client ? null,
+          enabledProfiles ? null,
+          requiredApi ? null,
         }:
         let
           defaultOfficial = lib.optionalAttrs (nativeFamily != null && !(profiles ? official)) {
@@ -279,14 +281,19 @@ let
             in
             builtins.seq provider (clientAllowed && providerAllowed && tierChannelsAllowed);
 
-          enabledProfiles = lib.filterAttrs profileSupported allProfiles;
+          supportedProfiles = lib.filterAttrs profileSupported allProfiles;
+          resolvedProfiles = lib.mapAttrs (
+            name: profile:
+            resolveProfile {
+              inherit allowedChannels name profile;
+            }
+          ) supportedProfiles;
         in
-        lib.mapAttrs (
+        lib.filterAttrs (
           name: profile:
-          resolveProfile {
-            inherit allowedChannels name profile;
-          }
-        ) enabledProfiles;
+          (requiredApi == null || profile.roles.default.api == requiredApi)
+          && (enabledProfiles == null || lib.elem name enabledProfiles)
+        ) resolvedProfiles;
     in
     {
       inherit resolveProfile resolveProfiles;
@@ -312,8 +319,23 @@ let
         description = "Optional allowlist of profile names to install";
       };
     };
+
+  mkClientProfilesOption =
+    profiles:
+    lib.mkOption {
+      type = lib.types.attrsOf lib.types.raw;
+      default = profiles;
+      defaultText = lib.literalMD "Profiles selected by the client's authentication filters.";
+      readOnly = true;
+      description = "Profiles available to this client after applying its authentication filters";
+    };
 in
 {
-  inherit apiKeyFileFor mkOptions mkResolver;
+  inherit
+    apiKeyFileFor
+    mkClientProfilesOption
+    mkOptions
+    mkResolver
+    ;
   inherit (models) modelAliases roleTiers workloadPolicy;
 }
