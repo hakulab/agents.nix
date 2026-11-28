@@ -6,7 +6,7 @@ Rules for tmux session layout, Workmux worker placement, and interactive assista
 
 Keep independent projects in long-lived repository-scoped tmux sessions. Use a coherent workstream or repository-family session only for windows that genuinely share ownership, and reserve additional sessions for genuinely distinct interactive or operational contexts. Name windows for their task or owner.
 
-Once the task is clear, a top-level interactive agent runs `tmux-task-name <short-hyphenated-name>` from its shell tool (delegated, headless, and background runs never call it):
+When the host provides `tmux-task-name`, a top-level interactive agent runs `tmux-task-name <short-hyphenated-name>` once the task is clear. Delegated, headless, and background runs skip this step.
 
 - Single-window numeric session → renames the session.
 - Named or multi-window session with an auto-named window → renames the window.

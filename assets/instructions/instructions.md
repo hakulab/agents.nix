@@ -1,6 +1,6 @@
 ## Read before you act
 
-Before your first edit or command in any installed or repository-local skill's area, load every matching skill if it is not already in context. Read the linked guide before starting work in its area, applying devkit's guides by default while preserving justified repository-specific requirements:
+Follow the skills named in these instructions and their linked guides when they are installed or provided by the repository. Before your first edit or command, load every matching skill that is not already in context and read the guide for that area. Apply devkit's guides by default while preserving justified repository-specific requirements.
 
 | When the task involves                                                | Read                                                                            |
 | --------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
@@ -38,7 +38,7 @@ Secrets live in secret files, environment variables, and credential files such a
 
 ## Environment and Shell
 
-- **Terminal sessions**: Once the task is clear, a top-level interactive agent runs `tmux-task-name <short-hyphenated-name>` (delegated, headless, and background runs skip it). See [Terminals and Workmux](@docsDir@/terminals-and-workmux.md) for session layout, Workmux workers, and interactive panes.
+- **Terminal sessions**: Follow [Terminals and Workmux](@docsDir@/terminals-and-workmux.md) for session layout, Workmux workers, interactive panes, and task naming when the host provides `tmux-task-name`.
 - **Dev shells**: Enter a repository's dev shell only from within that repository so its hook does not install Git hooks elsewhere. Get standalone tools from `PATH` or `nix shell nixpkgs#<pkg> -c`.
 - **Shell commands**: `pgrep -f` and `pkill -f` can match the tool's own shell, so wait for another process with `flock` or `tail -f --pid`. In zsh, quote `*`, `?`, `[` (including in option values and query-string URLs), and leading `=`, build command arrays for word splitting, and store exit codes in `rc` or 1-indexed `pipestatus` (`status` is read-only).
 
