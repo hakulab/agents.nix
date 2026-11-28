@@ -1,9 +1,9 @@
 # ==================================================================================================
-# agents.nix
+# agents.nix Flake
 # ==================================================================================================
 
 {
-  description = "Declarative Nix and Home Manager modules for coding agents, MCP servers, hooks, and skills";
+  description = "Nix packages and Home Manager modules for coding agents";
 
   nixConfig = {
     extra-substituters = [ "https://hakula.cachix.org" ];
@@ -16,9 +16,23 @@
   # Inputs
   # ------------------------------------------------------------------------------------------------
   inputs = {
+    # ----------------------------------------------------------------------------------------------
+    # Nixpkgs
+    # ----------------------------------------------------------------------------------------------
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
 
+    # ----------------------------------------------------------------------------------------------
+    # System frameworks
+    # ----------------------------------------------------------------------------------------------
+    home-manager = {
+      url = "github:nix-community/home-manager/release-26.05";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    # ----------------------------------------------------------------------------------------------
+    # Development tools
+    # ----------------------------------------------------------------------------------------------
     devkit = {
       url = "github:hakulab/devkit/v3";
       inputs = {
@@ -27,13 +41,10 @@
       };
     };
 
-    home-manager = {
-      url = "github:nix-community/home-manager/release-26.05";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
+    # ----------------------------------------------------------------------------------------------
+    # Agent packages
+    # ----------------------------------------------------------------------------------------------
     llm-agents.url = "github:numtide/llm-agents.nix";
-
     activity-report.url = "github:hakulab/activity-report";
     agent-project-move.url = "github:hakulab/agent-project-move";
     claude-statusline.url = "github:hakulab/claude-statusline";
@@ -56,8 +67,8 @@
       self,
       nixpkgs,
       nixpkgs-unstable,
-      devkit,
       home-manager,
+      devkit,
       llm-agents,
       activity-report,
       agent-project-move,
