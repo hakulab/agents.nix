@@ -56,12 +56,6 @@ Add `agents-nix` to your flake inputs, import `agents-nix.homeModules.default` (
 }
 ```
 
-To use Antigravity CLI with a Google AI subscription, set `agents.agy.enable = true`. After activation, run `agy` and sign in with the Google account for that subscription. The CLI starts with the default model and reasoning effort from the shared Gemini policy. To override the default for one session, run `agy --model <slug>`.
-
-Custom agents request the native Flash or Pro tier when their shared workload uses a distinct mini or flagship model. Google selects the model and effort for those tiers. Otherwise custom agents inherit the active session model and effort.
-
-With `agents.acp.enable` and `agents.agy.enable`, `acpx` can launch `agy acp`. To register the same server independently, enable `agents.acp.agyAdapter.enable` in your ACP configuration. To use an existing `agy` executable, set `agents.acp.agyAdapter.executable` to its path.
-
 Supply each secret as a runtime file path string, such as `"/run/secrets/api-key"`. Literal environment values and HTTP headers in your Nix configuration are written to the Nix store.
 
 For clients that support authentication profiles, use `config.agents.resolved.clientProfiles.<client>` to select a default profile. The read-only map applies the client's allowlists and API restrictions before generating client-specific files.
