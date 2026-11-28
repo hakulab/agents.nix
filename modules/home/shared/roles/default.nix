@@ -73,7 +73,7 @@ let
   # Role normalization and options helper
   # ------------------------------------------------------------------------------------------------
   defaultDefinitions = import ./definitions.nix {
-    inherit assetsDir promptFragments;
+    inherit lib assetsDir promptFragments;
   };
 
   toLine = text: lib.replaceStrings [ "\n" ] [ " " ] (lib.trim text);

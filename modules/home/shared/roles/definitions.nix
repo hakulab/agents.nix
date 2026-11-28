@@ -3,6 +3,7 @@
 # ==================================================================================================
 
 {
+  lib,
   assetsDir,
   promptFragments,
 }:
@@ -16,7 +17,8 @@ let
     ${roleSections.preamble}
     ${readPrompt (rolesDir + "/prompts/${name}.md")}
     ${roleSections.memory}
-    ${roleSections.coordination}${readPrompt (rolesDir + "/coordination/${name}.md")}
+    ${lib.removeSuffix "\n" roleSections.coordination}
+    ${readPrompt (rolesDir + "/coordination/${name}.md")}
     ${roleSections.status}
   '';
 
