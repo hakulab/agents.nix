@@ -13,14 +13,21 @@ let
 
   rolesDir = assetsDir + "/agent-roles";
 
-  composePrompt = name: ''
-    ${roleSections.preamble}
-    ${readPrompt (rolesDir + "/prompts/${name}.md")}
-    ${roleSections.memory}
-    ${lib.removeSuffix "\n" roleSections.coordination}
-    ${readPrompt (rolesDir + "/coordination/${name}.md")}
-    ${roleSections.status}
-  '';
+  composePrompt =
+    name:
+    let
+      coordination = lib.concatStrings [
+        roleSections.coordination
+        (readPrompt (rolesDir + "/coordination/${name}.md"))
+      ];
+    in
+    ''
+      ${roleSections.preamble}
+      ${readPrompt (rolesDir + "/prompts/${name}.md")}
+      ${roleSections.memory}
+      ${coordination}
+      ${roleSections.status}
+    '';
 
   readOnlyRole = lib.recursiveUpdate {
     claude.permissionMode = "plan";
