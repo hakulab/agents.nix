@@ -7,7 +7,6 @@
 set -euo pipefail
 
 unset @profileEnvVars@
-__agy_profile_mode=""
 __agy_profile_model=""
 __agy_profile_settings_file=""
 __agy_settings=""
@@ -19,12 +18,6 @@ if [ -f "$__agy_profile" ]; then
 else
   echo "agy: no active auth profile at ${__agy_profile}" >&2
   exit 1
-fi
-
-if [ "$__agy_profile_mode" = "api" ]; then
-  # shellcheck disable=SC1091  # store path substituted by Nix
-  . "@apiArgsScript@"
-  validate_agy_api_args "$@"
 fi
 
 if [ -n "$__agy_profile_settings_file" ]; then

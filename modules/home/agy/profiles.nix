@@ -23,10 +23,6 @@ let
   profiles = resolved.clientProfiles.agy;
   inherit (import ./models.nix { inherit lib resolved; }) slugFor;
 
-  apiArgsScript = pkgs.writeText "agy-validate-api-args.sh" (
-    builtins.readFile (repoRoot + "/scripts/agy/validate-api-args.sh")
-  );
-
   extraHeaderProfiles = lib.filter (
     name:
     let
@@ -55,7 +51,6 @@ let
         }
       );
 
-      mode = if keyFile != null then "api" else "official";
       model = slugFor profile.roles.default;
 
       extraEnvLines = lib.concatStringsSep "\n" (
@@ -93,7 +88,6 @@ let
         ${extraEnvFileLines}
       ''
       + ''
-        __agy_profile_mode=${esc mode}
         __agy_profile_model=${esc model}
         __agy_profile_settings_file=${esc settingsFile}
       ''
@@ -123,7 +117,7 @@ let
   );
 
   profileLoader = pkgs.replaceVars (repoRoot + "/scripts/agy/profile-loader.sh") {
-    inherit stateDir apiArgsScript;
+    inherit stateDir;
     jq = lib.getExe pkgs.jq;
     profileEnvVars = toString profileEnvVars;
   };

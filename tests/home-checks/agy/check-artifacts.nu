@@ -14,7 +14,7 @@ def take-settings [result: record, offset: int]: nothing -> record {
   }
 }
 
-# Verify the generated ACP registrations, auth wrappers, permissions, and argument guards.
+# Verify the generated ACP registrations, auth wrappers, and permissions.
 def main [] {
   hide-env --ignore-errors HTTPS_PROXY NO_PROXY GEMINI_API_KEY GOOGLE_GEMINI_BASE_URL AGY_ADC_AUTH
   let artifacts = $env.ARTIFACTS | from json
@@ -125,37 +125,10 @@ def main [] {
   assert equal (open $native_settings) $saved
 
   # ------------------------------------------------------------------------------------------------
-  # Missing API key and argument guards
+  # Missing API key
   # ------------------------------------------------------------------------------------------------
   let missing = ^$artifacts.missingKeyWrapper models | complete
   assert equal $missing.exit_code 1
   assert ($missing.stderr | str contains "could not read the API key for profile ai-studio")
   assert equal $missing.stdout ""
-
-  let acp_error = "ACP requires the official profile"
-  let settings_error = "the API-key profile manages --settings"
-  let cases = [
-    {name: "flag-value -p then acp" args: ["--model" "-p" "acp"] error: $acp_error}
-    {name: "double-dash acp" args: ["--" "acp"] error: $acp_error}
-    {name: "prompt then acp" args: ["-p" "x" "acp"] error: $acp_error}
-    {name: "settings arg" args: ["--settings" "{}" "models"] error: $settings_error}
-    {name: "settings equals" args: ["--settings={}" "models"] error: $settings_error}
-    {name: "single-dash settings" args: ["-settings" "{}" "models"] error: $settings_error}
-    {name: "short prompt acp" args: ["-p" "acp"] error: null}
-    {name: "long prompt acp" args: ["--prompt" "acp"] error: null}
-    {name: "interactive prompt acp" args: ["-i" "acp"] error: null}
-    {name: "equals reserved value" args: ["--model=acp" "models"] error: null}
-    {name: "help acp" args: ["help" "acp"] error: null}
-  ]
-
-  for case in $cases {
-    let result = ^$artifacts.apiWrapper ...$case.args | complete
-    if $case.error == null {
-      assert equal $result.exit_code 0 $"($case.name): ($result.stderr)"
-    } else {
-      assert equal $result.exit_code 1 $case.name
-      assert ($result.stderr | str contains $case.error) $case.name
-      assert equal $result.stdout "" $case.name
-    }
-  }
 }
