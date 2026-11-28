@@ -18,6 +18,7 @@ let
 
   esc = lib.escapeShellArg;
   cat = lib.getExe' pkgs.coreutils "cat";
+  json = pkgs.formats.json { };
   stateDir = "${config.xdg.stateHome}/agy";
   profiles = resolved.clientProfiles.agy;
   inherit (import ./models.nix { inherit lib resolved; }) slugFor;
@@ -47,13 +48,14 @@ let
       extraEnv = if provider == null then { } else provider.extraEnv or { };
       extraEnvFiles = if provider == null then { } else provider.extraEnvFiles or { };
 
-      settings = builtins.toJSON (
+      settingsFile = json.generate "agy-settings-${name}.json" (
         (lib.recursiveUpdate permissionSettings extraSettings)
         // {
           modelProvider = if provider == null then "" else "gemini";
         }
       );
 
+      mode = if keyFile != null then "api" else "official";
       model = slugFor profile.roles.default;
 
       extraEnvLines = lib.concatStringsSep "\n" (
@@ -72,8 +74,6 @@ let
     in
     pkgs.writeShellScript "agy-profile-${name}" (
       lib.optionalString (keyFile != null) ''
-        source ${apiArgsScript}
-        validate_agy_api_args "$@" || exit 1
         if ! GEMINI_API_KEY="$(${cat} ${esc keyFile})" || [ -z "$GEMINI_API_KEY" ]; then
           echo "agy: could not read the API key for profile "${esc name} >&2
           exit 1
@@ -93,21 +93,9 @@ let
         ${extraEnvFileLines}
       ''
       + ''
-        agy_settings=${esc settings}
-        agy_user_settings="$HOME/.gemini/antigravity-cli/settings.json"
-        if [ -f "$agy_user_settings" ]; then
-          if ! agy_settings="$(${lib.getExe pkgs.jq} -ce --argjson managed "$agy_settings" '
-            .permissions as $saved
-            | $managed
-            | .permissions.allow += ($saved.allow // [])
-            | .permissions.ask += ($saved.ask // [])
-            | .permissions.deny += ($saved.deny // [])
-          ' "$agy_user_settings")"; then
-            echo "agy: could not load saved permission rules from settings.json" >&2
-            exit 1
-          fi
-        fi
-        set -- --settings "$agy_settings" --model ${esc model} "$@"
+        __agy_profile_mode=${esc mode}
+        __agy_profile_model=${esc model}
+        __agy_profile_settings_file=${esc settingsFile}
       ''
     );
 
@@ -135,7 +123,8 @@ let
   );
 
   profileLoader = pkgs.replaceVars (repoRoot + "/scripts/agy/profile-loader.sh") {
-    inherit stateDir;
+    inherit stateDir apiArgsScript;
+    jq = lib.getExe pkgs.jq;
     profileEnvVars = toString profileEnvVars;
   };
 
