@@ -22,6 +22,5 @@ let
 in
 {
   home-agy = import ./eval.nix { inherit lib harness fixtures; };
-
   home-agy-artifacts = import ./artifacts.nix { inherit pkgs nushell fixtures; };
 }
