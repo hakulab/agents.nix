@@ -5,6 +5,7 @@
 | When the change touches | Read                                                                      |
 | ----------------------- | ------------------------------------------------------------------------- |
 | CI or a workflow        | [devkit's CI guide](https://github.com/hakulab/devkit/blob/v3/docs/ci.md) |
+| A manual dependency pin | [Pinned Versions](.agents/skills/pinned-versions/SKILL.md)                |
 | A release               | [RELEASING.md](RELEASING.md)                                              |
 
 ## Rules for every change
