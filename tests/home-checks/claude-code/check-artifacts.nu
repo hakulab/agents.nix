@@ -15,6 +15,8 @@ def check-settings [settings: record, minimal: record, home_directory: string] {
 
   let trusted_script = $"Bash\(($home_directory)/.claude/skills/trusted-skill/scripts/check.sh *\)"
   assert ($trusted_script in $settings.permissions.allow)
+  assert ("mcp__CustomHttp__list_items" in $settings.permissions.allow)
+  assert ("mcp__CustomHttp__edit_item" not-in $settings.permissions.allow)
   assert (
     $settings.autoMode.environment | any {|entry| $entry | str contains "github.com/example-org" }
   )
@@ -93,7 +95,7 @@ def check-wrapper [wrapper: string] {
   let session_args = open --raw (referenced-path $wrapper "session-args.sh")
   let mcp = open (referenced-path $session_args "claude-code-mcp-config.json")
   assert ("GitHub" in $mcp.mcpServers)
-  assert ("CustomHttp" in $mcp.mcpServers)
+  assert equal $mcp.mcpServers.CustomHttp.url "https://mcp.example.test/mcp"
   assert ("DeepWiki" not-in $mcp.mcpServers)
 }
 

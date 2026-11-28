@@ -202,6 +202,25 @@ let
   enabledServers = lib.filterAttrs (_: server: server.enable) cfg.servers;
   resolvedServers = lib.mapAttrs resolveServer enabledServers;
   displayNames = lib.mapAttrs (_: server: server.displayName) enabledServers;
+
+  computeEnabledServers =
+    selection:
+    let
+      names = lib.unique (agentsLib.mcp.computeEnabledServers selection);
+      available = lib.filter (name: displayNames ? ${name}) names;
+      unavailable = lib.subtractLists available names;
+      byDisplayName = lib.groupBy (name: displayNames.${name}) available;
+      duplicates = lib.filterAttrs (_: servers: lib.length servers > 1) byDisplayName;
+      errors =
+        lib.optional (
+          unavailable != [ ]
+        ) "Unknown or disabled MCP servers in enabledServers: ${lib.concatStringsSep ", " unavailable}"
+        ++ lib.mapAttrsToList (
+          displayName: servers:
+          "MCP display name ${builtins.toJSON displayName} is shared by enabled servers: ${lib.concatStringsSep ", " servers}"
+        ) duplicates;
+    in
+    lib.throwIf (errors != [ ]) (lib.concatStringsSep "\n" errors) names;
 in
 {
   imports = [
@@ -270,9 +289,9 @@ in
     # Resolved exports
     # ----------------------------------------------------------------------------------------------
     agents.resolved.mcp = {
-      inherit displayNames;
+      inherit displayNames computeEnabledServers;
       inherit (cfg) disabledServers timeouts;
-      inherit (agentsLib.mcp) computeEnabledServers mkMcpOptions;
+      inherit (agentsLib.mcp) mkMcpOptions;
       serverNames = builtins.attrNames resolvedServers;
       servers = resolvedServers;
     };

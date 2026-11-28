@@ -167,11 +167,30 @@ let
             displayName = "CustomHttp";
             url = "https://mcp.example.test/mcp";
             permissions.allowTools = [ "list_items" ];
+            permissions.gateTools = [
+              {
+                tool = "delete_item";
+                reason = "Deletes an item";
+              }
+            ];
           };
+
           blocked = {
             type = "http";
             displayName = "Blocked";
             url = "https://blocked.example.test/mcp";
+          };
+
+          extraBlocked = {
+            type = "http";
+            displayName = "CustomHttp";
+            url = "https://unused.example.test/mcp";
+            permissions.gateTools = [
+              {
+                tool = "edit_item";
+                reason = "Edits an item";
+              }
+            ];
           };
         };
       };
@@ -534,6 +553,12 @@ check "home-codex" [
       && fullSettings.mcp_servers.CustomHttp.tools.list_items.approval_mode == "approve";
   }
   {
+    name = "Codex reviewer policy describes only MCP gates for selected servers";
+    ok =
+      lib.hasInfix "`delete_item` on the CustomHttp MCP server" fullSettings.auto_review.extra_policy
+      && !(lib.hasInfix "`edit_item` on the CustomHttp MCP server" fullSettings.auto_review.extra_policy);
+  }
+  {
     name = "enabled modelCall installs commentGate and hooks.extraEvents merges with built-in and new events";
     ok =
       fullCfg.xdg.dataFile ? "agents-nix/hooks/codex-comment-gate"
@@ -608,8 +633,8 @@ check "home-codex" [
     ok = throws missingProviderBaseUrlCfg.assertions;
   }
   {
-    name = "enabledServers referencing an unavailable MCP server fails module assertions";
-    ok = throws missingMcpServerCfg.assertions;
+    name = "enabledServers referencing an unavailable MCP server fails settings evaluation";
+    ok = throws missingMcpServerCfg.agents.codex.finalSettings.mcp_servers;
   }
   {
     name = "multiple distinct provider caCertFile values fail module assertions";

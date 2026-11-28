@@ -117,8 +117,26 @@ let
     };
   };
 
+  duplicateNameCfg = evalHome {
+    agents.mcp.servers = {
+      primary = {
+        type = "http";
+        displayName = "Service";
+        url = "https://primary.example.test/mcp";
+      };
+
+      secondary = {
+        type = "http";
+        displayName = "Service";
+        url = "https://secondary.example.test/mcp";
+      };
+    };
+  };
+
   mcp = cfg.agents.resolved.mcp;
   permissions = cfg.agents.resolved.permissions;
+
+  computeDuplicateSelection = duplicateNameCfg.agents.resolved.mcp.computeEnabledServers;
 
   computedEnabled = mcp.computeEnabledServers {
     enabledServers = mcp.serverNames;
@@ -176,6 +194,32 @@ check "home-shared-mcp" [
   {
     name = "computeEnabledServers removes globally disabled servers";
     ok = !(lib.elem "exa" computedEnabled) && lib.elem "github" computedEnabled;
+  }
+  {
+    name = "computeEnabledServers rejects a display name shared by two selected servers";
+    ok = throws (computeDuplicateSelection {
+      enabledServers = [
+        "primary"
+        "secondary"
+      ];
+      disabledServers = [ ];
+    });
+  }
+  {
+    name = "computeEnabledServers deduplicates canonical names and accepts disabled aliases";
+    ok =
+      computeDuplicateSelection {
+        enabledServers = [
+          "secondary"
+          "primary"
+          "primary"
+          "unknown"
+        ];
+        disabledServers = [
+          "secondary"
+          "unknown"
+        ];
+      } == [ "primary" ];
   }
   {
     name = "resolved.mcp exposes timeouts and displayNames";

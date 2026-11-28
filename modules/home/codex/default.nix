@@ -183,14 +183,16 @@ in
         hooksCfg = cfg.hooks;
       };
 
+      enabledServers = resolved.mcp.computeEnabledServers cfg.mcp;
+
       permissions = import ./permissions.nix {
-        inherit lib resolved;
+        inherit lib resolved enabledServers;
       };
 
       mcp = import ./mcp.nix {
         inherit lib resolved;
         inherit (permissions) mcpApprovals;
-        enabledServers = agentsLib.mcp.computeEnabledServers cfg.mcp;
+        inherit enabledServers;
       };
 
       # --------------------------------------------------------------------------------------------
@@ -268,16 +270,6 @@ in
           profiles.config
 
           {
-            # --------------------------------------------------------------------------------------
-            # Assertions
-            # --------------------------------------------------------------------------------------
-            assertions = [
-              {
-                assertion = mcp.missingServers == [ ];
-                message = "Codex: agents.codex.mcp.enabledServers references unavailable MCP server(s): ${lib.concatStringsSep ", " mcp.missingServers}";
-              }
-            ];
-
             # --------------------------------------------------------------------------------------
             # Shared integration
             # --------------------------------------------------------------------------------------

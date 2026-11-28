@@ -205,24 +205,61 @@ let
     };
   };
 
-  longMcpToolCfg = evalHomeWith [ homeModules.omp ] {
-    agents = {
-      browser.chromiumPackage = null;
-      mcp = {
-        presets.github.enable = true;
-        servers.github.permissions.gateTools = [
-          {
-            tool = "this_mcp_tool_name_is_intentionally_longer_than_sixty_four_characters";
-            reason = "test";
-          }
-        ];
-      };
-      omp = {
-        enable = true;
-        package = stubOmp;
+  longMcpToolCfg =
+    mcp:
+    evalHomeWith [ homeModules.omp ] {
+      agents = {
+        browser.chromiumPackage = null;
+        mcp = {
+          presets.github.enable = true;
+          servers.github.permissions.gateTools = [
+            {
+              tool = "this_mcp_tool_name_is_intentionally_longer_than_sixty_four_characters";
+              reason = "test";
+            }
+          ];
+        };
+        omp = {
+          enable = true;
+          package = stubOmp;
+          inherit mcp;
+        };
       };
     };
+
+  missingMcpServerCfg = evalHomeWith [ homeModules.omp ] {
+    agents.omp = {
+      enable = true;
+      package = stubOmp;
+      mcp.enabledServers = [ "unknown" ];
+    };
   };
+
+  namespaceCfg =
+    primaryName: secondaryName: disabledServers:
+    evalHomeWith [ homeModules.omp ] {
+      agents = {
+        mcp.servers = {
+          primary = {
+            type = "http";
+            displayName = primaryName;
+            url = "https://primary.example.test/mcp";
+          };
+
+          secondary = {
+            type = "http";
+            displayName = secondaryName;
+            url = "https://secondary.example.test/mcp";
+          };
+        };
+
+        omp = {
+          enable = true;
+          package = stubOmp;
+          mcp.disabledServers = disabledServers;
+        };
+      };
+    };
 
   missingBaseUrlCfg = evalHomeWith [ homeModules.omp ] {
     agents = {
@@ -246,7 +283,8 @@ let
   filteredStateDir = "${filteredProfilesCfg.xdg.stateHome}/omp";
 
   combinedOmpBin = findPackageNamed "omp" combinedCfg.home.packages;
-  combinedMcp = builtins.fromJSON combinedCfg.home.file.".omp/agent/mcp.json".source.value;
+  mcpConfig = cfg: builtins.fromJSON cfg.home.file.".omp/agent/mcp.json".source.value;
+  combinedMcp = mcpConfig combinedCfg;
   workClaudeProfile =
     builtins.fromJSON
       combinedCfg.home.file."${stateDir}/profiles/work-claude.config.yml".source.value;
@@ -316,7 +354,40 @@ check "home-omp" [
   }
   {
     name = "permissions guard throws on MCP tool names exceeding 64 characters";
-    ok = throws (findPackageNamed "omp" longMcpToolCfg.home.packages).buildCommand;
+    ok = throws (findPackageNamed "omp" (longMcpToolCfg { }).home.packages).buildCommand;
+  }
+  {
+    name = "permissions ignore MCP tools on servers disabled for OMP";
+    ok =
+      !(throws
+        (findPackageNamed "omp"
+          (longMcpToolCfg {
+            disabledServers = [ "github" ];
+          }).home.packages
+        ).buildCommand
+      );
+  }
+  {
+    name = "unknown MCP server in enabledServers fails settings evaluation";
+    ok = throws (mcpConfig missingMcpServerCfg);
+  }
+  {
+    name = "OMP rejects selected servers that normalize to the same namespace";
+    ok =
+      throws (mcpConfig (namespaceCfg "Team-API" "team_api" [ ]))
+      && throws (mcpConfig (namespaceCfg "---" "Server" [ ]))
+      && throws (mcpConfig (namespaceCfg "Key" "Key" [ ]));
+  }
+  {
+    name = "disabling an OMP alias leaves the selected server in the generated MCP config";
+    ok =
+      (mcpConfig (namespaceCfg "Team-API" "team_api" [ "secondary" ])).mcpServers == {
+        "Team-API" = {
+          type = "http";
+          timeout = 120000;
+          url = "https://primary.example.test/mcp";
+        };
+      };
   }
 
   # ------------------------------------------------------------------------------------------------

@@ -129,7 +129,7 @@ in
 
       mcp = import ./mcp.nix {
         inherit lib resolved;
-        enabledServers = resolved.mcp.computeEnabledServers cfg.mcp;
+        selectedServers = resolved.mcp.computeEnabledServers cfg.mcp;
       };
 
       baseSettings = import ./settings.nix {
@@ -142,7 +142,7 @@ in
 
       permissionConfigFile = yaml.generate "omp-permissions.yml" (
         import ./permissions.nix {
-          inherit lib resolved;
+          inherit lib resolved mcp;
         }
       );
 

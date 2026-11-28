@@ -5,10 +5,14 @@
 {
   lib,
   resolved,
+  enabledServers,
 }:
 
 let
   policy = resolved.permissions;
+  forEnabledServers = lib.filter (entry: lib.elem entry.server enabledServers);
+  mcpAllows = forEnabledServers policy.mcpAllows;
+  mcpGates = forEnabledServers policy.mcpGates;
 
   toPattern = command: lib.concatStringsSep ", " (map builtins.toJSON (lib.splitString " " command));
 
@@ -41,10 +45,10 @@ let
       map (entry: { ${entry.server}.tools.${entry.tool}.approval_mode = mode; }) entries
     );
 
-  mcpGates = map (gate: {
+  mcpGateItems = map (gate: {
     name = "`${gate.tool}` on the ${gate.displayName} MCP server";
     inherit (gate) reason;
-  }) policy.mcpGates;
+  }) mcpGates;
 
   indentMultiline = text: lib.replaceStrings [ "\n" ] [ "\n  " ] (lib.trim text);
 
@@ -62,8 +66,8 @@ in
 {
   rules = lib.concatStringsSep "\n" (gateRules ++ allowRules ++ skillRules);
 
-  mcpApprovals = lib.recursiveUpdate (toMcpApprovals "approve" policy.mcpAllows) (
-    toMcpApprovals "prompt" policy.mcpGates
+  mcpApprovals = lib.recursiveUpdate (toMcpApprovals "approve" mcpAllows) (
+    toMcpApprovals "prompt" mcpGates
   );
 
   extraPolicy = ''
@@ -73,6 +77,6 @@ in
 
     ## Requires the user's explicit approval, including approval given earlier in the conversation
 
-    ${toPolicyItems (policy.gates.commands ++ mcpGates ++ policy.gates.policies)}
+    ${toPolicyItems (policy.gates.commands ++ mcpGateItems ++ policy.gates.policies)}
   '';
 }

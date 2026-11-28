@@ -6,11 +6,13 @@
   lib,
   resolved,
   instructionsDir,
+  enabledServers,
 }:
 
 let
   policy = resolved.permissions;
   inherit (policy) allows;
+  forEnabledServers = lib.filter (entry: lib.elem entry.server enabledServers);
 
   # ------------------------------------------------------------------------------------------------
   # Allow rules
@@ -25,7 +27,9 @@ let
 
   commandRules = map toAllowRule policy.allowCommands;
   skillRules = map toAllowRule (resolved.mkSkillScriptPaths "${resolved.configDirs.claude}/skills");
-  mcpRules = map (entry: "mcp__${entry.displayName}__${entry.tool}") policy.mcpAllows;
+  mcpRules = map (entry: "mcp__${entry.displayName}__${entry.tool}") (
+    forEnabledServers policy.mcpAllows
+  );
   toolRules = map (tool: toolNames.${tool}) allows.tools;
 
   # A leading `//` makes a Claude Code path rule absolute.
@@ -78,7 +82,7 @@ let
   mcpGates = map (gate: {
     name = "`mcp__${gate.displayName}__${gate.tool}`";
     inherit (gate) reason;
-  }) policy.mcpGates;
+  }) (forEnabledServers policy.mcpGates);
 
   toSoftDenyRules = entries: map (rule: "${rule} ${toLine softDenyClearance}") (toProseRules entries);
 

@@ -139,15 +139,28 @@ let
           };
 
           mcp = {
-            disabledServers = [ "deepwiki" ];
+            disabledServers = [
+              "deepwiki"
+              "unusedHttp"
+            ];
             presets = {
               deepwiki.enable = true;
               github.enable = true;
             };
-            servers.customHttp = {
-              type = "http";
-              displayName = "CustomHttp";
-              url = "https://mcp.example.test/mcp";
+            servers = {
+              customHttp = {
+                type = "http";
+                displayName = "CustomHttp";
+                url = "https://mcp.example.test/mcp";
+                permissions.allowTools = [ "list_items" ];
+              };
+
+              unusedHttp = {
+                type = "http";
+                displayName = "CustomHttp";
+                url = "https://unused.example.test/mcp";
+                permissions.allowTools = [ "edit_item" ];
+              };
             };
           };
 
