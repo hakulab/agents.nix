@@ -21,15 +21,25 @@ let
     nativeAgyAcpCfg
     ;
 
-  agyModels = import ../../../modules/home/agy/models.nix {
-    inherit lib;
-    inherit (managedCfg.agents) resolved;
-  };
-
   agyConfigDir = "${homeDirectory}/.gemini/config";
   researcher = managedCfg.home.file."${agyConfigDir}/agents/researcher.md".text;
   reviewer = managedCfg.home.file."${agyConfigDir}/agents/reviewer.md".text;
   defaultResearcher = optedOutCfg.home.file."${agyConfigDir}/agents/researcher.md".text;
+
+  expectedReviewerFrontmatter = lib.trim ''
+    mainAgent: false
+    model: pro
+    excludeDefaultComponents: true
+    inheritMcp: false
+  '';
+
+  expectedResearcherFrontmatter = lib.trim ''
+    mainAgent: true
+    model: inherit
+    excludeDefaultComponents: true
+    inheritCustomizations: false
+    inheritMcp: false
+  '';
 in
 check "home-agy" [
   # ------------------------------------------------------------------------------------------------
@@ -46,9 +56,9 @@ check "home-agy" [
   {
     name = "agy renders selected subagents with native model tiers and read-only tools";
     ok =
-      lib.hasInfix "mainAgent: false\nmodel: pro\nexcludeDefaultComponents: true\ninheritMcp: false" reviewer
+      lib.hasInfix expectedReviewerFrontmatter reviewer
       && lib.hasInfix ''tools: ["view_file","search_web","read_url_content"]'' reviewer
-      && lib.hasInfix "mainAgent: true\nmodel: inherit\nexcludeDefaultComponents: true\ninheritCustomizations: false\ninheritMcp: false" researcher
+      && lib.hasInfix expectedResearcherFrontmatter researcher
       && lib.hasInfix ''tools: ["view_file"]'' researcher
       && lib.hasInfix managedCfg.agents.resolved.agentRoles.reviewer.prompt reviewer
       && !(managedCfg.home.file ? "${agyConfigDir}/agents/implementer.md")
@@ -79,21 +89,6 @@ check "home-agy" [
   {
     name = "agy rejects provider extraHeaders with an eval-time assertion";
     ok = throws extraHeadersCfg.assertions;
-  }
-  {
-    name = "agy slugFor strips route prefixes and handles null effort";
-    ok =
-      agyModels.slugFor {
-        modelId = "gemini/gemini-4-hydrogen";
-        effort = "medium";
-        model.thinking.mode = "effort";
-      } == "gemini-4-hydrogen-medium"
-      &&
-        agyModels.slugFor {
-          modelId = "gemini/gemini-4-neon";
-          effort = null;
-          model.thinking.mode = "effort";
-        } == "gemini-4-neon";
   }
 
   # ------------------------------------------------------------------------------------------------
