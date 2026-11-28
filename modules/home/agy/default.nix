@@ -65,14 +65,9 @@ in
       };
 
       agyPackage = import ./package.nix {
-        inherit
-          pkgs
-          lib
-          agentsLib
-          resolved
-          ;
+        inherit pkgs lib agentsLib;
+        inherit (config.agents) resolved proxy;
         inherit (cfg) package;
-        inherit (config.agents) proxy;
       };
     in
     lib.mkIf cfg.enable {

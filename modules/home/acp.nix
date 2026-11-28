@@ -95,9 +95,8 @@ let
 
   agyAdapter = import ./agy/package.nix {
     inherit pkgs lib agentsLib;
-    inherit (config.agents) resolved;
+    inherit (config.agents) resolved proxy;
     inherit (cfg.agyAdapter) package;
-    inherit (config.agents) proxy;
   };
 
   # ------------------------------------------------------------------------------------------------

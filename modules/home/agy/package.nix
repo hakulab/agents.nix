@@ -7,8 +7,8 @@
   lib,
   agentsLib,
   resolved,
-  package,
   proxy,
+  package,
 }:
 
 let
