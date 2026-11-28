@@ -25,25 +25,6 @@ let
   forEnabledServers = lib.filter (entry: lib.elem entry.server enabledServers);
 
   # ------------------------------------------------------------------------------------------------
-  # Allow rules
-  # ------------------------------------------------------------------------------------------------
-
-  # Command allows also apply outside the sandbox. Keep them scoped to forge inspections.
-  commandAllows = lib.intersectLists policy.allows.commands.readOnly [
-    "gh issue view"
-    "gh pr checks"
-    "gh pr diff"
-    "gh pr list"
-    "gh pr view"
-    "gh run list"
-    "glab ci status"
-    "glab issue list"
-    "glab issue view"
-    "glab mr list"
-    "glab mr view"
-  ];
-
-  # ------------------------------------------------------------------------------------------------
   # Deny rules
   # ------------------------------------------------------------------------------------------------
   profileKeyFile =
@@ -66,7 +47,7 @@ in
 
   permissions = {
     allow =
-      map toCommand commandAllows
+      map toCommand policy.allows.commands.sandboxSafe
       ++ map toMcp (forEnabledServers policy.mcpAllows)
       ++ lib.optional instructions.enable "read_file(${instructionsDir})";
 

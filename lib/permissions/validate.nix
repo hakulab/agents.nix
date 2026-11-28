@@ -31,6 +31,8 @@ let
     )
   ) policy.allows.commands.readOnly;
 
+  sandboxSafeNotReadOnly = lib.subtractLists policy.allows.commands.readOnly policy.allows.commands.sandboxSafe;
+
   mcpServers = builtins.attrNames policy.allows.mcp ++ builtins.attrNames policy.gates.mcp;
   unknownServers = lib.unique (lib.subtractLists knownServers mcpServers);
 
@@ -43,8 +45,12 @@ let
   errors =
     overlaps
     ++ readOnlyCovers
+    ++ map (item: "sandbox-safe `${item}` is not in read-only allows") sandboxSafeNotReadOnly
     ++ map (item: "`${item}` is listed more than once") (
-      duplicates allCommands ++ duplicates mcpAllowIds ++ duplicates mcpGateIds
+      duplicates allCommands
+      ++ duplicates policy.allows.commands.sandboxSafe
+      ++ duplicates mcpAllowIds
+      ++ duplicates mcpGateIds
     )
     ++ map (item: "`${item}` contains `*`") wildcards
     ++ map (server: "unknown MCP server `${server}`") unknownServers

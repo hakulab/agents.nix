@@ -38,6 +38,7 @@ check "lib-permissions" [
     ok =
       defaultPolicy.ownRepositories == [ ]
       && builtins.length defaultPolicy.allowCommands > 0
+      && builtins.length defaultPolicy.allows.commands.sandboxSafe > 0
       && builtins.length defaultPolicy.gateCommands > 0
       && builtins.length defaultPolicy.mcpAllows > 0
       && builtins.length defaultPolicy.mcpGates > 0;
@@ -70,10 +71,26 @@ check "lib-permissions" [
     );
   }
   {
+    name = "rejects sandboxSafe not in readOnly";
+    ok = throws (
+      agentsLib.permissions.mkPolicy {
+        extraAllowCommands.sandboxSafe = [ "git status --short" ];
+      }
+    );
+  }
+  {
     name = "rejects duplicate command";
     ok = throws (
       agentsLib.permissions.mkPolicy {
         extraAllowCommands.readOnly = [ "ls" ];
+      }
+    );
+  }
+  {
+    name = "rejects duplicate sandboxSafe command";
+    ok = throws (
+      agentsLib.permissions.mkPolicy {
+        extraAllowCommands.sandboxSafe = [ "gh pr view" ];
       }
     );
   }
