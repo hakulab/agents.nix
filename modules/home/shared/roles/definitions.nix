@@ -20,6 +20,12 @@ let
     ${roleSections.status}
   '';
 
+  agyReadOnlyTools = [
+    "view_file"
+    "search_web"
+    "read_url_content"
+  ];
+
   defaultRoles = {
     architect = {
       description = ''
@@ -53,6 +59,8 @@ let
           "web_search"
         ];
       };
+
+      agy.tools = agyReadOnlyTools;
     };
 
     debugger = {
@@ -188,6 +196,8 @@ let
           "web_search"
         ];
       };
+
+      agy.tools = agyReadOnlyTools;
     };
 
     reviewer = {
@@ -223,6 +233,8 @@ let
         ];
         spawns = "reviewer";
       };
+
+      agy.tools = agyReadOnlyTools;
     };
 
     tester = {
@@ -281,6 +293,8 @@ let
           "web_search"
         ];
       };
+
+      agy.tools = agyReadOnlyTools;
     };
   };
 in

@@ -60,6 +60,12 @@ let
         default = { };
         description = "Oh My Pi-specific role fields";
       };
+
+      agy.tools = lib.mkOption {
+        type = lib.types.nullOr (lib.types.listOf lib.types.str);
+        default = null;
+        description = "Antigravity tool allowlist for this role";
+      };
     };
   };
 

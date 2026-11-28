@@ -96,6 +96,12 @@ let
     }
     // lib.optionalAttrs cfg.codexAdapter.enable {
       codex.argv = [ (profileBin "codex-acp") ];
+    }
+    // lib.optionalAttrs (config.agents.agy.enable or false) {
+      agy.argv = [
+        (profileBin "agy")
+        "acp"
+      ];
     };
 
   configFile = json.generate "acpx-config.json" {

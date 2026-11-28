@@ -125,6 +125,12 @@ in
           default = false;
           description = "Install skills into the Oh My Pi skills directory";
         };
+
+        agy = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = "Install skills into the Antigravity skills directory";
+        };
       };
 
       prosePolish = {
@@ -186,6 +192,13 @@ in
       home.file = mkSkillFiles {
         directory = "${resolved.configDirs.omp}/skills";
         recursive = true;
+      };
+    })
+
+    (lib.mkIf cfg.skills.targets.agy {
+      home.file = mkSkillFiles {
+        directory = "${resolved.configDirs.agy}/skills";
+        recursive = false;
       };
     })
   ];

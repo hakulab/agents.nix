@@ -75,6 +75,12 @@ let
       }
     );
 
+    agy = mkHomeModule "agy" (
+      import ./agy.nix {
+        inherit llm-agents sharedModule;
+      }
+    );
+
     oxide-code = mkHomeModule "oxide-code" (
       import ./oxide-code {
         inherit

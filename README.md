@@ -56,6 +56,8 @@ Add `agents-nix` to your flake inputs, import `agents-nix.homeModules.default` (
 }
 ```
 
+To use Antigravity CLI with a Google AI subscription, set `agents.agy.enable = true`. After activation, run `agy` and sign in with the Google account for that subscription.
+
 Supply each secret as a runtime file path string, such as `"/run/secrets/api-key"`. Literal environment values and HTTP headers in your Nix configuration are written to the Nix store.
 
 Read `config.agents.resolved.clientProfiles.<client>` to select a default authentication profile from the profiles available to an imported client. The read-only map applies the client's allowlists and API restrictions before generating client-specific files.
