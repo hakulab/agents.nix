@@ -36,6 +36,7 @@ let
         agy = {
           enable = true;
           package = authStub;
+          mcp.enabledServers = [ "sample" ];
           auth = {
             inherit defaultProfile;
             enabledProfiles = [
@@ -46,6 +47,32 @@ let
             ];
           };
         };
+        mcp.servers = {
+          sample = {
+            displayName = "Sample Tools";
+            command = [ "example-mcp" ];
+            permissions = {
+              allowTools = [ "read_item" ];
+              gateTools = [
+                {
+                  tool = "write_item";
+                  reason = "Writes data.";
+                }
+              ];
+            };
+          };
+          unused = {
+            displayName = "Unused Tools";
+            command = [ "example-mcp" ];
+            permissions.allowTools = [ "read_item" ];
+          };
+        };
+        permissions.gateCommands = [
+          {
+            command = "example deploy";
+            reason = "Deploys an application.";
+          }
+        ];
         models.defaults.native-api = {
           default = "gemini-4-hydrogen";
           standard = "gemini-4-hydrogen";
@@ -235,6 +262,7 @@ in
     explicitExecutableCfg
     nullExecutableCfg
     officialAuthCfg
+    fixtureKey
     apiAuthCfg
     apiState
     missingKeyCfg

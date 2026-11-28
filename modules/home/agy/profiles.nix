@@ -8,6 +8,7 @@
   lib,
   agentsLib,
   repoRoot,
+  permissionSettings,
 }:
 
 let
@@ -29,7 +30,12 @@ let
       provider = if profile.provider == null then null else providers.${profile.provider};
       keyFile = agentsLib.profiles.apiKeyFileFor provider "agy";
       baseUrl = if provider == null then null else provider.apiUrls.gemini or null;
-      settings = builtins.toJSON { modelProvider = if provider == null then "" else "gemini"; };
+      settings = builtins.toJSON (
+        permissionSettings
+        // {
+          modelProvider = if provider == null then "" else "gemini";
+        }
+      );
       model = slugFor profile.roles.default;
       esc = lib.escapeShellArg;
       cat = lib.getExe' pkgs.coreutils "cat";
@@ -51,7 +57,21 @@ let
         export GOOGLE_GEMINI_BASE_URL=${esc baseUrl}
       ''
       + ''
-        set -- --settings ${esc settings} --model ${esc model} "$@"
+        agy_settings=${esc settings}
+        agy_user_settings="$HOME/.gemini/antigravity-cli/settings.json"
+        if [ -f "$agy_user_settings" ]; then
+          if ! agy_settings="$(${lib.getExe pkgs.jq} -ce --argjson managed "$agy_settings" '
+            .permissions as $saved
+            | $managed
+            | .permissions.allow += ($saved.allow // [])
+            | .permissions.ask += ($saved.ask // [])
+            | .permissions.deny += ($saved.deny // [])
+          ' "$agy_user_settings" 2>/dev/null)"; then
+            echo "agy: could not load saved permission rules from settings.json" >&2
+            exit 1
+          fi
+        fi
+        set -- --settings "$agy_settings" --model ${esc model} "$@"
       ''
     );
 

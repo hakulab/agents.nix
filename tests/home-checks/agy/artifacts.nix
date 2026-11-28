@@ -18,6 +18,7 @@ let
     explicitExecutableCfg
     nullExecutableCfg
     officialAuthCfg
+    fixtureKey
     apiAuthCfg
     apiState
     missingKeyCfg
@@ -33,8 +34,9 @@ pkgs.runCommand "home-agy-artifacts"
     buildInputs = [ apiState ];
 
     ARTIFACTS = builtins.toJSON {
-      inherit explicitExecutable;
+      inherit explicitExecutable fixtureKey;
       profileAgy = "${combinedCfg.home.profileDirectory}/bin/agy";
+      instructionsPath = "${officialAuthCfg.agents.dataDir}/instructions";
       profileConfigs = map acpConfig [
         combinedCfg
         fallbackCfg

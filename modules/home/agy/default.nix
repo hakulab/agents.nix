@@ -63,6 +63,17 @@ in
   # ------------------------------------------------------------------------------------------------
   config =
     let
+      enabledServers = resolved.mcp.computeEnabledServers cfg.mcp;
+
+      permissionSettings = import ./permissions.nix {
+        inherit
+          config
+          lib
+          agentsLib
+          enabledServers
+          ;
+      };
+
       profiles = import ./profiles.nix {
         inherit
           config
@@ -70,6 +81,7 @@ in
           lib
           agentsLib
           repoRoot
+          permissionSettings
           ;
       };
 
@@ -79,8 +91,7 @@ in
       };
 
       mcp = import ./mcp.nix {
-        inherit lib resolved;
-        enabledServers = resolved.mcp.computeEnabledServers cfg.mcp;
+        inherit lib resolved enabledServers;
       };
 
       agyPackage = import ./package.nix {

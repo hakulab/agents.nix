@@ -113,6 +113,7 @@ let
       agy.argv = [
         (lib.defaultTo (profileBin "agy") cfg.agyAdapter.executable)
         "acp"
+        "--sandbox"
       ];
     };
 
