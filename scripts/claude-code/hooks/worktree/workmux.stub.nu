@@ -25,6 +25,7 @@ def --wrapped main [...args: string] {
       }
       print $path
     }
+
     "add" => {
       let branch = ($args | get 1)
       let base = ($args | get 3)
@@ -45,6 +46,7 @@ def --wrapped main [...args: string] {
       }
       | to json --raw
     }
+
     "list" => {
       let handle = ($args | get 2)
       let local = {
@@ -58,6 +60,7 @@ def --wrapped main [...args: string] {
         [$local] | to json --raw
       }
     }
+
     "remove" => {
       let leaves = ($env.STUB_REMOVE_LEAVES? | default "")
       if ($leaves | is-empty) {
@@ -65,6 +68,7 @@ def --wrapped main [...args: string] {
         exit 0
       }
     }
+
     _ => {}
   }
 }
