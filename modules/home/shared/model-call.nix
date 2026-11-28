@@ -80,7 +80,7 @@ in
       type = lib.types.nullOr lib.types.str;
       default = if providerCfg != null then providerCfg.baseUrl else null;
       defaultText = lib.literalExpression "agents.providers.<provider>.baseUrl or null";
-      description = "Base URL of the OpenAI-compatible chat completions endpoint";
+      description = "OpenAI-compatible base URL with an optional trailing /v1";
     };
 
     apiKeyFile = lib.mkOption {

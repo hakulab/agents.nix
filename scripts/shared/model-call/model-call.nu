@@ -40,10 +40,13 @@ def main [
   let token_file = ($gateway | get -o tokenFile | default "")
   let extra_headers = ($gateway | get -o extraHeaders | default {})
 
-  mut curl_args = [
-    $"($gateway.baseUrl)/v1/chat/completions"
-    ...$config.curlArgs
-  ]
+  let base_url = ($gateway.baseUrl | str trim --right --char "/")
+  let api_url = if ($base_url | url parse | get path | str ends-with "/v1") {
+    $base_url
+  } else {
+    $"($base_url)/v1"
+  }
+  mut curl_args = [$"($api_url)/chat/completions" ...$config.curlArgs]
   if ($ca_file | is-not-empty) {
     $curl_args = ($curl_args | append [--cacert $ca_file])
   }
