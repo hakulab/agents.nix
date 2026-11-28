@@ -34,29 +34,9 @@
 
     llm-agents.url = "github:numtide/llm-agents.nix";
 
-    activity-report = {
-      url = "github:hakulab/activity-report";
-      inputs = {
-        nixpkgs.follows = "nixpkgs";
-        devkit.follows = "devkit";
-      };
-    };
-
-    agent-project-move = {
-      url = "github:hakulab/agent-project-move";
-      inputs = {
-        nixpkgs.follows = "nixpkgs";
-        devkit.follows = "devkit";
-      };
-    };
-
-    claude-statusline = {
-      url = "github:hakulab/claude-statusline";
-      inputs = {
-        nixpkgs.follows = "nixpkgs";
-        devkit.follows = "devkit";
-      };
-    };
+    activity-report.url = "github:hakulab/activity-report";
+    agent-project-move.url = "github:hakulab/agent-project-move";
+    claude-statusline.url = "github:hakulab/claude-statusline";
 
     oxide-code = {
       url = "github:hakulab/oxide-code";
