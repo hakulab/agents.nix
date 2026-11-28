@@ -191,7 +191,7 @@ in
       package = lib.mkOption {
         type = lib.types.package;
         default = llmAgentsPackages.antigravity-cli;
-        description = "Antigravity CLI package to install when the program does not supply it";
+        description = "Fallback package providing the agy binary";
       };
     };
 
