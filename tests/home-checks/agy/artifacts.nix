@@ -11,44 +11,44 @@
 let
   inherit (fixtures)
     agyPackages
-    combinedCfg
+    fixtureKey
+    explicitExecutable
+    managedCfg
+    officialState
+    managedAuthCfg
+    apiState
+    apiAuthCfg
+    missingKeyState
+    missingKeyCfg
     optedOutCfg
     fallbackCfg
-    explicitExecutable
     explicitExecutableCfg
-    nullExecutableCfg
-    officialAuthCfg
-    fixtureKey
-    apiAuthCfg
-    apiState
-    missingKeyCfg
     ;
 
   acpConfig = cfg: cfg.home.file.".acpx/config.json".source;
-  combinedPackage = combinedCfg.programs.antigravity-cli.package;
   fallbackPackage = builtins.head (agyPackages fallbackCfg);
 in
-pkgs.runCommand "home-agy-artifacts"
+pkgs.runCommand "check-home-agy-artifacts"
   {
     nativeBuildInputs = [ nushell ];
-    buildInputs = [ apiState ];
+    buildInputs = [
+      officialState
+      apiState
+      missingKeyState
+    ];
 
     ARTIFACTS = builtins.toJSON {
       inherit explicitExecutable fixtureKey;
-      profileAgy = "${combinedCfg.home.profileDirectory}/bin/agy";
-      instructionsPath = "${officialAuthCfg.agents.dataDir}/instructions";
-      profileConfigs = map acpConfig [
-        combinedCfg
-        fallbackCfg
-        nullExecutableCfg
-      ];
-      explicit = acpConfig explicitExecutableCfg;
-      optOut = acpConfig optedOutCfg;
-      combinedWrapper = "${combinedPackage}/bin/agy";
+      profileAgy = "${managedCfg.home.profileDirectory}/bin/agy";
+      instructionsPath = "${managedCfg.agents.dataDir}/instructions";
+      managedAcp = acpConfig managedCfg;
+      fallbackAcp = acpConfig fallbackCfg;
+      explicitAcp = acpConfig explicitExecutableCfg;
+      optOutAcp = acpConfig optedOutCfg;
+      managedWrapper = "${managedAuthCfg.programs.antigravity-cli.package}/bin/agy";
       fallbackWrapper = "${fallbackPackage}/bin/agy";
-      officialAuth = "${officialAuthCfg.programs.antigravity-cli.package}/bin/agy";
-      apiAuth = "${apiAuthCfg.programs.antigravity-cli.package}/bin/agy";
-      missingKey = "${missingKeyCfg.programs.antigravity-cli.package}/bin/agy";
+      apiWrapper = "${apiAuthCfg.programs.antigravity-cli.package}/bin/agy";
+      missingKeyWrapper = "${missingKeyCfg.programs.antigravity-cli.package}/bin/agy";
     };
   }
   ''

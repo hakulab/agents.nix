@@ -28,7 +28,8 @@ let
       model,
       ...
     }:
-    modelId + lib.optionalString ((model.thinking.mode or null) == "effort") "-${effort}";
+    lib.last (lib.splitString "/" modelId)
+    + lib.optionalString (effort != null && (model.thinking.mode or null) == "effort") "-${effort}";
 in
 {
   inherit slugFor;

@@ -40,6 +40,12 @@ in
 
     auth = agentsLib.profiles.mkOptions { };
 
+    extraSettings = lib.mkOption {
+      type = lib.types.attrsOf lib.types.anything;
+      default = { };
+      description = "Extra settings recursively merged into the managed Antigravity CLI settings";
+    };
+
     agents = {
       enabledAgents = resolved.agentRoleOptions.mkEnabledAgentsOption {
         description = "Custom agents to enable for Antigravity CLI";
@@ -101,24 +107,25 @@ in
         profileWrapArgs = profiles.wrapArgs;
       };
     in
-    lib.mkIf cfg.enable {
-      agents = {
-        agy.mcp.disabledServers = resolved.mcp.disabledServers;
-        skills.targets.agy = lib.mkDefault true;
-      };
+    lib.mkIf cfg.enable (
+      lib.mkMerge [
+        profiles.config
 
-      programs.antigravity-cli = {
-        enable = true;
-        package = agyPackage;
-        mcpServers = mcp.serversConfig;
-        context.AGENTS = lib.mkIf (resolved.instructions != "") resolved.instructions;
-      };
+        {
+          agents = {
+            agy.mcp.disabledServers = resolved.mcp.disabledServers;
+            skills.targets.agy = lib.mkDefault true;
+          };
 
-      inherit (profiles) assertions;
+          programs.antigravity-cli = {
+            enable = true;
+            package = agyPackage;
+            mcpServers = mcp.serversConfig;
+            context.AGENTS = lib.mkIf (resolved.instructions != "") resolved.instructions;
+          };
 
-      home = {
-        inherit (profiles) packages activation;
-        file = agents.homeFiles // profiles.files;
-      };
-    };
+          home.file = agents.homeFiles;
+        }
+      ]
+    );
 }

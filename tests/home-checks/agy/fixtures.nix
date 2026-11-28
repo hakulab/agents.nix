@@ -13,128 +13,58 @@ let
   inherit (harness) evalHomeWith;
 
   stubAgy = pkgs.writeShellScriptBin "agy" ''
-    printf '%s\n' "$HTTPS_PROXY" "$NO_PROXY" "$@"
-  '';
+    set -euo pipefail
 
-  authStub = pkgs.writeShellScriptBin "agy" ''
-    [ "${"$"}{GEMINI_API_KEY:-}" = fixture-key ] && echo key-loaded
-    printf '%s\n' "${"$"}{GEMINI_API_KEY:+key-present}" "$GOOGLE_GEMINI_BASE_URL" "$@"
+    if [[ -z "''${GEMINI_API_KEY-}" ]]; then
+      key_status=""
+    elif [[ "''${GEMINI_API_KEY-}" == "fixture-key" ]]; then
+      key_status="fixture-key"
+    else
+      key_status="unexpected-key"
+    fi
+
+    printf '%s\n' \
+      "''${HTTPS_PROXY-}" \
+      "''${NO_PROXY-}" \
+      "$key_status" \
+      "''${GOOGLE_GEMINI_BASE_URL-}" \
+      "''${AGY_ADC_AUTH-}" \
+      "$@"
   '';
 
   stubGemini = pkgs.writeShellScriptBin "gemini-cli" "exit 0";
 
   agyPackages = cfg: lib.filter (pkg: lib.getName pkg == "agy") cfg.home.packages;
-
-  # ------------------------------------------------------------------------------------------------
-  # Auth profiles
-  # ------------------------------------------------------------------------------------------------
-  evalAuth =
-    defaultProfile: apiKeyFile: extraConfig:
-    evalHomeWith [ homeModules.agy ] {
-      imports = [ extraConfig ];
-      agents = {
-        agy = {
-          enable = true;
-          package = authStub;
-          mcp.enabledServers = [ "sample" ];
-          auth = {
-            inherit defaultProfile;
-            enabledProfiles = [
-              "official"
-              "ai-studio"
-              "gateway"
-              "official-token"
-            ];
-          };
-        };
-        mcp.servers = {
-          sample = {
-            displayName = "Sample Tools";
-            command = [ "example-mcp" ];
-            permissions = {
-              allowTools = [ "read_item" ];
-              gateTools = [
-                {
-                  tool = "write_item";
-                  reason = "Writes data.";
-                }
-              ];
-            };
-          };
-          unused = {
-            displayName = "Unused Tools";
-            command = [ "example-mcp" ];
-            permissions.allowTools = [ "read_item" ];
-          };
-        };
-        permissions.gateCommands = [
-          {
-            command = "example deploy";
-            reason = "Deploys an application.";
-          }
-        ];
-        models.defaults.native-api = {
-          default = "gemini-4-hydrogen";
-          standard = "gemini-4-hydrogen";
-          mini = "gemini-4-hydrogen";
-          flagship = "gemini-4-neon";
-        };
-        providers = {
-          studio = {
-            apiKeyFile = "/fixtures/ignored-key";
-            clientApiKeyFiles.agy = apiKeyFile;
-            apiUrls.gemini = "https://gemini.example.test";
-          };
-          gateway = {
-            apiUrls.openai-responses = "https://gateway.example.test/v1";
-            inherit apiKeyFile;
-          };
-        };
-        profiles = {
-          ai-studio = {
-            provider = "studio";
-            family = "gemini";
-            defaultsKey = "native-api";
-          };
-          gateway = {
-            provider = "gateway";
-            family = "gemini";
-          };
-          official-token = {
-            family = "gemini";
-            oauthTokenFile = "/fixtures/oauth-token";
-          };
-        };
-      };
-    };
+  evalAcpWith = modules: evalHomeWith ([ homeModules.acp ] ++ modules) { agents.acp.enable = true; };
 
   fixtureKey = "${pkgs.writeText "agy-fixture-key" "fixture-key\n"}";
-  officialAuthCfg = evalAuth "official" fixtureKey { };
-  apiProfile =
-    officialAuthCfg.home.file."${officialAuthCfg.xdg.stateHome}/agy/profiles/ai-studio.sh".source;
-  apiState = pkgs.linkFarm "agy-active-api-profile" { "agy/active-profile" = apiProfile; };
-  apiAuthCfg = evalAuth "official" fixtureKey {
-    xdg.stateHome = builtins.unsafeDiscardStringContext "${apiState}";
-  };
-  missingKeyCfg = evalAuth "ai-studio" "/fixtures/missing-key" { };
+  explicitExecutable = "/fixtures/local/bin/agy";
 
   # ------------------------------------------------------------------------------------------------
-  # Shared customizations
+  # Managed CLI, customizations, auth profiles, proxy, and default ACP
   # ------------------------------------------------------------------------------------------------
-  customizedCfg = evalHomeWith [ homeModules.agy ] {
+  managedConfig = {
     agents = {
       agy = {
         enable = true;
+        package = stubAgy;
+        extraSettings.customSetting = "enabled";
         agents.enabledAgents = [
           "researcher"
           "reviewer"
         ];
+        auth = {
+          defaultProfile = "official";
+          enabledProfiles = [
+            "official"
+            "ai-studio"
+            "gateway"
+            "official-token"
+          ];
+        };
       };
 
-      instructions = {
-        enable = false;
-        extraSections = "Project guidance.";
-      };
+      instructions.extraSections = "Project guidance.";
 
       roles.definitions.researcher.agy = {
         mainAgent = true;
@@ -144,6 +74,26 @@ let
 
       skills.sources.sample.source = "/fixtures/sample-skill";
 
+      models = {
+        defaults = {
+          gemini.default = "gemini-4-hydrogen";
+          native-api = {
+            default = "gemini-4-neon";
+            standard = "gemini-4-neon";
+            mini = "gemini-4-hydrogen";
+            flagship = "gemini-4-neon";
+          };
+        };
+        workloadPolicy.gemini.default = "medium";
+        catalog.gemini-4-hydrogen.channelId.google = "gemini/gemini-4-hydrogen";
+      };
+
+      proxy = {
+        enable = true;
+        url = "https://proxy.example.test";
+        noProxy = [ "direct.example.test" ];
+      };
+
       mcp = {
         disabledServers = [ "hidden" ];
         servers = {
@@ -151,6 +101,15 @@ let
             displayName = "Local";
             command = [ "example-mcp" ];
             envFiles.MCP_TOKEN = "/run/secrets/mcp-token";
+            permissions = {
+              allowTools = [ "read_item" ];
+              gateTools = [
+                {
+                  tool = "write_item";
+                  reason = "Writes data.";
+                }
+              ];
+            };
           };
 
           remote = {
@@ -162,41 +121,134 @@ let
           hidden = {
             displayName = "Hidden";
             command = [ "example-mcp" ];
+            permissions.allowTools = [ "read_item" ];
           };
+        };
+      };
+
+      permissions.gateCommands = [
+        {
+          command = "example deploy";
+          reason = "Deploys an application.";
+        }
+      ];
+
+      providers = {
+        studio = {
+          apiKeyFile = "/fixtures/ignored-key";
+          clientApiKeyFiles.agy = fixtureKey;
+          apiUrls.gemini = "https://gemini.example.test";
+        };
+        gateway = {
+          apiUrls.openai-responses = "https://gateway.example.test/v1";
+          apiKeyFile = fixtureKey;
+        };
+      };
+
+      profiles = {
+        ai-studio = {
+          provider = "studio";
+          family = "gemini";
+          defaultsKey = "native-api";
+        };
+        gateway = {
+          provider = "gateway";
+          family = "gemini";
+        };
+        official-token = {
+          family = "gemini";
+          oauthTokenFile = "/fixtures/oauth-token";
         };
       };
     };
   };
 
-  # ------------------------------------------------------------------------------------------------
-  # ACP configurations
-  # ------------------------------------------------------------------------------------------------
-  evalAcpWith = modules: evalHomeWith ([ homeModules.acp ] ++ modules) { agents.acp.enable = true; };
-
-  combinedCfg = evalAcpWith [
+  managedCfg = evalAcpWith [
     homeModules.agy
+    managedConfig
+  ];
+
+  # ------------------------------------------------------------------------------------------------
+  # Switched profiles and error cases
+  # ------------------------------------------------------------------------------------------------
+  officialProfile =
+    managedCfg.home.file."${managedCfg.xdg.stateHome}/agy/profiles/official.env.sh".source;
+  officialState = pkgs.linkFarm "agy-active-official-profile" {
+    "agy/active-profile" = officialProfile;
+  };
+
+  managedAuthCfg = evalAcpWith [
+    homeModules.agy
+    managedConfig
     {
-      agents = {
-        agy = {
-          enable = true;
-          package = stubAgy;
-        };
-
-        models = {
-          defaults.gemini.default = "gemini-4-hydrogen";
-          workloadPolicy.gemini.default = "medium";
-          catalog.gemini-4-hydrogen.channelId.google = "gemini/gemini-4-hydrogen";
-        };
-
-        proxy = {
-          enable = true;
-          url = "https://proxy.example.test";
-          noProxy = [ "direct.example.test" ];
-        };
-      };
+      xdg.stateHome = builtins.unsafeDiscardStringContext "${officialState}";
     }
   ];
 
+  apiProfile =
+    managedCfg.home.file."${managedCfg.xdg.stateHome}/agy/profiles/ai-studio.env.sh".source;
+  apiState = pkgs.linkFarm "agy-active-api-profile" { "agy/active-profile" = apiProfile; };
+
+  apiAuthCfg = evalHomeWith [ homeModules.agy ] {
+    xdg.stateHome = builtins.unsafeDiscardStringContext "${apiState}";
+    agents.agy = {
+      enable = true;
+      package = stubAgy;
+    };
+  };
+
+  missingKeyConfig = {
+    agents = {
+      agy = {
+        enable = true;
+        package = stubAgy;
+        auth.defaultProfile = "ai-studio";
+      };
+      providers.studio = {
+        apiKeyFile = "/fixtures/missing-key";
+        apiUrls.gemini = "https://gemini.example.test";
+      };
+      profiles.ai-studio = {
+        provider = "studio";
+        family = "gemini";
+      };
+    };
+  };
+
+  missingKeyBaseCfg = evalHomeWith [ homeModules.agy ] missingKeyConfig;
+  missingKeyProfile =
+    missingKeyBaseCfg.home.file."${missingKeyBaseCfg.xdg.stateHome}/agy/profiles/ai-studio.env.sh".source;
+  missingKeyState = pkgs.linkFarm "agy-active-missing-key-profile" {
+    "agy/active-profile" = missingKeyProfile;
+  };
+
+  missingKeyCfg = evalHomeWith [ homeModules.agy ] (
+    lib.recursiveUpdate missingKeyConfig {
+      xdg.stateHome = builtins.unsafeDiscardStringContext "${missingKeyState}";
+    }
+  );
+
+  extraHeadersCfg = evalHomeWith [ homeModules.agy ] {
+    agents = {
+      agy = {
+        enable = true;
+        package = stubAgy;
+      };
+      providers.studio = {
+        apiKeyFile = fixtureKey;
+        apiUrls.gemini = "https://gemini.example.test";
+        extraHeaders."X-Test" = "1";
+      };
+      profiles.ai-studio = {
+        provider = "studio";
+        family = "gemini";
+      };
+    };
+  };
+
+  # ------------------------------------------------------------------------------------------------
+  # ACP opt-out, fallback, and explicit executable
+  # ------------------------------------------------------------------------------------------------
   optedOutCfg = evalAcpWith [
     homeModules.agy
     {
@@ -223,8 +275,6 @@ let
     }
   ];
 
-  explicitExecutable = "/fixtures/local/bin/agy";
-
   explicitExecutableCfg = evalAcpWith [
     {
       agents.acp.agyAdapter = {
@@ -235,7 +285,7 @@ let
     }
   ];
 
-  nullExecutableCfg = evalAcpWith [
+  nativeAgyAcpCfg = evalAcpWith [
     {
       agents.acp.agyAdapter = {
         enable = true;
@@ -253,18 +303,19 @@ in
 {
   inherit
     agyPackages
-    stubAgy
-    customizedCfg
-    combinedCfg
+    fixtureKey
+    explicitExecutable
+    managedCfg
+    officialState
+    managedAuthCfg
+    apiState
+    apiAuthCfg
+    missingKeyState
+    missingKeyCfg
+    extraHeadersCfg
     optedOutCfg
     fallbackCfg
-    explicitExecutable
     explicitExecutableCfg
-    nullExecutableCfg
-    officialAuthCfg
-    fixtureKey
-    apiAuthCfg
-    apiState
-    missingKeyCfg
+    nativeAgyAcpCfg
     ;
 }

@@ -13,10 +13,12 @@
 
 let
   inherit (config.agents) providers resolved;
+  inherit (config.agents.agy) extraSettings;
   inherit (config.agents.agy.auth) defaultProfile;
 
+  esc = lib.escapeShellArg;
+  cat = lib.getExe' pkgs.coreutils "cat";
   stateDir = "${config.xdg.stateHome}/agy";
-  activeProfile = lib.escapeShellArg "${stateDir}/active-profile";
   profiles = resolved.clientProfiles.agy;
   inherit (import ./models.nix { inherit lib resolved; }) slugFor;
 
@@ -24,27 +26,47 @@ let
     builtins.readFile (repoRoot + "/scripts/agy/validate-api-args.sh")
   );
 
+  extraHeaderProfiles = lib.filter (
+    name:
+    let
+      providerName = profiles.${name}.provider;
+    in
+    providerName != null && (providers.${providerName}.extraHeaders or { }) != { }
+  ) (builtins.attrNames profiles);
+
   mkProfile =
     name: profile:
     let
       provider = if profile.provider == null then null else providers.${profile.provider};
       keyFile = agentsLib.profiles.apiKeyFileFor provider "agy";
       baseUrl = if provider == null then null else provider.apiUrls.gemini or null;
+      caCertFile = if provider == null then null else provider.caCertFile or null;
+      extraEnv = if provider == null then { } else provider.extraEnv or { };
+      extraEnvFiles = if provider == null then { } else provider.extraEnvFiles or { };
       settings = builtins.toJSON (
-        permissionSettings
+        (lib.recursiveUpdate permissionSettings extraSettings)
         // {
           modelProvider = if provider == null then "" else "gemini";
         }
       );
       model = slugFor profile.roles.default;
-      esc = lib.escapeShellArg;
-      cat = lib.getExe' pkgs.coreutils "cat";
+
+      extraEnvLines = lib.concatStringsSep "\n" (
+        lib.mapAttrsToList (k: v: "export ${k}=${esc v}") extraEnv
+      );
+
+      extraEnvFileLines = lib.concatStringsSep "\n" (
+        lib.mapAttrsToList (var: file: ''
+          if ! ${var}="$(${cat} ${esc file})" || [ -z "''${${var}}" ]; then
+            echo "agy: could not read ${var} for profile "${esc name} >&2
+            exit 1
+          fi
+          export ${var}
+        '') extraEnvFiles
+      );
     in
     pkgs.writeShellScript "agy-profile-${name}" (
-      ''
-        unset GEMINI_API_KEY GOOGLE_GEMINI_BASE_URL
-      ''
-      + lib.optionalString (keyFile != null) ''
+      lib.optionalString (keyFile != null) ''
         source ${apiArgsScript}
         validate_agy_api_args "$@" || exit 1
         if ! GEMINI_API_KEY="$(${cat} ${esc keyFile})" || [ -z "$GEMINI_API_KEY" ]; then
@@ -56,6 +78,15 @@ let
       + lib.optionalString (baseUrl != null) ''
         export GOOGLE_GEMINI_BASE_URL=${esc baseUrl}
       ''
+      + lib.optionalString (caCertFile != null) ''
+        export NODE_EXTRA_CA_CERTS=${esc caCertFile}
+      ''
+      + lib.optionalString (extraEnvLines != "") ''
+        ${extraEnvLines}
+      ''
+      + lib.optionalString (extraEnvFileLines != "") ''
+        ${extraEnvFileLines}
+      ''
       + ''
         agy_settings=${esc settings}
         agy_user_settings="$HOME/.gemini/antigravity-cli/settings.json"
@@ -66,7 +97,7 @@ let
             | .permissions.allow += ($saved.allow // [])
             | .permissions.ask += ($saved.ask // [])
             | .permissions.deny += ($saved.deny // [])
-          ' "$agy_user_settings" 2>/dev/null)"; then
+          ' "$agy_user_settings")"; then
             echo "agy: could not load saved permission rules from settings.json" >&2
             exit 1
           fi
@@ -76,32 +107,66 @@ let
     );
 
   profileScripts = lib.mapAttrs mkProfile profiles;
+
+  profileEnvVars = lib.unique (
+    [
+      "AGY_ADC_AUTH"
+      "GEMINI_API_KEY"
+      "GOOGLE_GEMINI_BASE_URL"
+      "NODE_EXTRA_CA_CERTS"
+    ]
+    ++ lib.concatMap (
+      profile:
+      let
+        provider = if profile.provider == null then null else providers.${profile.provider};
+      in
+      lib.optionals (provider != null) (
+        builtins.attrNames (provider.extraEnv or { }) ++ builtins.attrNames (provider.extraEnvFiles or { })
+      )
+    ) (builtins.attrValues profiles)
+  );
+
+  profileLoader = pkgs.replaceVars (repoRoot + "/scripts/agy/profile-loader.sh") {
+    inherit stateDir;
+    profileEnvVars = toString profileEnvVars;
+  };
+
   switch = resolved.mkProfileSwitch {
     name = "agy-switch";
     assistant = "Antigravity CLI";
     inherit stateDir defaultProfile;
-    extension = "sh";
+    extension = "env.sh";
     profiles = profileScripts;
   };
 in
 {
-  assertions = [ switch.assertion ];
-  packages = [ switch.package ];
-  inherit (switch) files;
-  activation.agyAuthProfile = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
-    run ${lib.getExe switch.package} --initialize
-  '';
+  # ------------------------------------------------------------------------------------------------
+  # Module config
+  # ------------------------------------------------------------------------------------------------
+  config = {
+    assertions = [
+      switch.assertion
+      {
+        assertion = extraHeaderProfiles == [ ];
+        message = "agents.agy: provider extraHeaders is not supported for profile(s): ${lib.concatStringsSep ", " extraHeaderProfiles}";
+      }
+    ];
 
+    home = {
+      packages = [ switch.package ];
+      file = switch.files;
+
+      activation.agyAuthProfile = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+        run ${lib.getExe switch.package} --initialize
+      '';
+    };
+  };
+
+  # ------------------------------------------------------------------------------------------------
+  # Exports
+  # ------------------------------------------------------------------------------------------------
   wrapArgs = [
     "--run"
-    ''
-      if [ -L ${activeProfile} ]; then
-        source ${activeProfile} || exit 1
-      else
-        source ${
-          profileScripts.${defaultProfile} or (pkgs.writeShellScript "agy-profile-missing" "exit 1")
-        }
-      fi
-    ''
+    "source ${profileLoader}"
   ];
 }

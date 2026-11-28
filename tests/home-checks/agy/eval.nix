@@ -9,25 +9,27 @@
 }:
 
 let
-  inherit (harness) check homeDirectory;
+  inherit (harness) check throws homeDirectory;
 
   inherit (fixtures)
     agyPackages
-    stubAgy
-    customizedCfg
-    combinedCfg
+    managedCfg
+    extraHeadersCfg
     optedOutCfg
     fallbackCfg
     explicitExecutableCfg
-    nullExecutableCfg
-    officialAuthCfg
+    nativeAgyAcpCfg
     ;
 
-  agyConfigDir = "${homeDirectory}/.gemini/config";
-  researcher = customizedCfg.home.file."${agyConfigDir}/agents/researcher.md".text;
-  reviewer = customizedCfg.home.file."${agyConfigDir}/agents/reviewer.md".text;
+  agyModels = import ../../../modules/home/agy/models.nix {
+    inherit lib;
+    inherit (managedCfg.agents) resolved;
+  };
 
-  combinedRolesDir = "${combinedCfg.agents.resolved.configDirs.agy}/agents";
+  agyConfigDir = "${homeDirectory}/.gemini/config";
+  researcher = managedCfg.home.file."${agyConfigDir}/agents/researcher.md".text;
+  reviewer = managedCfg.home.file."${agyConfigDir}/agents/reviewer.md".text;
+  defaultResearcher = optedOutCfg.home.file."${agyConfigDir}/agents/researcher.md".text;
 in
 check "home-agy" [
   # ------------------------------------------------------------------------------------------------
@@ -36,33 +38,29 @@ check "home-agy" [
   {
     name = "agy writes shared customizations while leaving sign-in settings writable";
     ok =
-      customizedCfg.home.file.".gemini/AGENTS.md".text == "Project guidance."
-      && customizedCfg.home.file."${agyConfigDir}/skills/sample".source == "/fixtures/sample-skill"
-      && !(customizedCfg.home.file ? ".gemini/antigravity-cli/settings.json");
+      managedCfg.home.file.".gemini/AGENTS.md".text == managedCfg.agents.resolved.instructions
+      && lib.hasInfix "Project guidance." managedCfg.home.file.".gemini/AGENTS.md".text
+      && managedCfg.home.file."${agyConfigDir}/skills/sample".source == "/fixtures/sample-skill"
+      && !(managedCfg.home.file ? ".gemini/antigravity-cli/settings.json");
   }
   {
     name = "agy renders selected subagents with native model tiers and read-only tools";
     ok =
-      lib.hasInfix "mainAgent: false\nmodel: inherit\nexcludeDefaultComponents: true\ninheritMcp: false" reviewer
+      lib.hasInfix "mainAgent: false\nmodel: pro\nexcludeDefaultComponents: true\ninheritMcp: false" reviewer
       && lib.hasInfix ''tools: ["view_file","search_web","read_url_content"]'' reviewer
-      && lib.hasInfix "mainAgent: true\nmodel: flash\nexcludeDefaultComponents: true\ninheritCustomizations: false\ninheritMcp: false" researcher
+      && lib.hasInfix "mainAgent: true\nmodel: inherit\nexcludeDefaultComponents: true\ninheritCustomizations: false\ninheritMcp: false" researcher
       && lib.hasInfix ''tools: ["view_file"]'' researcher
-      && lib.hasInfix customizedCfg.agents.resolved.agentRoles.reviewer.prompt reviewer
-      && !(customizedCfg.home.file ? "${agyConfigDir}/agents/implementer.md");
+      && lib.hasInfix managedCfg.agents.resolved.agentRoles.reviewer.prompt reviewer
+      && !(managedCfg.home.file ? "${agyConfigDir}/agents/implementer.md")
+      && lib.hasInfix "model: flash\n" defaultResearcher;
   }
   {
     name = "agy uses the runtime MCP wrapper and omits globally disabled servers";
     ok =
-      customizedCfg.programs.antigravity-cli.mcpServers == {
-        Local.command = customizedCfg.agents.resolved.mcp.servers.local.command;
+      managedCfg.programs.antigravity-cli.mcpServers == {
+        Local.command = managedCfg.agents.resolved.mcp.servers.local.command;
         Remote.url = "https://example.test/mcp";
       };
-  }
-  {
-    name = "agy projects shared model overrides into subagent tiers";
-    ok =
-      lib.hasInfix "model: inherit\n" combinedCfg.home.file."${combinedRolesDir}/researcher.md".text
-      && lib.hasInfix "model: pro\n" combinedCfg.home.file."${combinedRolesDir}/implementer.md".text;
   }
 
   # ------------------------------------------------------------------------------------------------
@@ -71,12 +69,31 @@ check "home-agy" [
   {
     name = "agy selects official and native Gemini API-key profiles";
     ok =
-      builtins.attrNames officialAuthCfg.agents.resolved.clientProfiles.agy == [
+      builtins.attrNames managedCfg.agents.resolved.clientProfiles.agy == [
         "ai-studio"
         "official"
       ]
-      && officialAuthCfg.home.activation ? agyAuthProfile
-      && lib.any (pkg: lib.getName pkg == "agy-switch") officialAuthCfg.home.packages;
+      && managedCfg.home.activation ? agyAuthProfile
+      && lib.any (pkg: lib.getName pkg == "agy-switch") managedCfg.home.packages;
+  }
+  {
+    name = "agy rejects provider extraHeaders with an eval-time assertion";
+    ok = throws extraHeadersCfg.assertions;
+  }
+  {
+    name = "agy slugFor strips route prefixes and handles null effort";
+    ok =
+      agyModels.slugFor {
+        modelId = "gemini/gemini-4-hydrogen";
+        effort = "medium";
+        model.thinking.mode = "effort";
+      } == "gemini-4-hydrogen-medium"
+      &&
+        agyModels.slugFor {
+          modelId = "gemini/gemini-4-neon";
+          effort = null;
+          model.thinking.mode = "effort";
+        } == "gemini-4-neon";
   }
 
   # ------------------------------------------------------------------------------------------------
@@ -84,7 +101,7 @@ check "home-agy" [
   # ------------------------------------------------------------------------------------------------
   {
     name = "agy uses the managed CLI for ACP by default";
-    ok = combinedCfg.agents.acp.agyAdapter.executable == "${combinedCfg.home.profileDirectory}/bin/agy";
+    ok = managedCfg.agents.acp.agyAdapter.executable == "${managedCfg.home.profileDirectory}/bin/agy";
   }
   {
     name = "agy installs one fallback ACP executable alongside the legacy Gemini CLI";
@@ -97,11 +114,13 @@ check "home-agy" [
     ok = agyPackages explicitExecutableCfg == [ ];
   }
   {
-    name = "agy reuses the installed native CLI when the ACP executable is null";
-    ok = agyPackages nullExecutableCfg == [ stubAgy ];
-  }
-  {
     name = "agy keeps the managed CLI installed when ACP registration is disabled";
     ok = lib.elem optedOutCfg.programs.antigravity-cli.package optedOutCfg.home.packages;
+  }
+  {
+    name = "agy skips the fallback package when programs.antigravity-cli already provides agy";
+    ok =
+      nativeAgyAcpCfg.agents.acp.agyAdapter.executable == null
+      && builtins.length (agyPackages nativeAgyAcpCfg) == 1;
   }
 ]
