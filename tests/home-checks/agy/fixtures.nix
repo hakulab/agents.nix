@@ -16,9 +16,80 @@ let
     printf '%s\n' "$HTTPS_PROXY" "$NO_PROXY" "$@"
   '';
 
+  authStub = pkgs.writeShellScriptBin "agy" ''
+    [ "${"$"}{GEMINI_API_KEY:-}" = fixture-key ] && echo key-loaded
+    printf '%s\n' "${"$"}{GEMINI_API_KEY:+key-present}" "$GOOGLE_GEMINI_BASE_URL" "$@"
+  '';
+
   stubGemini = pkgs.writeShellScriptBin "gemini-cli" "exit 0";
 
   agyPackages = cfg: lib.filter (pkg: lib.getName pkg == "agy") cfg.home.packages;
+
+  # ------------------------------------------------------------------------------------------------
+  # Auth profiles
+  # ------------------------------------------------------------------------------------------------
+  evalAuth =
+    defaultProfile: apiKeyFile: extraConfig:
+    evalHomeWith [ homeModules.agy ] {
+      imports = [ extraConfig ];
+      agents = {
+        agy = {
+          enable = true;
+          package = authStub;
+          auth = {
+            inherit defaultProfile;
+            enabledProfiles = [
+              "official"
+              "ai-studio"
+              "gateway"
+              "official-token"
+            ];
+          };
+        };
+        models.defaults.native-api = {
+          default = "gemini-4-hydrogen";
+          standard = "gemini-4-hydrogen";
+          mini = "gemini-4-hydrogen";
+          flagship = "gemini-4-neon";
+        };
+        providers = {
+          studio = {
+            apiKeyFile = "/fixtures/ignored-key";
+            clientApiKeyFiles.agy = apiKeyFile;
+            apiUrls.gemini = "https://gemini.example.test";
+          };
+          gateway = {
+            apiUrls.openai-responses = "https://gateway.example.test/v1";
+            inherit apiKeyFile;
+          };
+        };
+        profiles = {
+          ai-studio = {
+            provider = "studio";
+            family = "gemini";
+            defaultsKey = "native-api";
+          };
+          gateway = {
+            provider = "gateway";
+            family = "gemini";
+          };
+          official-token = {
+            family = "gemini";
+            oauthTokenFile = "/fixtures/oauth-token";
+          };
+        };
+      };
+    };
+
+  fixtureKey = "${pkgs.writeText "agy-fixture-key" "fixture-key\n"}";
+  officialAuthCfg = evalAuth "official" fixtureKey { };
+  apiProfile =
+    officialAuthCfg.home.file."${officialAuthCfg.xdg.stateHome}/agy/profiles/ai-studio.sh".source;
+  apiState = pkgs.linkFarm "agy-active-api-profile" { "agy/active-profile" = apiProfile; };
+  apiAuthCfg = evalAuth "official" fixtureKey {
+    xdg.stateHome = builtins.unsafeDiscardStringContext "${apiState}";
+  };
+  missingKeyCfg = evalAuth "ai-studio" "/fixtures/missing-key" { };
 
   # ------------------------------------------------------------------------------------------------
   # Shared customizations
@@ -163,5 +234,9 @@ in
     explicitExecutable
     explicitExecutableCfg
     nullExecutableCfg
+    officialAuthCfg
+    apiAuthCfg
+    apiState
+    missingKeyCfg
     ;
 }

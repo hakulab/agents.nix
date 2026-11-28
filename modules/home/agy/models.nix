@@ -20,11 +20,19 @@ let
   inherit (official.roles) default;
   miniModel = workloads.mini.modelKey;
   flagshipModel = workloads.flagship.modelKey;
+
+  slugFor =
+    {
+      modelId,
+      effort,
+      model,
+      ...
+    }:
+    modelId + lib.optionalString ((model.thinking.mode or null) == "effort") "-${effort}";
 in
 {
-  defaultSlug =
-    default.modelId
-    + lib.optionalString ((default.model.thinking.mode or null) == "effort") "-${default.effort}";
+  inherit slugFor;
+  defaultSlug = slugFor default;
 
   # Custom agents accept tier aliases. Keep inheritance when neither tier is a distinct match.
   tierFor =

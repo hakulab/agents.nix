@@ -77,7 +77,12 @@ let
 
     agy = mkHomeModule "agy" (
       import ./agy {
-        inherit llm-agents agentsLib sharedModule;
+        inherit
+          llm-agents
+          agentsLib
+          repoRoot
+          sharedModule
+          ;
       }
     );
 

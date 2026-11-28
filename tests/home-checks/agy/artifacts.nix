@@ -17,6 +17,10 @@ let
     explicitExecutable
     explicitExecutableCfg
     nullExecutableCfg
+    officialAuthCfg
+    apiAuthCfg
+    apiState
+    missingKeyCfg
     ;
 
   acpConfig = cfg: cfg.home.file.".acpx/config.json".source;
@@ -26,6 +30,7 @@ in
 pkgs.runCommand "home-agy-artifacts"
   {
     nativeBuildInputs = [ nushell ];
+    buildInputs = [ apiState ];
 
     ARTIFACTS = builtins.toJSON {
       inherit explicitExecutable;
@@ -39,6 +44,9 @@ pkgs.runCommand "home-agy-artifacts"
       optOut = acpConfig optedOutCfg;
       combinedWrapper = "${combinedPackage}/bin/agy";
       fallbackWrapper = "${fallbackPackage}/bin/agy";
+      officialAuth = "${officialAuthCfg.programs.antigravity-cli.package}/bin/agy";
+      apiAuth = "${apiAuthCfg.programs.antigravity-cli.package}/bin/agy";
+      missingKey = "${missingKeyCfg.programs.antigravity-cli.package}/bin/agy";
     };
   }
   ''

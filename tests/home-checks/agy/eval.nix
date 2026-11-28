@@ -20,6 +20,7 @@ let
     fallbackCfg
     explicitExecutableCfg
     nullExecutableCfg
+    officialAuthCfg
     ;
 
   agyConfigDir = "${homeDirectory}/.gemini/config";
@@ -62,6 +63,20 @@ check "home-agy" [
     ok =
       lib.hasInfix "model: inherit\n" combinedCfg.home.file."${combinedRolesDir}/researcher.md".text
       && lib.hasInfix "model: pro\n" combinedCfg.home.file."${combinedRolesDir}/implementer.md".text;
+  }
+
+  # ------------------------------------------------------------------------------------------------
+  # Auth profiles
+  # ------------------------------------------------------------------------------------------------
+  {
+    name = "agy selects official and native Gemini API-key profiles";
+    ok =
+      builtins.attrNames officialAuthCfg.agents.resolved.clientProfiles.agy == [
+        "ai-studio"
+        "official"
+      ]
+      && officialAuthCfg.home.activation ? agyAuthProfile
+      && lib.any (pkg: lib.getName pkg == "agy-switch") officialAuthCfg.home.packages;
   }
 
   # ------------------------------------------------------------------------------------------------

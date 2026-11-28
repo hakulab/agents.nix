@@ -9,6 +9,7 @@
   resolved,
   proxy,
   package,
+  profileWrapArgs ? null,
 }:
 
 let
@@ -18,12 +19,18 @@ agentsLib.wrapPackage {
   inherit pkgs;
   pkg = package;
   bin = "agy";
-  wrapArgs = [
-    "--add-flags"
-    (lib.escapeShellArgs [
-      "--model"
-      defaultSlug
-    ])
-  ]
-  ++ agentsLib.proxy.mkProxyWrapArgs proxy;
+  wrapArgs =
+    (
+      if profileWrapArgs != null then
+        profileWrapArgs
+      else
+        [
+          "--add-flags"
+          (lib.escapeShellArgs [
+            "--model"
+            defaultSlug
+          ])
+        ]
+    )
+    ++ agentsLib.proxy.mkProxyWrapArgs proxy;
 }

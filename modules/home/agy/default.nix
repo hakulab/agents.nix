@@ -5,6 +5,7 @@
 {
   llm-agents,
   agentsLib,
+  repoRoot,
   sharedModule,
 }:
 
@@ -37,6 +38,8 @@ in
       description = "Antigravity CLI package to install";
     };
 
+    auth = agentsLib.profiles.mkOptions { };
+
     agents = {
       enabledAgents = resolved.agentRoleOptions.mkEnabledAgentsOption {
         description = "Custom agents to enable for Antigravity CLI";
@@ -49,11 +52,27 @@ in
     };
   };
 
+  options.agents.resolved.clientProfiles.agy = agentsLib.profiles.mkClientProfilesOption (
+    import ./supported-profiles.nix {
+      inherit config lib agentsLib;
+    }
+  );
+
   # ------------------------------------------------------------------------------------------------
   # Config
   # ------------------------------------------------------------------------------------------------
   config =
     let
+      profiles = import ./profiles.nix {
+        inherit
+          config
+          pkgs
+          lib
+          agentsLib
+          repoRoot
+          ;
+      };
+
       agents = import ./agents.nix {
         inherit lib resolved;
         inherit (cfg.agents) enabledAgents;
@@ -68,6 +87,7 @@ in
         inherit pkgs lib agentsLib;
         inherit (config.agents) resolved proxy;
         inherit (cfg) package;
+        profileWrapArgs = profiles.wrapArgs;
       };
     in
     lib.mkIf cfg.enable {
@@ -83,6 +103,11 @@ in
         context.AGENTS = lib.mkIf (resolved.instructions != "") resolved.instructions;
       };
 
-      home.file = agents.homeFiles;
+      inherit (profiles) assertions;
+
+      home = {
+        inherit (profiles) packages activation;
+        file = agents.homeFiles // profiles.files;
+      };
     };
 }
