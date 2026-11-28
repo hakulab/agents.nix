@@ -124,15 +124,15 @@ let
       # --------------------------------------------------------------------------------------------
       # Claude
       # --------------------------------------------------------------------------------------------
-      "claude-opus-5-5" = claudeCommon // {
+      claude-opus-5-5 = claudeCommon // {
         name = "Claude Opus 5.5";
       };
 
-      "claude-sonnet-5-5" = claudeCommon // {
+      claude-sonnet-5-5 = claudeCommon // {
         name = "Claude Sonnet 5.5";
       };
 
-      "claude-haiku-5-5" = claudeCommon // {
+      claude-haiku-5-5 = claudeCommon // {
         name = "Claude Haiku 5.5";
       };
 
@@ -152,7 +152,7 @@ let
         contextWindow = 922000;
       };
 
-      "gpt-6-luna" = gptCommon // {
+      gpt-6-luna = gptCommon // {
         name = "GPT-6 Luna";
 
         thinking = gptCommon.thinking // {
@@ -163,15 +163,15 @@ let
       # --------------------------------------------------------------------------------------------
       # Gemini
       # --------------------------------------------------------------------------------------------
-      "gemini-4-carbon" = geminiCommon // {
+      gemini-4-carbon = geminiCommon // {
         name = "Gemini 4 Carbon";
       };
 
-      "gemini-4-neon" = geminiCommon // {
+      gemini-4-neon = geminiCommon // {
         name = "Gemini 4 Neon";
       };
 
-      "gemini-4-hydrogen" = geminiCommon // {
+      gemini-4-hydrogen = geminiCommon // {
         name = "Gemini 4 Hydrogen";
       };
     };

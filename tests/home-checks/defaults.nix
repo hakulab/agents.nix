@@ -40,6 +40,29 @@ let
     };
   };
 
+  disabledInstructionsCfg = evalHome {
+    agents.instructions.enable = false;
+  };
+
+  customInstructionsCfg = evalHome {
+    agents = {
+      dataDir = "${homeDirectory}/custom-agents";
+      instructions = {
+        enable = false;
+        baseText = "Custom instructions.";
+        extraSections = "Extra guidance.";
+        docs."team.md" = "# Team guide\n";
+      };
+    };
+  };
+
+  extraInstructionsCfg = evalHome {
+    agents.instructions = {
+      enable = false;
+      extraSections = "Extra guidance.";
+    };
+  };
+
   readOnlyMutation = evalHome {
     agents.resolved.configDirs = {
       claude = "/tmp/override";
@@ -99,6 +122,23 @@ check "home-shared-defaults" [
       lib.hasSuffix "## Custom\n\nExtra guidance." xdgCfg.agents.resolved.instructions
       && xdgCfg.xdg.dataFile ? "custom-agents/instructions/code-design.md"
       && xdgCfg.xdg.dataFile ? "custom-agents/instructions/team.md";
+  }
+  {
+    name = "disabling instructions omits the bundled text and companion guides";
+    ok =
+      disabledInstructionsCfg.agents.resolved.instructions == ""
+      && !lib.any (lib.hasPrefix "agents-nix/instructions/") (
+        builtins.attrNames disabledInstructionsCfg.xdg.dataFile
+      );
+  }
+  {
+    name = "disabling instructions preserves custom text and skips custom guide files";
+    ok =
+      customInstructionsCfg.agents.resolved.instructions == "Custom instructions.\n\nExtra guidance."
+      && extraInstructionsCfg.agents.resolved.instructions == "Extra guidance."
+      && !lib.any (lib.hasPrefix "custom-agents/instructions/") (
+        builtins.attrNames customInstructionsCfg.home.file
+      );
   }
 
   # ------------------------------------------------------------------------------------------------
