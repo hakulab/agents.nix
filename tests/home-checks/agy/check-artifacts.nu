@@ -19,6 +19,9 @@ def main [] {
   hide-env --ignore-errors HTTPS_PROXY NO_PROXY GEMINI_API_KEY GOOGLE_GEMINI_BASE_URL AGY_ADC_AUTH
   let artifacts = $env.ARTIFACTS | from json
 
+  # ------------------------------------------------------------------------------------------------
+  # ACP registrations
+  # ------------------------------------------------------------------------------------------------
   for path in [$artifacts.managedAcp $artifacts.fallbackAcp] {
     assert equal (open $path).agents.agy.argv [$artifacts.profileAgy "acp" "--sandbox"]
   }
@@ -29,6 +32,9 @@ def main [] {
   ]
   assert ("agy" not-in (open $artifacts.optOutAcp).agents)
 
+  # ------------------------------------------------------------------------------------------------
+  # Fallback wrapper
+  # ------------------------------------------------------------------------------------------------
   let fallback = ^$artifacts.fallbackWrapper acp | complete
   assert equal $fallback.exit_code 0 $fallback.stderr
   assert equal ($fallback.stdout | split row "\n" | skip 5) [
@@ -38,6 +44,9 @@ def main [] {
     ""
   ]
 
+  # ------------------------------------------------------------------------------------------------
+  # Official profile wrapper and permissions
+  # ------------------------------------------------------------------------------------------------
   $env.GEMINI_API_KEY = "stale"
   $env.GOOGLE_GEMINI_BASE_URL = "https://stale.example.test"
   $env.AGY_ADC_AUTH = "stale"
@@ -45,6 +54,7 @@ def main [] {
   let settings_dir = $env.HOME | path join ".gemini" "antigravity-cli"
   mkdir $settings_dir
   let native_settings = $settings_dir | path join "settings.json"
+
   let saved = {
     permissions: {
       allow: ["command(example status)"]
@@ -92,6 +102,9 @@ def main [] {
     ""
   ]
 
+  # ------------------------------------------------------------------------------------------------
+  # API-key profile wrapper
+  # ------------------------------------------------------------------------------------------------
   let api = ^$artifacts.apiWrapper models | complete
   assert equal $api.exit_code 0 $api.stderr
 
@@ -111,6 +124,9 @@ def main [] {
   ]
   assert equal (open $native_settings) $saved
 
+  # ------------------------------------------------------------------------------------------------
+  # Missing API key and argument guards
+  # ------------------------------------------------------------------------------------------------
   let missing = ^$artifacts.missingKeyWrapper models | complete
   assert equal $missing.exit_code 1
   assert ($missing.stderr | str contains "could not read the API key for profile ai-studio")

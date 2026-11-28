@@ -34,6 +34,9 @@ let
     providerName != null && (providers.${providerName}.extraHeaders or { }) != { }
   ) (builtins.attrNames profiles);
 
+  # ------------------------------------------------------------------------------------------------
+  # Profile scripts
+  # ------------------------------------------------------------------------------------------------
   mkProfile =
     name: profile:
     let
@@ -43,12 +46,14 @@ let
       caCertFile = if provider == null then null else provider.caCertFile or null;
       extraEnv = if provider == null then { } else provider.extraEnv or { };
       extraEnvFiles = if provider == null then { } else provider.extraEnvFiles or { };
+
       settings = builtins.toJSON (
         (lib.recursiveUpdate permissionSettings extraSettings)
         // {
           modelProvider = if provider == null then "" else "gemini";
         }
       );
+
       model = slugFor profile.roles.default;
 
       extraEnvLines = lib.concatStringsSep "\n" (
@@ -108,6 +113,9 @@ let
 
   profileScripts = lib.mapAttrs mkProfile profiles;
 
+  # ------------------------------------------------------------------------------------------------
+  # Profile loader
+  # ------------------------------------------------------------------------------------------------
   profileEnvVars = lib.unique (
     [
       "AGY_ADC_AUTH"
@@ -131,6 +139,9 @@ let
     profileEnvVars = toString profileEnvVars;
   };
 
+  # ------------------------------------------------------------------------------------------------
+  # Profile switcher
+  # ------------------------------------------------------------------------------------------------
   switch = resolved.mkProfileSwitch {
     name = "agy-switch";
     assistant = "Antigravity CLI";

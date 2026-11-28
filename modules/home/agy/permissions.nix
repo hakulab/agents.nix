@@ -16,24 +16,17 @@ let
     providers
     resolved
     ;
+
   policy = resolved.permissions;
   instructionsDir = "${dataDir}/instructions";
-
-  profileKeyFile =
-    profile:
-    if profile.provider == null then
-      null
-    else
-      agentsLib.profiles.apiKeyFileFor providers.${profile.provider} "agy";
-  keyFiles = lib.unique (
-    lib.filter (file: file != null) (
-      map profileKeyFile (builtins.attrValues resolved.clientProfiles.agy)
-    )
-  );
 
   toCommand = command: "command(${command})";
   toMcp = entry: "mcp(${resolved.mcp.displayNames.${entry.server}}/${entry.tool})";
   forEnabledServers = lib.filter (entry: lib.elem entry.server enabledServers);
+
+  # ------------------------------------------------------------------------------------------------
+  # Allow rules
+  # ------------------------------------------------------------------------------------------------
 
   # Command allows also apply outside the sandbox. Keep them scoped to forge inspections.
   commandAllows = lib.intersectLists policy.allows.commands.readOnly [
@@ -49,6 +42,22 @@ let
     "glab mr list"
     "glab mr view"
   ];
+
+  # ------------------------------------------------------------------------------------------------
+  # Deny rules
+  # ------------------------------------------------------------------------------------------------
+  profileKeyFile =
+    profile:
+    if profile.provider == null then
+      null
+    else
+      agentsLib.profiles.apiKeyFileFor providers.${profile.provider} "agy";
+
+  keyFiles = lib.unique (
+    lib.filter (file: file != null) (
+      map profileKeyFile (builtins.attrValues resolved.clientProfiles.agy)
+    )
+  );
 in
 {
   agentMode = "auto";

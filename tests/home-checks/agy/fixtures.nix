@@ -49,10 +49,12 @@ let
         enable = true;
         package = stubAgy;
         extraSettings.customSetting = "enabled";
+
         agents.enabledAgents = [
           "researcher"
           "reviewer"
         ];
+
         auth = {
           defaultProfile = "official";
           enabledProfiles = [
@@ -84,6 +86,7 @@ let
             flagship = "gemini-4-neon";
           };
         };
+
         workloadPolicy.gemini.default = "medium";
         catalog.gemini-4-hydrogen.channelId.google = "gemini/gemini-4-hydrogen";
       };
@@ -139,6 +142,7 @@ let
           clientApiKeyFiles.agy = fixtureKey;
           apiUrls.gemini = "https://gemini.example.test";
         };
+
         gateway = {
           apiUrls.openai-responses = "https://gateway.example.test/v1";
           apiKeyFile = fixtureKey;
@@ -151,10 +155,12 @@ let
           family = "gemini";
           defaultsKey = "native-api";
         };
+
         gateway = {
           provider = "gateway";
           family = "gemini";
         };
+
         official-token = {
           family = "gemini";
           oauthTokenFile = "/fixtures/oauth-token";
@@ -173,6 +179,7 @@ let
   # ------------------------------------------------------------------------------------------------
   officialProfile =
     managedCfg.home.file."${managedCfg.xdg.stateHome}/agy/profiles/official.env.sh".source;
+
   officialState = pkgs.linkFarm "agy-active-official-profile" {
     "agy/active-profile" = officialProfile;
   };
@@ -187,6 +194,7 @@ let
 
   apiProfile =
     managedCfg.home.file."${managedCfg.xdg.stateHome}/agy/profiles/ai-studio.env.sh".source;
+
   apiState = pkgs.linkFarm "agy-active-api-profile" { "agy/active-profile" = apiProfile; };
 
   apiAuthCfg = evalHomeWith [ homeModules.agy ] {
@@ -204,10 +212,12 @@ let
         package = stubAgy;
         auth.defaultProfile = "ai-studio";
       };
+
       providers.studio = {
         apiKeyFile = "/fixtures/missing-key";
         apiUrls.gemini = "https://gemini.example.test";
       };
+
       profiles.ai-studio = {
         provider = "studio";
         family = "gemini";
@@ -216,8 +226,10 @@ let
   };
 
   missingKeyBaseCfg = evalHomeWith [ homeModules.agy ] missingKeyConfig;
+
   missingKeyProfile =
     missingKeyBaseCfg.home.file."${missingKeyBaseCfg.xdg.stateHome}/agy/profiles/ai-studio.env.sh".source;
+
   missingKeyState = pkgs.linkFarm "agy-active-missing-key-profile" {
     "agy/active-profile" = missingKeyProfile;
   };
@@ -234,11 +246,13 @@ let
         enable = true;
         package = stubAgy;
       };
+
       providers.studio = {
         apiKeyFile = fixtureKey;
         apiUrls.gemini = "https://gemini.example.test";
         extraHeaders."X-Test" = "1";
       };
+
       profiles.ai-studio = {
         provider = "studio";
         family = "gemini";
