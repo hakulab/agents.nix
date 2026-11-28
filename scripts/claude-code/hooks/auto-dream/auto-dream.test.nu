@@ -10,16 +10,25 @@ use test-runner.testlib.nu [run-script]
 const SCRIPT_DIR = path self "."
 const SCRIPT = ($SCRIPT_DIR | path join "auto-dream.nu")
 
+def project-slug [directory: string]: nothing -> string {
+  $directory | str replace --all --regex "[^a-zA-Z0-9]" "-"
+}
+
 def add-session [projects: string, directory: string, id: string, cwd: string]: nothing -> string {
-  let slug = ($directory | str replace --all --regex "[^a-zA-Z0-9]" "-")
-  let project = ($projects | path join $slug)
+  let project = ($projects | path join (project-slug $directory))
   let transcript = ($project | path join $"($id).jsonl")
 
   mkdir $project
   [
-    ({type: "file-history-snapshot"} | to json --raw)
-    ({type: "user", cwd: $cwd} | to json --raw)
-  ] | str join (char nl) | save $transcript
+    {type: "file-history-snapshot"}
+    {
+      type: "user"
+      cwd: $cwd
+    }
+  ]
+  | each {|entry| $entry | to json --raw }
+  | str join "\n"
+  | save $transcript
 
   $transcript
 }
@@ -37,13 +46,22 @@ def "test auto-dream counts recent sessions from this repository and its worktre
   mkdir $main $nested $subdir $sibling $other
   ^git -C $main init --quiet --initial-branch main
   ^git -C $nested init --quiet --initial-branch main
-  ^git -C $main -c user.name=Test -c user.email=test@example.com commit --quiet --allow-empty -m root
+  (
+    ^git
+      -C $main
+      -c "user.name=Test"
+      -c "user.email=test@example.com"
+      commit
+        --quiet
+        --allow-empty
+        --message "root"
+  )
   ^git -C $main worktree add --quiet -b linked $worktree
   mkdir $worktree_subdir
 
   let projects = ($root | path join ".claude/projects")
   let cache = ($root | path join "cache")
-  let slug = ($main | str replace --all --regex "[^a-zA-Z0-9]" "-")
+  let slug = (project-slug $main)
   let memory = ($projects | path join $slug "memory")
   let cutoff = (date now) - 2day
   mkdir $memory
@@ -61,17 +79,30 @@ def "test auto-dream counts recent sessions from this repository and its worktre
   add-session $projects $sibling "sibling" $sibling | ignore
   add-session $projects $other "other" $other | ignore
   add-session $projects $nested "nested" $nested | ignore
-  '{"type":"summary"}' | save ($projects | path join $slug "missing-cwd.jsonl")
+  {type: "summary"}
+  | to json --raw
+  | save ($projects | path join $slug "missing-cwd.jsonl")
 
   let config = ($root | path join "config.json")
   {
     git: (which git | get 0.path)
     prompt: "Sessions: @sessions@"
     model: "test-model"
-  } | to json | save $config
+  }
+  | to json
+  | save $config
 
-  let input = ({cwd: $worktree, session_id: "current"} | to json)
-  with-env {HOME: $root, XDG_CACHE_HOME: $cache} {
+  let input = (
+    {
+      cwd: $worktree
+      session_id: "current"
+    }
+    | to json
+  )
+  with-env {
+    HOME: $root
+    XDG_CACHE_HOME: $cache
+  } {
     let before = ($input | run-script $SCRIPT --config $config)
     assert equal $before.exit_code 0 $before.stderr
     assert equal $before.stdout ""
