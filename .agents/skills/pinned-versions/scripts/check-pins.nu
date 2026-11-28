@@ -1,153 +1,305 @@
 #!/usr/bin/env nu
 
 # ==================================================================================================
-# Pinned Versions
+# Pinned Version Drift Check
+# ==================================================================================================
+# Compare the registered manual pins against their upstream values and report which ones have
+# drifted. Renovate manages flake inputs and GitHub Actions. See ../SKILL.md for update guidance.
+#
+# Run with --help for usage.
 # ==================================================================================================
 
-const REPO_ROOT = path self "../../../.."
+source versions.nu
 
 # --------------------------------------------------------------------------------------------------
-# Pin readers
+# Helpers
 # --------------------------------------------------------------------------------------------------
 
-def source-value [file: string, pattern: string]: nothing -> string {
-  open --raw ($REPO_ROOT | path join $file)
-  | parse --regex $pattern
-  | get value.0
+# A missing prerequisite leaves the run incomplete, so it shares exit 2 with a failed query.
+def die [msg: string] {
+  print -e $"error: ($msg)"
+  exit 2
 }
 
-def package-version [file: string]: nothing -> string {
-  $"v(source-value $file '(?m)^\s*version = "(?<value>[^"]+)"')"
+def repo-root []: nothing -> string {
+  try {
+    ^git rev-parse --show-toplevel | str trim
+  } catch {
+    die "cannot find the repository root. Run inside the agents.nix checkout."
+  }
+}
+
+# A failed lookup leaves no comparable value, so the caller reports UNKNOWN.
+def query [pin: string, closure: closure]: nothing -> string {
+  try {
+    let value = (do $closure | into string | str trim)
+
+    if ($value | is-empty) {
+      error make {msg: "no value found"}
+    }
+    $value
+  } catch {|err|
+    print -e $"  ($pin): ($err.msg)"
+    ""
+  }
 }
 
 # --------------------------------------------------------------------------------------------------
-# Upstream releases and tags
+# Upstream queries
 # --------------------------------------------------------------------------------------------------
 
-def --wrapped github [endpoint: string, filter: string, ...options: string]: nothing -> string {
+def --wrapped gh-api [path: string, jq: string, ...args: string]: nothing -> string {
   let result = (
-    ^gh api $endpoint
+    ^gh api $path
       --hostname github.com
-      --jq $filter
-      ...$options
+      --jq $jq
+      ...$args
     | complete
   )
 
   if $result.exit_code != 0 {
-    error make { msg: ($result.stderr | str trim) }
+    error make {msg: ($result.stderr | str trim)}
   }
-
   $result.stdout | str trim
 }
 
-def latest-release [repo: string]: nothing -> string {
-  github $"repos/($repo)/releases/latest" ".tag_name"
+def gh-latest-release [repo: string]: nothing -> string {
+  gh-api $"repos/($repo)/releases/latest" ".tag_name"
 }
 
-def latest-telegram-rev []: nothing -> string {
-  let repo = "TerrifiedBug/omp-telegram"
-  let tag = (
-    github $"repos/($repo)/tags?per_page=100" ".[].name" --paginate
-    | lines
-    | where {|tag| $tag =~ '^v?[0-9]+\.[0-9]+\.[0-9]+$' }
-    | sort-by --natural {|tag| $tag | str replace -r "^v" "" }
-    | last
-  )
-
-  github $"repos/($repo)/commits/($tag)" ".sha"
+def gh-releases [repo: string]: nothing -> list<record> {
+  let jq = ".[] | select(.draft == false) | @json"
+  gh-api $"repos/($repo)/releases?per_page=100" $jq --paginate
+  | from json --objects
 }
 
-def latest-toasty-release []: nothing -> string {
-  let filter = '.[] | select(.draft == false and .prerelease == false and any(.assets[]; .name == "toasty-x64.exe")) | .tag_name'
-  # cspell:ignore shanselman
-  github "repos/shanselman/toasty/releases?per_page=100" $filter --paginate
-  | lines
+def gh-newest-tag [repo: string]: nothing -> string {
+  newest-version (gh-api $"repos/($repo)/tags" ".[].name" --paginate | lines)
+}
+
+def gh-newest-tag-head [repo: string]: nothing -> string {
+  let tag = (gh-newest-tag $repo)
+
+  if ($tag | is-empty) {
+    error make {msg: "no stable version tag found"}
+  }
+  gh-api $"repos/($repo)/commits/($tag)" ".sha"
+}
+
+# A release without the expected binary cannot update the pin.
+def gh-latest-release-with-asset [repo: string, asset: string]: nothing -> string {
+  gh-releases $repo
+  | where {|release| not $release.prerelease }
+  | where {|release| $release.assets | any {|entry| $entry.name == $asset } }
   | first
+  | get tag_name
 }
 
 # --------------------------------------------------------------------------------------------------
-# Pin inventory
+# Pin extraction
 # --------------------------------------------------------------------------------------------------
 
-def pins []: nothing -> table {
+def nix-attr [root: string, file: string, regex: string]: nothing -> string {
+  open --raw ($root | path join $file) | parse --regex $regex | get v.0
+}
+
+def nix-version [root: string, file: string]: nothing -> string {
+  nix-attr $root $file '(?m)^\s*version = "(?<v>[^"]+)"'
+}
+
+def nix-version-v [root: string, file: string]: nothing -> string {
+  $"v(nix-version $root $file)"
+}
+
+def action-pins [root: string]: nothing -> list<string> {
+  [".github/workflows" ".github/actions"]
+  | each {|dir| glob ($root | path join $dir "**/*") }
+  | flatten
+  | where {|p|
+    ($p | path type) == "file" and ($p | path parse | get extension) in ["yml" "yaml"]
+  }
+  | each {|p|
+    let doc = (open $p)
+    let jobs = ($doc | get -o jobs | default {} | values)
+    [
+      ($jobs | get -o uses)
+      ($jobs | each {|job| $job | get -o steps | default [] | get -o uses } | flatten)
+      ($doc | get -o runs.steps | default [] | get -o uses)
+    ]
+    | flatten
+  }
+  | flatten
+  | compact
+  | where {|pin|
+    not ($pin | str starts-with "./") and not ($pin | str starts-with "docker://")
+  }
+  | uniq
+  | sort
+}
+
+# --------------------------------------------------------------------------------------------------
+# Pin registry
+# --------------------------------------------------------------------------------------------------
+
+# Renovate's github-actions manager updates these refs, so the row delegates.
+def action-pin [pin: string]: nothing -> record {
+  {
+    pin: ($pin | split row "@" | first)
+    local: {|| $pin | split row "@" | last }
+    delegated: "renovate"
+  }
+}
+
+# Each row pairs a pin name with closures that read the local value and the upstream value. Both
+# stay lazy so list can print the registry without touching the network.
+def registry [root: string]: nothing -> list<record> {
   [
     {
-      pin: "acpx"
-      pinned: {|| package-version "packages/acpx/default.nix" }
-      upstream: {|| latest-release "openclaw/acpx" }
+      title: "OMP extensions (rev + hash)"
+      pins: [
+        {
+          pin: "omp-telegram"
+          local: {||
+            let file = "modules/home/omp/extensions.nix"
+            nix-attr $root $file 'rev = "(?<v>[0-9a-f]{40})"'
+          }
+          # Upstream publishes tags without GitHub release objects.
+          upstream: {|| gh-newest-tag-head "TerrifiedBug/omp-telegram" }
+        }
+      ]
     }
     {
-      pin: "mcp-server-github"
-      pinned: {|| package-version "packages/mcp/mcp-server-github/default.nix" }
-      upstream: {|| latest-release "github/github-mcp-server" }
+      title: "Nix-built overlay packages"
+      pins: [
+        {
+          pin: "acpx"
+          local: {|| nix-version-v $root "packages/acpx/default.nix" }
+          upstream: {|| gh-latest-release "openclaw/acpx" }
+        }
+        {
+          pin: "mcp-server-github"
+          local: {|| nix-version-v $root "packages/mcp/mcp-server-github/default.nix" }
+          upstream: {|| gh-latest-release "github/github-mcp-server" }
+        }
+        {
+          pin: "mcp-server-gitlab"
+          local: {|| nix-version-v $root "packages/mcp/mcp-server-gitlab/default.nix" }
+          upstream: {|| gh-latest-release "zereight/gitlab-mcp" }
+        }
+      ]
     }
     {
-      pin: "mcp-server-gitlab"
-      pinned: {|| package-version "packages/mcp/mcp-server-gitlab/default.nix" }
-      upstream: {|| latest-release "zereight/gitlab-mcp" }
+      title: "Windows notification helper"
+      pins: [
+        {
+          pin: "toasty"
+          local: {||
+            let file = "modules/home/shared/notify.nix"
+            nix-attr $root $file 'download/(?<v>[^/]+)/toasty-x64\.exe'
+          }
+          # cspell:ignore shanselman
+          upstream: {|| gh-latest-release-with-asset "shanselman/toasty" "toasty-x64.exe" }
+        }
+      ]
     }
     {
-      pin: "omp-telegram"
-      pinned: {|| source-value "modules/home/omp/extensions.nix" 'rev = "(?<value>[0-9a-f]{40})"' }
-      upstream: {|| latest-telegram-rev }
-    }
-    {
-      pin: "toasty"
-      pinned: {||
-        source-value "modules/home/shared/notify.nix" 'download/(?<value>[^/]+)/toasty-x64\.exe'
-      }
-      upstream: {|| latest-toasty-release }
+      title: "GitHub Actions"
+      pins: (try {
+        action-pins $root | each {|pin| action-pin $pin }
+      } catch {
+        []
+      })
     }
   ]
+}
+
+# --------------------------------------------------------------------------------------------------
+# Reporting
+# --------------------------------------------------------------------------------------------------
+
+def resolve []: list<record> -> list<record> {
+  par-each --keep-order {|row|
+    if ($row.delegated? | is-not-empty) {
+      let pinned = (query $row.pin $row.local)
+      return {
+        pin: $row.pin
+        pinned: $pinned
+        upstream: "renovate"
+        status: $row.delegated
+      }
+    }
+
+    let pinned = (query $row.pin $row.local)
+    let upstream = (query $row.pin $row.upstream)
+    let status = if ($pinned | is-empty) or ($upstream | is-empty) {
+      "UNKNOWN"
+    } else if $pinned == $upstream {
+      "ok"
+    } else {
+      "STALE"
+    }
+
+    {
+      pin: $row.pin
+      pinned: ($pinned | default --empty "?")
+      upstream: ($upstream | default --empty "?")
+      status: $status
+    }
+  }
+}
+
+def resolve-group [group: record]: nothing -> record {
+  let rows = if ($group.pins | is-empty) {
+    # An empty group would print as a clean sweep, indistinguishable from every pin being current.
+    print -e $"  ($group.title): no pins matched"
+    [
+      {
+        pin: $group.title
+        pinned: "?"
+        upstream: "?"
+        status: "UNKNOWN"
+      }
+    ]
+  } else {
+    $group.pins | resolve
+  }
+  {
+    title: $group.title
+    rows: $rows
+  }
 }
 
 # --------------------------------------------------------------------------------------------------
 # Entry point
 # --------------------------------------------------------------------------------------------------
 
-def query [pin: string, field: string, lookup: closure]: nothing -> string {
-  try {
-    let value = (do $lookup)
-    if ($value | is-empty) {
-      error make { msg: "no value found" }
-    }
-    $value
-  } catch {|err|
-    print -e $"($pin) [($field)]: ($err.msg)"
-    ""
-  }
-}
-
 # Compare registered manual pins with upstream versions.
 def "main check" [] {
-  let rows = (
-    pins
-    | each {|entry|
-      let pinned = (query $entry.pin "pinned" $entry.pinned)
-      let upstream = (query $entry.pin "upstream" $entry.upstream)
-      let status = if ($pinned | is-empty) or ($upstream | is-empty) {
-        "UNKNOWN"
-      } else if $pinned == $upstream {
-        "ok"
-      } else {
-        "STALE"
-      }
+  if (which gh | is-empty) {
+    die "gh not found. Install GitHub CLI and authenticate to github.com."
+  }
+  if (^gh auth status --hostname github.com | complete).exit_code != 0 {
+    die "GitHub authentication check failed. Check credentials and network access."
+  }
 
-      {
-        pin: $entry.pin
-        pinned: ($pinned | default --empty "?")
-        upstream: ($upstream | default --empty "?")
-        status: $status
-      }
-    }
+  # Resolution finishes before anything prints, since par-each threads would otherwise interleave
+  # their sections.
+  let groups = (
+    registry (repo-root)
+    | par-each --keep-order {|group| resolve-group $group }
   )
 
-  print ($rows | table)
+  for group in $groups {
+    print $"\n($group.title)"
+    print ($group.rows | table)
+  }
+  let rows = ($groups | get rows | flatten)
   let stale = ($rows | where status == "STALE" | length)
   let unknown = ($rows | where status == "UNKNOWN" | length)
-  print $"\n($stale) stale, ($unknown) unknown."
 
+  print $"\n($stale) stale, ($unknown) unknown."
   if $unknown > 0 {
+    print "UNKNOWN means a lookup failed. Rerun, and fix the printed cause if it persists."
     exit 2
   }
   if $stale > 0 {
@@ -158,9 +310,13 @@ def "main check" [] {
 # List the registered pins without querying upstream.
 def "main list" [] {
   print "Manual pins tracked by this script:"
-  for pin in (pins | get pin) {
-    print $"  ($pin)"
+  for group in (registry (repo-root)) {
+    print $"\n($group.title)"
+    for pin in $group.pins {
+      print $"  ($pin.pin)"
+    }
   }
+  print "\nRenovate owns the flake.lock inputs and the GitHub Actions refs."
 }
 
 # Check registered manual pins for upstream drift by default.
