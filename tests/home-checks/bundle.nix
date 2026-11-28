@@ -147,6 +147,9 @@ check "home-default" [
       && combinedCfg.home.file ? ".omp/agent/extensions/workmux-status.ts"
       && combinedCfg.agents.acp.claudeAdapter.executable != null
       && combinedCfg.agents.acp.codexAdapter.executable != null
+      && combinedCfg.agents.acp.agyAdapter.enable
+      &&
+        lib.count (pkg: pkg == combinedCfg.programs.antigravity-cli.package) combinedCfg.home.packages == 1
       && combinedCfg.programs.activity-report.settings.excluded_dirs == [ "/[^/]+__worktrees/workmux-" ]
       && lib.all (a: a.assertion) combinedCfg.assertions;
   }

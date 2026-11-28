@@ -41,6 +41,14 @@ let
     else
       null;
 
+  agyProgramInstallsPackage =
+    let
+      package = config.programs.antigravity-cli.package or null;
+    in
+    (config.programs.antigravity-cli.enable or false)
+    && package != null
+    && lib.getName package != "gemini-cli";
+
   # ------------------------------------------------------------------------------------------------
   # Package wrappers
   # ------------------------------------------------------------------------------------------------
@@ -83,6 +91,13 @@ let
     inherit (cfg.codexAdapter) executable;
   };
 
+  agyAdapter = import ./agy/package.nix {
+    inherit pkgs lib agentsLib;
+    inherit (config.agents) resolved;
+    inherit (cfg.agyAdapter) package;
+    inherit (config.agents) proxy;
+  };
+
   # ------------------------------------------------------------------------------------------------
   # Client configuration
   # ------------------------------------------------------------------------------------------------
@@ -97,7 +112,7 @@ let
     // lib.optionalAttrs cfg.codexAdapter.enable {
       codex.argv = [ (profileBin "codex-acp") ];
     }
-    // lib.optionalAttrs (config.agents.agy.enable or false) {
+    // lib.optionalAttrs cfg.agyAdapter.enable {
       agy.argv = [
         (profileBin "agy")
         "acp"
@@ -165,6 +180,21 @@ in
       };
     };
 
+    agyAdapter = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = config.agents.agy.enable or false;
+        defaultText = lib.literalExpression "config.agents.agy.enable or false";
+        description = "Install and register the Antigravity CLI ACP server";
+      };
+
+      package = lib.mkOption {
+        type = lib.types.package;
+        default = llmAgentsPackages.antigravity-cli;
+        description = "Antigravity CLI package to install when the program does not supply it";
+      };
+    };
+
     defaultAgent = lib.mkOption {
       type = lib.types.str;
       default = "codex";
@@ -186,7 +216,8 @@ in
       acpxBin
     ]
     ++ lib.optional cfg.claudeAdapter.enable claudeAdapter
-    ++ lib.optional cfg.codexAdapter.enable codexAdapter;
+    ++ lib.optional cfg.codexAdapter.enable codexAdapter
+    ++ lib.optional (cfg.agyAdapter.enable && !agyProgramInstallsPackage) agyAdapter;
 
     home.file.".acpx/config.json".source = configFile;
   };

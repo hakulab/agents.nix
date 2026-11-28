@@ -26,6 +26,12 @@ let
         extraSections = "Project guidance.";
       };
 
+      roles.definitions.researcher.agy = {
+        mainAgent = true;
+        inheritCustomizations = false;
+        tools = [ "view_file" ];
+      };
+
       skills.sources.sample.source = "/fixtures/sample-skill";
 
       mcp = {
@@ -65,11 +71,12 @@ check "home-agy" [
       && !(cfg.home.file ? ".gemini/antigravity-cli/settings.json");
   }
   {
-    name = "agy renders selected subagents with native tiers and read-only tools";
+    name = "agy renders selected subagents with native model tiers and read-only tools";
     ok =
-      lib.hasInfix "mainAgent: false\nmodel: pro\nexcludeDefaultComponents: true\ninheritMcp: false" reviewer
+      lib.hasInfix "mainAgent: false\nmodel: inherit\nexcludeDefaultComponents: true\ninheritMcp: false" reviewer
       && lib.hasInfix ''tools: ["view_file","search_web","read_url_content"]'' reviewer
-      && lib.hasInfix "\nmodel: flash\n" researcher
+      && lib.hasInfix "mainAgent: true\nmodel: flash\nexcludeDefaultComponents: true\ninheritCustomizations: false\ninheritMcp: false" researcher
+      && lib.hasInfix ''tools: ["view_file"]'' researcher
       && lib.hasInfix cfg.agents.resolved.agentRoles.reviewer.prompt reviewer
       && !(cfg.home.file ? "${agyConfigDir}/agents/implementer.md");
   }

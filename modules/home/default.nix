@@ -76,8 +76,8 @@ let
     );
 
     agy = mkHomeModule "agy" (
-      import ./agy.nix {
-        inherit llm-agents sharedModule;
+      import ./agy {
+        inherit llm-agents agentsLib sharedModule;
       }
     );
 

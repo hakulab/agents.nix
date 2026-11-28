@@ -61,10 +61,14 @@ let
         description = "Oh My Pi-specific role fields";
       };
 
-      agy.tools = lib.mkOption {
-        type = lib.types.nullOr (lib.types.listOf lib.types.str);
-        default = null;
-        description = "Antigravity tool allowlist for this role";
+      agy = lib.mkOption {
+        type = lib.types.attrsOf lib.types.anything;
+        default = { };
+        description = ''
+          Antigravity CLI-specific role fields. The shared role supplies the name, description,
+          and model tier. For a custom role limited to its `tools` list, also set
+          `excludeDefaultComponents = true` and `inheritMcp = false`.
+        '';
       };
     };
   };

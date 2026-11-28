@@ -81,6 +81,15 @@ in
     inherit lib harness homeModules;
   };
 
+  home-agy-artifacts = import ./agy-artifacts.nix {
+    inherit
+      pkgs
+      lib
+      harness
+      homeModules
+      ;
+  };
+
   home-oxide-code = import ./oxide-code.nix {
     inherit
       pkgs
