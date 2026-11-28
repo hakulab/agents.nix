@@ -95,6 +95,12 @@ in
           default = [ ];
           description = "Extra mutating command patterns added to the allowlist";
         };
+
+        sandboxSafe = lib.mkOption {
+          type = lib.types.listOf lib.types.str;
+          default = [ ];
+          description = "Extra read-only command patterns allowed outside a terminal sandbox";
+        };
       };
 
       gateCommands = lib.mkOption {

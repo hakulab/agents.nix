@@ -60,6 +60,12 @@ let
         default = { };
         description = "Oh My Pi-specific role fields";
       };
+
+      agy = lib.mkOption {
+        type = lib.types.attrsOf lib.types.anything;
+        default = { };
+        description = "Antigravity CLI-specific role fields";
+      };
     };
   };
 
@@ -67,7 +73,7 @@ let
   # Role normalization and options helper
   # ------------------------------------------------------------------------------------------------
   defaultDefinitions = import ./definitions.nix {
-    inherit assetsDir promptFragments;
+    inherit lib assetsDir promptFragments;
   };
 
   toLine = text: lib.replaceStrings [ "\n" ] [ " " ] (lib.trim text);

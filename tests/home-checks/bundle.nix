@@ -54,6 +54,7 @@ let
         };
 
         omp.enable = true;
+        agy.enable = true;
         oxide-code.enable = true;
 
         acp.enable = true;
@@ -105,6 +106,7 @@ check "home-default" [
       !defaultDisabledCfg.agents.claude-code.enable
       && !defaultDisabledCfg.agents.codex.enable
       && !defaultDisabledCfg.agents.omp.enable
+      && !defaultDisabledCfg.agents.agy.enable
       && !defaultDisabledCfg.agents.oxide-code.enable
       && !defaultDisabledCfg.agents.acp.enable
       && !defaultDisabledCfg.agents.activity-report.enable
@@ -115,6 +117,7 @@ check "home-default" [
       && !defaultDisabledCfg.agents.workmux.enable
       && !defaultDisabledCfg.programs.claude-code.enable
       && !defaultDisabledCfg.programs.codex.enable
+      && !defaultDisabledCfg.programs.antigravity-cli.enable
       && !defaultDisabledCfg.programs.oxide-code.enable
       && defaultDisabledCfg.home.packages == sharedOnlyCfg.home.packages
       && !(defaultDisabledCfg.xdg.configFile ? "workmux/config.yaml")
@@ -134,7 +137,8 @@ check "home-default" [
     ok =
       combinedCfg.programs.claude-code.enable
       && combinedCfg.programs.codex.enable
-      && combinedCfg.agents.omp.enable
+      && lib.any (pkg: (pkg.meta.mainProgram or pkg.name) == "omp") combinedCfg.home.packages
+      && combinedCfg.programs.antigravity-cli.enable
       && combinedCfg.programs.oxide-code.enable
       && combinedCfg.programs.activity-report.enable
       && combinedCfg.programs.agent-project-move.enable
@@ -143,6 +147,9 @@ check "home-default" [
       && combinedCfg.home.file ? ".omp/agent/extensions/workmux-status.ts"
       && combinedCfg.agents.acp.claudeAdapter.executable != null
       && combinedCfg.agents.acp.codexAdapter.executable != null
+      && combinedCfg.agents.acp.agyAdapter.enable
+      &&
+        lib.count (pkg: pkg == combinedCfg.programs.antigravity-cli.package) combinedCfg.home.packages == 1
       && combinedCfg.programs.activity-report.settings.excluded_dirs == [ "/[^/]+__worktrees/workmux-" ]
       && lib.all (a: a.assertion) combinedCfg.assertions;
   }

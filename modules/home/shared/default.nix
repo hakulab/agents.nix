@@ -54,6 +54,8 @@ let
         "${config.home.homeDirectory}/.codex";
 
     omp = "${config.home.homeDirectory}/.omp/agent";
+
+    agy = "${config.home.homeDirectory}/.gemini/config";
   };
 in
 {

@@ -26,20 +26,28 @@ let
   # ------------------------------------------------------------------------------------------------
   # Default executable detection
   # ------------------------------------------------------------------------------------------------
-  defaultClaudeExecutable =
-    if
-      (config.programs.claude-code.enable or false)
-      && (config.programs.claude-code.package or null) != null
-    then
-      lib.getExe' config.programs.claude-code.package "claude"
-    else
-      null;
+  # Session identity includes argv. Keep paths stable across rebuilds and upstream basenames intact
+  # for adapter detection.
+  profileBin = name: "${config.home.profileDirectory}/bin/${name}";
 
-  defaultCodexExecutable =
-    if (config.programs.codex.enable or false) && (config.programs.codex.package or null) != null then
-      lib.getExe' config.programs.codex.package "codex"
-    else
-      null;
+  programPackage = program: if program.enable or false then program.package or null else null;
+
+  programExecutable =
+    name: program:
+    let
+      package = programPackage program;
+    in
+    if package != null then lib.getExe' package name else null;
+
+  defaultClaudeExecutable = programExecutable "claude" (config.programs.claude-code or { });
+
+  defaultCodexExecutable = programExecutable "codex" (config.programs.codex or { });
+
+  defaultAgyExecutable =
+    let
+      package = programPackage (config.programs.antigravity-cli or { });
+    in
+    if package != null && lib.getName package != "gemini-cli" then profileBin "agy" else null;
 
   # ------------------------------------------------------------------------------------------------
   # Package wrappers
@@ -83,19 +91,30 @@ let
     inherit (cfg.codexAdapter) executable;
   };
 
+  needsAgyPackage = cfg.agyAdapter.executable == null && defaultAgyExecutable == null;
+
+  agyAdapter = import ./agy/package.nix {
+    inherit pkgs lib agentsLib;
+    inherit (config.agents) resolved proxy;
+    inherit (cfg.agyAdapter) package;
+  };
+
   # ------------------------------------------------------------------------------------------------
   # Client configuration
   # ------------------------------------------------------------------------------------------------
-  # Session identity includes argv. Keep paths stable across rebuilds and upstream basenames intact
-  # for adapter detection.
-  profileBin = name: "${config.home.profileDirectory}/bin/${name}";
-
   agents =
     lib.optionalAttrs cfg.claudeAdapter.enable {
       claude.argv = [ (profileBin "claude-agent-acp") ];
     }
     // lib.optionalAttrs cfg.codexAdapter.enable {
       codex.argv = [ (profileBin "codex-acp") ];
+    }
+    // lib.optionalAttrs cfg.agyAdapter.enable {
+      agy.argv = [
+        (lib.defaultTo (profileBin "agy") cfg.agyAdapter.executable)
+        "acp"
+        "--sandbox"
+      ];
     };
 
   configFile = json.generate "acpx-config.json" {
@@ -159,6 +178,27 @@ in
       };
     };
 
+    agyAdapter = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = config.agents.agy.enable or false;
+        defaultText = lib.literalExpression "config.agents.agy.enable or false";
+        description = "Register the Antigravity CLI ACP server";
+      };
+
+      package = lib.mkOption {
+        type = lib.types.package;
+        default = llmAgentsPackages.antigravity-cli;
+        description = "Fallback package providing the agy binary";
+      };
+
+      executable = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = defaultAgyExecutable;
+        description = "Path to an existing agy executable for the ACP server";
+      };
+    };
+
     defaultAgent = lib.mkOption {
       type = lib.types.str;
       default = "codex";
@@ -180,7 +220,8 @@ in
       acpxBin
     ]
     ++ lib.optional cfg.claudeAdapter.enable claudeAdapter
-    ++ lib.optional cfg.codexAdapter.enable codexAdapter;
+    ++ lib.optional cfg.codexAdapter.enable codexAdapter
+    ++ lib.optional (cfg.agyAdapter.enable && needsAgyPackage) agyAdapter;
 
     home.file.".acpx/config.json".source = configFile;
   };

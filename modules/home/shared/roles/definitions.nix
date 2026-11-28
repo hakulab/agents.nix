@@ -3,6 +3,7 @@
 # ==================================================================================================
 
 {
+  lib,
   assetsDir,
   promptFragments,
 }:
@@ -12,16 +13,48 @@ let
 
   rolesDir = assetsDir + "/agent-roles";
 
-  composePrompt = name: ''
-    ${roleSections.preamble}
-    ${readPrompt (rolesDir + "/prompts/${name}.md")}
-    ${roleSections.memory}
-    ${roleSections.coordination}${readPrompt (rolesDir + "/coordination/${name}.md")}
-    ${roleSections.status}
-  '';
+  composePrompt =
+    name:
+    let
+      coordination = lib.concatStrings [
+        roleSections.coordination
+        (readPrompt (rolesDir + "/coordination/${name}.md"))
+      ];
+    in
+    ''
+      ${roleSections.preamble}
+      ${readPrompt (rolesDir + "/prompts/${name}.md")}
+      ${roleSections.memory}
+      ${coordination}
+      ${roleSections.status}
+    '';
+
+  readOnlyRole = lib.recursiveUpdate {
+    claude.permissionMode = "plan";
+
+    codex.sandboxMode = "read-only";
+
+    omp.tools = [
+      "ast_grep"
+      "glob"
+      "grep"
+      "read"
+      "web_search"
+    ];
+
+    agy = {
+      excludeDefaultComponents = true;
+      inheritMcp = false;
+      tools = [
+        "view_file"
+        "search_web"
+        "read_url_content"
+      ];
+    };
+  };
 
   defaultRoles = {
-    architect = {
+    architect = readOnlyRole {
       description = ''
         Architecture review, design critique, and design proposals. Use when you need a design for a
         new feature or significant change, feedback on an approach, or analysis of code structure,
@@ -33,26 +66,12 @@ let
       claude = {
         color = "cyan";
         memory = "local";
-        permissionMode = "plan";
       };
 
-      codex = {
-        sandboxMode = "read-only";
-        nicknameCandidates = [
-          "architect"
-          "arch"
-        ];
-      };
-
-      omp = {
-        tools = [
-          "ast_grep"
-          "glob"
-          "grep"
-          "read"
-          "web_search"
-        ];
-      };
+      codex.nicknameCandidates = [
+        "architect"
+        "arch"
+      ];
     };
 
     debugger = {
@@ -156,7 +175,7 @@ let
       };
     };
 
-    researcher = {
+    researcher = readOnlyRole {
       description = ''
         Fast codebase exploration and documentation lookup. Use when you need to gather context from
         multiple files, search for patterns, or look up external documentation.
@@ -168,29 +187,15 @@ let
         color = "blue";
         memory = "local";
         background = true;
-        permissionMode = "plan";
       };
 
-      codex = {
-        sandboxMode = "read-only";
-        nicknameCandidates = [
-          "researcher"
-          "explorer"
-        ];
-      };
-
-      omp = {
-        tools = [
-          "ast_grep"
-          "glob"
-          "grep"
-          "read"
-          "web_search"
-        ];
-      };
+      codex.nicknameCandidates = [
+        "researcher"
+        "explorer"
+      ];
     };
 
-    reviewer = {
+    reviewer = readOnlyRole {
       description = ''
         Convention, simplicity, and correctness review across every dimension. Use after
         implementation or before a merge to review recent changes, or to audit existing code.
@@ -201,28 +206,15 @@ let
       claude = {
         color = "green";
         memory = "local";
-        permissionMode = "plan";
         skills = [ "review" ];
       };
 
-      codex = {
-        sandboxMode = "read-only";
-        nicknameCandidates = [
-          "reviewer"
-          "audit"
-        ];
-      };
+      codex.nicknameCandidates = [
+        "reviewer"
+        "audit"
+      ];
 
-      omp = {
-        tools = [
-          "ast_grep"
-          "glob"
-          "grep"
-          "read"
-          "web_search"
-        ];
-        spawns = "reviewer";
-      };
+      omp.spawns = "reviewer";
     };
 
     tester = {
@@ -250,7 +242,7 @@ let
       };
     };
 
-    usability-reviewer = {
+    usability-reviewer = readOnlyRole {
       description = ''
         Usability and clarity review from a first-time user's perspective. Use after implementation to
         evaluate user-facing surfaces such as APIs, docs, CLI help text, error messages, and UI copy.
@@ -261,26 +253,12 @@ let
       claude = {
         color = "gray";
         memory = "local";
-        permissionMode = "plan";
       };
 
-      codex = {
-        sandboxMode = "read-only";
-        nicknameCandidates = [
-          "usability"
-          "ux-review"
-        ];
-      };
-
-      omp = {
-        tools = [
-          "ast_grep"
-          "glob"
-          "grep"
-          "read"
-          "web_search"
-        ];
-      };
+      codex.nicknameCandidates = [
+        "usability"
+        "ux-review"
+      ];
     };
   };
 in

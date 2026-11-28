@@ -13,7 +13,10 @@ in
     ok =
       desktopCfg.programs.activity-report.enable
       && desktopCfg.programs.activity-report.skillDirectories == [ ]
-      && desktopCfg.programs.activity-report.settings.assistants == desktopCfg.agents.resolved.configDirs
+      &&
+        desktopCfg.programs.activity-report.settings.assistants == {
+          inherit (desktopCfg.agents.resolved.configDirs) claude codex omp;
+        }
       &&
         desktopCfg.programs.activity-report.settings.excluded_dirs == [
           "/[^/]+__worktrees/workmux-"

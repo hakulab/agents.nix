@@ -7,6 +7,7 @@
   lib,
   harness,
   homeModules,
+  mkCodexModelCatalog,
 }:
 
 let
@@ -368,7 +369,7 @@ let
 
   mkModelCatalog =
     cfg:
-    import ../../modules/home/codex/models.nix {
+    mkCodexModelCatalog {
       inherit pkgs lib;
       codexPackage = cfg.agents.codex.package;
     };

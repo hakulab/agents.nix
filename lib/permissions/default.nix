@@ -43,6 +43,7 @@ let
         commands = {
           readOnly = baseAllows.commands.readOnly ++ (extraAllowCommands.readOnly or [ ]);
           mutating = baseAllows.commands.mutating ++ (extraAllowCommands.mutating or [ ]);
+          sandboxSafe = baseAllows.commands.sandboxSafe ++ (extraAllowCommands.sandboxSafe or [ ]);
         };
         mcp = mergeMcpAttrs [
           baseAllows.mcp

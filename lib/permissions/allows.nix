@@ -346,6 +346,22 @@ in
       "podman inspect"
       "podman logs"
     ];
+
+    # Subset of `readOnly` safe to allow outside a terminal sandbox.
+    sandboxSafe = [
+      "gh issue view"
+      "gh pr checks"
+      "gh pr diff"
+      "gh pr list"
+      "gh pr view"
+      "gh run list"
+
+      "glab ci status"
+      "glab issue list"
+      "glab issue view"
+      "glab mr list"
+      "glab mr view"
+    ];
   };
 
   mcp = {

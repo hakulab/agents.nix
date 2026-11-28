@@ -30,7 +30,7 @@ let
   excludedDirs = lib.unique (workmuxExcludedDirs ++ cfg.excludedDirs);
 
   baseSettings = {
-    assistants = config.agents.resolved.configDirs;
+    assistants = { inherit (config.agents.resolved.configDirs) claude codex omp; };
   }
   // lib.optionalAttrs (excludedDirs != [ ]) {
     excluded_dirs = excludedDirs;

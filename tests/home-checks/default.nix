@@ -8,6 +8,7 @@
   nushell,
   home-manager,
   homeModules,
+  mkCodexModelCatalog,
   darwinPkgs,
 }:
 
@@ -22,6 +23,16 @@ let
   };
 
   claudeCodeChecks = import ./claude-code {
+    inherit
+      pkgs
+      lib
+      nushell
+      harness
+      homeModules
+      ;
+  };
+
+  agyChecks = import ./agy {
     inherit
       pkgs
       lib
@@ -59,7 +70,17 @@ in
 
   inherit (claudeCodeChecks) home-claude-code home-claude-code-artifacts;
 
-  home-codex = import ./codex.nix {
+  home-codex = import ./codex {
+    inherit
+      pkgs
+      lib
+      harness
+      homeModules
+      mkCodexModelCatalog
+      ;
+  };
+
+  home-omp = import ./omp {
     inherit
       pkgs
       lib
@@ -68,16 +89,9 @@ in
       ;
   };
 
-  home-omp = import ./omp.nix {
-    inherit
-      pkgs
-      lib
-      harness
-      homeModules
-      ;
-  };
+  inherit (agyChecks) home-agy home-agy-artifacts;
 
-  home-oxide-code = import ./oxide-code.nix {
+  home-oxide-code = import ./oxide-code {
     inherit
       pkgs
       lib
