@@ -137,7 +137,7 @@ check "home-default" [
     ok =
       combinedCfg.programs.claude-code.enable
       && combinedCfg.programs.codex.enable
-      && combinedCfg.agents.omp.enable
+      && lib.any (pkg: (pkg.meta.mainProgram or pkg.name) == "omp") combinedCfg.home.packages
       && combinedCfg.programs.antigravity-cli.enable
       && combinedCfg.programs.oxide-code.enable
       && combinedCfg.programs.activity-report.enable
