@@ -40,6 +40,7 @@ let
     if package != null then lib.getExe' package name else null;
 
   defaultClaudeExecutable = programExecutable "claude" (config.programs.claude-code or { });
+
   defaultCodexExecutable = programExecutable "codex" (config.programs.codex or { });
 
   defaultAgyExecutable =
