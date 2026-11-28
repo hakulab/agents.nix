@@ -24,9 +24,6 @@ let
   toMcp = entry: "mcp(${resolved.mcp.displayNames.${entry.server}}/${entry.tool})";
   forEnabledServers = lib.filter (entry: lib.elem entry.server enabledServers);
 
-  # ------------------------------------------------------------------------------------------------
-  # Deny rules
-  # ------------------------------------------------------------------------------------------------
   profileKeyFile =
     profile:
     if profile.provider == null then
