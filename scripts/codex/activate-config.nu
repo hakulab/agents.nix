@@ -6,9 +6,8 @@
 
 use config-file.nu [open-record save-atomic]
 
-# Mirrors Codex 0.163's `hook_hash` for command handlers without `additionalContextLimit`: the
-# SHA-256 of the key-sorted JSON identity of the event, its matcher, and the handler with its
-# defaults filled in.
+# Mirrors Codex's `hook_hash` for command handlers: the SHA-256 of the key-sorted JSON identity
+# of the event, its matcher, and the normalized handler.
 def hook-hash [event: string, matcher: any, handler: record]: nothing -> string {
   let timeout = if $event in ["session_end" "interrupt"] {
     [([($handler | get -o timeout | default 1) 3] | math min) 1] | math max
@@ -27,9 +26,23 @@ def hook-hash [event: string, matcher: any, handler: record]: nothing -> string 
   } else {
     $normalized | insert statusMessage $status
   }
+  let context_limit = ($handler | get -o additionalContextLimit)
+  let context_events = [
+    "pre_tool_use"
+    "post_tool_use"
+    "session_start"
+    "user_prompt_submit"
+    "subagent_start"
+  ]
+  # Codex omits the default from the identity and keeps zero, which means unlimited.
+  let command = if ($event in $context_events) and ($context_limit not-in [null 2500]) {
+    $described | insert additionalContextLimit $context_limit
+  } else {
+    $described
+  }
   let identity = {
     event_name: $event
-    hooks: [($described | sort)]
+    hooks: [($command | sort)]
   }
   let keyed = if $matcher == null {
     $identity

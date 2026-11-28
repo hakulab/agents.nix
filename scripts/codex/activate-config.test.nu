@@ -133,6 +133,67 @@ def "test activation records golden hook hashes and keeps other state" [] {
   )
 }
 
+def "test activation trusts command hooks with normalized context limits" [] {
+  let dir = (mktemp --directory | path expand --strict)
+  let target = ($dir | path join "config.toml")
+  let config_file = ($dir | path join "activation.json")
+  let emit = (command "/bin/emit")
+  let limited = (command "/bin/emit" {additionalContextLimit: 20000})
+  let settings = {
+    tools: {}
+    mcp_servers: {}
+    hooks: {
+      PreToolUse: [{hooks: [$limited]}]
+      PostToolUse: [
+        {
+          hooks: [
+            $emit
+            (command "/bin/emit" {additionalContextLimit: 2500})
+            $limited
+            (command "/bin/emit" {additionalContextLimit: 0})
+          ]
+        }
+      ]
+      SessionStart: [{hooks: [$limited]}]
+      UserPromptSubmit: [{hooks: [$limited]}]
+      SubagentStart: [{hooks: [$limited]}]
+      Stop: [{hooks: [$limited]}]
+    }
+  }
+  {
+    configDir: $dir
+    activeProfile: ($dir | path join "missing-profile")
+    settings: $settings
+    keybindings: []
+  }
+  | to json
+  | save $config_file
+
+  let run = run-script $SCRIPT --config $config_file
+  assert equal $run.exit_code 0 $run.stderr
+
+  let trusted = (
+    [
+      ["pre_tool_use" 0 "58beef7f273a949865a2d68a3d63db562f7b2e22e31fe815d55d6ca2b6949556"]
+      ["post_tool_use" 0 "342893e6672f62ef1d534c0c2c32d9662f8f9c1d04cc361b1574cd5bc9416249"]
+      ["post_tool_use" 1 "342893e6672f62ef1d534c0c2c32d9662f8f9c1d04cc361b1574cd5bc9416249"]
+      ["post_tool_use" 2 "5bf698c4d02ac75f9de80619be4727d5d9ba4241ead9021c89b6bcb1fd0b53ad"]
+      ["post_tool_use" 3 "a9db263656220ffbe20a0955f56a94f4589a1ec5ec223d3d6d2021e461fee97f"]
+      ["session_start" 0 "1eb62ee060c04911942150e54c63d9a65b4d01c0c9528ad059effe5840ffd22d"]
+      ["user_prompt_submit" 0 "9b088d9ae2e241be6f5d1c86d11636a0c80ffe4e7507fc2c870fc7754317f82f"]
+      ["subagent_start" 0 "9990a9112ce93580d000b248b276123dfb1c14892e379a47f5c6803b40d04bd5"]
+      ["stop" 0 "942459e342f08f39c7d1b728a6901389247c1a8a0bf59998bb2dd64ef448666d"]
+    ]
+    | reduce --fold {} {|row, acc|
+      let key = $"($target):($row.0):0:($row.1)"
+      $acc | insert ([$key] | into cell-path) {trusted_hash: $"sha256:($row.2)"}
+    }
+  )
+  let activated = open $target | get hooks
+  assert equal $activated.state $trusted
+  assert equal ($activated | reject state) $settings.hooks
+}
+
 def "test activation trusts hooks at the canonical config path" [] {
   for alias in [false true] {
     let dir = (mktemp --directory | path expand --strict)
